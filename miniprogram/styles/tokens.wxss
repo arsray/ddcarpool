@@ -1,0 +1,28 @@
+/**
+ * 设计 Token — M2 维护
+ * 其他模块请使用以下 CSS 变量，勿硬编码色值
+ */
+page {
+  --color-primary: #003087;
+  --color-primary-light: #ebf4ff;
+  --color-text: #1a1a2e;
+  --color-text-secondary: #4a5568;
+  --color-text-muted: #718096;
+  --color-border: #edf2f7;
+  --color-bg: #f0f4f8;
+  --color-surface: #ffffff;
+
+  --radius-sm: 8rpx;
+  --radius-md: 12rpx;
+  --radius-lg: 16rpx;
+
+  --space-xs: 8rpx;
+  --space-sm: 16rpx;
+  --space-md: 24rpx;
+  --space-lg: 32rpx;
+
+  --font-sm: 24rpx;
+  --font-md: 28rpx;
+  --font-lg: 32rpx;
+  --font-xl: 36rpx;
+}

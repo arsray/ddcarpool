@@ -1,0 +1,10 @@
+<view class="container">
+  <view class="scaffold-banner">协作脚手架 · {{module}}</view>
+  <view class="card">
+    <view class="scaffold-title">{{pageName}}</view>
+    <view class="scaffold-desc">模块负责人：{{owner}}</view>
+    <view class="scaffold-desc">待实现：{{todo}}</view>
+    <view class="scaffold-meta">接口：modules/order → listOpenOrders()</view>
+  </view>
+  <view class="empty-state">订单列表占位</view>
+</view>

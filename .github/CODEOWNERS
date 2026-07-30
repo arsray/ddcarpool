@@ -1,0 +1,31 @@
+# CODEOWNERS — 模块负责人 Review 规则
+# 请将 @___ 替换为实际 GitHub 用户名
+
+# 协作文档：全员 Review
+/docs/                    @arsray
+/.github/                 @arsray
+
+# M1 登录 / Profile / 我的订单
+/miniprogram/modules/auth/     @___
+/miniprogram/pages/mine/       @___
+/cloudfunctions/login/         @___
+
+# M2 主页 / UI
+/miniprogram/styles/           @___
+/miniprogram/components/       @___
+/miniprogram/pages/index/      @___
+/miniprogram/app.wxss          @___
+
+# M3 订单生命周期 / 点位
+/miniprogram/modules/order/    @___
+/miniprogram/pages/publish/    @___
+/miniprogram/pages/detail/     @___
+
+# M4 聊天
+/miniprogram/modules/chat/     @___
+/miniprogram/pages/chat/       @___
+
+# 共享入口（变更需 PR 说明）
+/miniprogram/app.js            @arsray
+/miniprogram/app.json          @arsray
+/project.config.json           @arsray

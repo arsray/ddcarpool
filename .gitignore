@@ -1,0 +1,16 @@
+# 微信开发者工具
+project.private.config.json
+
+# 依赖
+node_modules/
+miniprogram_npm/
+
+# 日志与系统文件
+*.log
+.DS_Store
+Thumbs.db
+
+# 环境配置（勿提交密钥）
+.env
+.env.local
+miniprogram/config/env.js

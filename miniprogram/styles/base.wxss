@@ -1,0 +1,54 @@
+/**
+ * 全局基础样式 — M2 维护
+ */
+page {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-md);
+  line-height: 1.5;
+}
+
+.container {
+  padding: var(--space-md) var(--space-lg) 48rpx;
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 28rpx var(--space-lg);
+  margin-bottom: var(--space-md);
+  box-shadow: 0 4rpx 16rpx rgba(0, 48, 135, 0.06);
+}
+
+.scaffold-banner {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-md);
+}
+
+.scaffold-title {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.scaffold-desc {
+  color: var(--color-text-secondary);
+  font-size: var(--font-md);
+  line-height: 1.6;
+}
+
+.scaffold-meta {
+  margin-top: var(--space-md);
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80rpx 40rpx;
+  color: var(--color-text-muted);
+}
