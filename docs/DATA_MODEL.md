@@ -2,6 +2,11 @@
 
 云开发数据库集合定义。字段变更需 PR 更新本文档，并通知所有模块负责人。
 
+> **Mock 阶段（当前 M1 PR）**  
+> 「我的订单」预览使用 `modules/auth/mock.js` 五态中文文案，**尚未与本文 `orders.status` 四枚举对齐**。  
+> 五态状态机、字段扩展建议见 [`ORDER_INTEGRATION_GUIDE.md`](./ORDER_INTEGRATION_GUIDE.md)。  
+> **与 @M3 @M4 确认后**，由 M3 主导更新本节与云库实现；本 PR **不修改** 云库四态定义为最终方案。
+
 ## 集合一览
 
 | 集合 | Owner | 说明 |

@@ -1,57 +1,56 @@
-# ddcarpool · Cast 顺风车小程序
+# DD 蹭车 · 内部捎带匹配小程序
 
-Profile 模块预览版（本地 Mock 数据，可微信开发者工具直接预览）。
+多人协作开发的微信小程序。当前仓库为**协作脚手架**，M1 已提交 Profile / 我的订单 **Mock 预览**（见 [`docs/M1_PREVIEW.md`](docs/M1_PREVIEW.md)）。
 
-## 预览步骤
+## 开始前必读
 
-1. 安装 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
-2. **导入项目** → 选择本目录：`~/Documents/ddcarpool`
-3. AppID：`wx7e29645b7284e0cb`
-4. 云环境（可选）：`cloudbase-d3g3o2bbha98776ab`
-5. 点击 **编译** → 默认进入登录页
+| 文档 | 说明 |
+|------|------|
+| [docs/COLLABORATION.md](docs/COLLABORATION.md) | 分工、Git 流程、目录约定 |
+| [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) | MVP 范围与验收标准 |
+| [docs/ORDER_INTEGRATION_GUIDE.md](docs/ORDER_INTEGRATION_GUIDE.md) | 订单状态机 · 跨模块集成（M2/M3/M4） |
+| [docs/ORDER_FLOWS_PM.md](docs/ORDER_FLOWS_PM.md) | 订单流转图（产品经理版） |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 云数据库集合（**Mock 阶段未与五态对齐**，见该文档顶部说明） |
+| [docs/MODULE_CONTRACTS.md](docs/MODULE_CONTRACTS.md) | 跨模块接口契约 |
 
-## 预览登录
+## 快速开始
 
-- 邮箱：任意 `@disney.com`（大小写不敏感）
-- 验证码：点击「获取验证码」后，页面底部会显示 **预览码**（正式版将发至邮箱）
-- 首次登录会引导选择身份（车主/乘车人）并填写必要信息
-
-## 本版本已实现（Profile P0 预览）
-
-| 页面 | 路径 |
-|---|---|
-| 登录 / 注册 | pages/login |
-| 首次身份选择 | pages/onboarding/identity |
-| 身份管理 | pages/identity-manage |
-| 我的（双身份） | pages/profile |
-| 账号与安全 | pages/account |
-| 车辆管理 | pages/vehicle |
-| 乘车偏好 | pages/preference |
-| 习惯标签 P1 | pages/habit-tags |
-| 发车单/搭车单历史 | pages/history |
-| 历史详情 | pages/history-detail |
-| 通知中心 | pages/notify |
-
-首页 / 发布 / 消息 为占位，待与其他同事模块合并。
-
-## 产品需求文档
-
-见：`~/Documents/10 Knowledge_base/AI产品/cast-carpool-requirements/`
-
-## 上传 GitHub（无本机 Git 时）
-
-1. 打开 https://github.com/arsray/ddcarpool
-2. **Add file → Upload files**，上传整个 `ddcarpool` 文件夹
-3. 建议分支名：`feature/profile-mvp`
+1. 克隆仓库，用[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/stable.html)导入**项目根目录**
+2. 在 `project.config.json` 填入 AppID
+3. 复制 `miniprogram/config/env.example.js` → `miniprogram/config/env.js`，填入云环境 ID（`env.js` 不提交）
+4. 编译运行；**M1 预览**见 [docs/M1_PREVIEW.md](docs/M1_PREVIEW.md)
 
 ## 项目结构
 
 ```
 ddcarpool/
-├── project.config.json
+├── docs/                       # 协作文档
+├── .github/                    # CODEOWNERS、PR 模板
 ├── miniprogram/
-│   ├── app.js / app.json / app.wxss
-│   ├── utils/mock.js      ← 预览 Mock 数据
-│   └── pages/
-└── README.md
+│   ├── modules/
+│   │   ├── auth/               # M1
+│   │   ├── order/              # M3
+│   │   └── chat/               # M4
+│   ├── pages/                  # 页面（按模块归属）
+│   ├── components/             # M2 共享组件
+│   ├── styles/                 # M2 设计 token
+│   └── config/                 # 本地环境配置（env.js 不提交）
+├── cloudfunctions/
+│   └── login/                  # M1
+└── project.config.json
 ```
+
+## 模块分工
+
+| 模块 | 目录 |
+|------|------|
+| M1 登录/Profile/我的订单 | `modules/auth/`、`pages/mine/`、`cloudfunctions/login/` |
+| M2 主页/UI | `styles/`、`components/`、`pages/index/` |
+| M3 订单/点位 | `modules/order/`、`pages/publish/`、`pages/detail/` |
+| M4 聊天 | `modules/chat/`、`pages/chat/` |
+
+详见 [COLLABORATION.md](docs/COLLABORATION.md)。
+
+## 仓库
+
+https://github.com/arsray/ddcarpool
