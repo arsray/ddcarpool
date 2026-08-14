@@ -1,8 +1,14 @@
 # 订单状态机 · 操作流转 · 数据结构（跨模块集成指南）
 
-> **受众**：负责 **创建订单 / 广场展示 / 匹配推荐 / 接单 / 取消 / Chat** 的同事与 Agent。  
-> **Owner**：M1 定产品规则与「我的订单」展示；M3 实现订单生命周期与云数据；M4 实现 Chat；M2 负责广场 UI。  
-> **配套**：[`M1_ORDER_STATES.md`](./M1_ORDER_STATES.md)（产品细则）、[`M1_ORDER_STATE_DIAGRAM.md`](./M1_ORDER_STATE_DIAGRAM.md)（Mermaid 图）、[`MODULE_CONTRACTS.md`](./MODULE_CONTRACTS.md)（接口契约）、[`DATA_MODEL.md`](./DATA_MODEL.md)（云库初稿，**待 M3 对齐本文**）。
+【读者】各模块开发、Cursor / Copilot 等 Agent（写代码、对接口时必读）  
+【产品经理】可读第 1、4、6、12 节了解规则与分工；状态流转图请优先看 ORDER_FLOWS_PM.md  
+【何时阅读】实现发单 / 接单 / 取消 / Chat、或 Agent 需要字段与状态码时  
+
+【不适合】只关心「页面长什么样」——请看 M1 预览分支或 ORDER_FLOWS_PM.md  
+
+> **Owner**：M1 规则与「我的订单」展示；M3 订单生命周期；M4 Chat；M2 广场 UI。  
+> **配套**：[`ORDER_FLOWS_PM.md`](./ORDER_FLOWS_PM.md)（PM 流转图）、[`M1_ORDER_STATES.md`](./M1_ORDER_STATES.md)、[`MODULE_CONTRACTS.md`](./MODULE_CONTRACTS.md)、[`DATA_MODEL.md`](./DATA_MODEL.md)（云库待 M3 对齐本文）。  
+> **在线**：https://github.com/arsray/ddcarpool/blob/feat/m1-profile/docs/ORDER_INTEGRATION_GUIDE.md
 
 ---
 
