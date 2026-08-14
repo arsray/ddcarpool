@@ -1,0 +1,9 @@
+<view class="container">
+  <view class="card">
+    <view class="tags">
+      <view wx:for="{{tagPool}}" wx:key="*this" class="tag {{selectedMap[item] ? 'on' : ''}}" data-tag="{{item}}" bindtap="toggleTag">{{item}}</view>
+    </view>
+    <view class="hint">可不选；支持多选，后续可扩展标签池</view>
+  </view>
+  <button class="btn-primary save-btn" bindtap="onSave">保存</button>
+</view>

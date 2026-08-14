@@ -1,0 +1,29 @@
+<view class="container">
+  <view class="card">
+    <view class="field">
+      <text class="label">默认乘车人数</text>
+      <picker mode="selector" range="{{countRange}}" value="{{countIndex}}" bindchange="onCountChange">
+        <view class="picker-field">
+          <text>{{form.defaultCount}} 人</text>
+          <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">特殊要求 · 常用</text>
+      <view class="tags">
+        <view wx:for="{{noteTags}}" wx:key="*this" class="tag {{selectedNoteMap[item] ? 'on' : ''}}" data-tag="{{item}}" bindtap="toggleNoteTag">{{item}}</view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="label">特殊要求 · 补充说明</text>
+      <textarea class="textarea" value="{{form.note}}" bindinput="onNoteInput" placeholder="可自由填写其他要求" maxlength="200" />
+    </view>
+
+    <view class="hint">常用选项与补充说明一并保存；发起搭车单时作初始默认值</view>
+    <button class="btn-primary save-btn" bindtap="onSave">保存</button>
+    <button wx:if="{{onboarding || setup}}" class="skip-btn" bindtap="onSkip">稍后再填</button>
+  </view>
+</view>

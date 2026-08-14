@@ -1,0 +1,19 @@
+<view class="container">
+  <view class="section-title">我的身份</view>
+
+  <view class="identity-card" wx:for="{{identities}}" wx:key="*this">
+    <view class="identity-main">
+      <text class="mode-tag {{item === 'owner' ? 'owner' : 'passenger'}}">{{item === 'owner' ? '车主' : '乘车人'}}</text>
+      <text class="active-tag" wx:if="{{item === userMode}}">当前</text>
+    </view>
+  </view>
+
+  <view class="tip" wx:if="{{missingRole}}">添加另一种身份后，可在「我的」顶部切换模式</view>
+  <view class="tip" wx:else>你已拥有车主和乘车人两种身份</view>
+
+  <button
+    wx:if="{{missingRole}}"
+    class="add-btn {{missingRole}}"
+    bindtap="onAdd"
+  >{{addButtonLabel}}</button>
+</view>

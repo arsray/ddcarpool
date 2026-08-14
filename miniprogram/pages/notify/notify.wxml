@@ -1,0 +1,9 @@
+<view class="container">
+  <view class="row-item" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap">
+    <view class="row-main">
+      <view class="row-title {{item.read ? '' : 'unread'}}">{{item.title}}</view>
+      <view class="row-sub">{{item.time}}</view>
+    </view>
+    <text class="arrow">›</text>
+  </view>
+</view>

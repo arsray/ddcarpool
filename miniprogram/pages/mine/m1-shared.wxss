@@ -1,0 +1,94 @@
+/**
+ * M1 共享样式 — 仅 M1 页面引用，不修改 M2 全局 app.wxss
+ */
+.section-title {
+  font-size: 24rpx;
+  color: #64748b;
+  font-weight: 600;
+  margin: 24rpx 0 12rpx;
+}
+
+.row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-surface, #fff);
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 16rpx;
+}
+
+.row-item:active {
+  opacity: 0.85;
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-title {
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.row-sub {
+  font-size: 22rpx;
+  color: #64748b;
+  margin-top: 6rpx;
+}
+
+.arrow {
+  color: #cbd5e1;
+  font-size: 36rpx;
+  margin-left: 12rpx;
+}
+
+.btn-primary {
+  background: var(--color-primary, #003087);
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.status {
+  display: inline-block;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-weight: 600;
+}
+
+.status-pub { background: #fef3c7; color: #b45309; }
+.status-wait { background: #e0e7ff; color: #4338ca; }
+.status-ing { background: #dbeafe; color: #1d4ed8; }
+.status-done { background: #dcfce7; color: #166534; }
+.status-exp { background: #f1f5f9; color: #64748b; }
+
+.switch-btn {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.switch-btn::after {
+  border: none;
+}
+
+.placeholder-page {
+  padding: 80rpx 40rpx;
+  text-align: center;
+  color: #64748b;
+}
+
+.placeholder-title {
+  font-size: 32rpx;
+  color: #1a2332;
+  margin-bottom: 12rpx;
+}

@@ -1,10 +1,67 @@
-<view class="container">
-  <view class="scaffold-banner">协作脚手架 · {{module}}</view>
-  <view class="card">
-    <view class="scaffold-title">{{pageName}}</view>
-    <view class="scaffold-desc">模块负责人：{{owner}}</view>
-    <view class="scaffold-desc">待实现：{{todo}}</view>
-    <view class="scaffold-meta">接口：modules/auth → ensureLogin()、listMyOrders()</view>
+<view class="container" wx:if="{{userInfo}}">
+  <view class="profile-head card theme-{{isOwner ? 'owner' : 'passenger'}}">
+    <view class="avatar">{{avatarLetter}}</view>
+    <view class="name">{{userInfo.displayName}}</view>
+    <view class="mode-block">
+      <text class="mode-label {{isOwner ? 'owner' : 'passenger'}} {{hasBothIdentities ? 'mode-label-lg' : ''}}">{{modeLabel}}</text>
+      <button wx:if="{{hasBothIdentities}}" class="switch-btn switch-btn-below" size="mini" bindtap="onSwitchMode">{{switchLabel}}</button>
+    </view>
   </view>
-  <view class="empty-state">Profile 与订单列表占位</view>
+
+  <block wx:if="{{isOwner}}">
+    <view class="section-title">我的车辆</view>
+    <view class="row-item" bindtap="goVehicle">
+      <view class="row-main">
+        <view class="row-title" wx:if="{{hasVehicle}}">🚗 {{vehicle.brand}} · {{vehicle.plate}}</view>
+        <view class="row-title placeholder" wx:else>未绑定车辆 · 点击填写</view>
+        <view class="row-sub" wx:if="{{hasVehicle}}">{{vehicle.modelType}} · {{vehicle.color || '未填颜色'}} · 可载{{vehicle.passengerCapacity}}人</view>
+        <view class="row-sub" wx:else>绑定车辆后可发布发车单</view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+
+    <view class="section-title">习惯标签</view>
+    <view class="row-item" bindtap="goHabitTags">
+      <view class="row-main">
+        <view class="row-title">{{habitSummary}}</view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="section-title">乘车偏好</view>
+    <view class="row-item" bindtap="goPreference">
+      <view class="row-main">
+        <view class="row-title" wx:if="{{hasPreference}}">默认 {{preference.defaultCount}} 人 · {{preferenceSummary}}</view>
+        <view class="row-title placeholder" wx:else>未设置乘车偏好 · 点击填写</view>
+        <view class="row-sub" wx:if="{{!hasPreference}}">设置后发布搭车单更快捷</view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </block>
+
+  <view class="section-title">订单</view>
+  <view class="row-item" bindtap="goHistory">
+    <view class="row-main">
+      <view class="row-title">我的订单</view>
+      <view class="row-sub" wx:if="{{unfinishedCount > 0}}">{{unfinishedCount}} 单未完成</view>
+      <view class="row-sub muted" wx:else>暂无未完成订单</view>
+    </view>
+    <text class="arrow">›</text>
+  </view>
+
+  <view class="section-title">设置</view>
+  <view class="row-item" bindtap="goAccount">
+    <view class="row-main"><view class="row-title">账号与安全</view></view>
+    <text class="arrow">›</text>
+  </view>
+
+  <view class="row-item" bindtap="goNotify">
+    <view class="row-main">
+      <view class="row-title">通知中心</view>
+      <view class="row-sub" wx:if="{{unreadCount > 0}}">{{unreadCount}} 条未读</view>
+    </view>
+    <text class="arrow">›</text>
+  </view>
 </view>

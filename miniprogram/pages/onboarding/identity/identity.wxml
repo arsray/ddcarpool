@@ -1,0 +1,28 @@
+<view class="container">
+  <view class="head">
+    <view class="title">{{pageTitle}}</view>
+    <view class="sub">{{pageSub}}</view>
+  </view>
+
+  <view class="option-card {{selected === 'owner' ? 'on owner' : ''}}" data-role="owner" bindtap="onSelect">
+    <view class="option-icon">🚗</view>
+    <view class="option-main">
+      <view class="option-title">我是车主</view>
+      <view class="option-sub">发布发车单，顺路带同事</view>
+    </view>
+    <view class="check" wx:if="{{selected === 'owner'}}">✓</view>
+  </view>
+
+  <view class="option-card {{selected === 'passenger' ? 'on passenger' : ''}}" data-role="passenger" bindtap="onSelect">
+    <view class="option-icon">🧳</view>
+    <view class="option-main">
+      <view class="option-title">我是乘车人</view>
+      <view class="option-sub">发布搭车单，寻找顺路车主</view>
+    </view>
+    <view class="check" wx:if="{{selected === 'passenger'}}">✓</view>
+  </view>
+
+  <view class="tip">首次请选择一个身份；另一种身份可在「我的」中后续添加</view>
+
+  <button class="btn-primary next-btn" disabled="{{!selected}}" bindtap="onNext">下一步</button>
+</view>

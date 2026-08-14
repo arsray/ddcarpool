@@ -1,0 +1,94 @@
+<view class="container">
+  <view class="card">
+    <view class="field">
+      <text class="label">品牌</text>
+      <view class="picker-field" bindtap="openBrandPicker">
+        <text class="{{form.brand ? '' : 'placeholder'}}">{{form.brand || '请选择品牌'}}</text>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="label">车型</text>
+      <radio-group class="radio-group" bindchange="onModelChange">
+        <label class="radio-item"><radio value="SUV" checked="{{form.modelType==='SUV'}}" color="#2563eb" />SUV</label>
+        <label class="radio-item"><radio value="轿车" checked="{{form.modelType==='轿车'}}" color="#2563eb" />轿车</label>
+      </radio-group>
+    </view>
+
+    <view class="field">
+      <text class="label">车牌号</text>
+      <view class="plate-row">
+        <view class="plate-prefix" bindtap="openPrefixPicker">{{form.platePrefix || '地区'}}</view>
+        <input class="input plate-suffix" value="{{form.plateSuffix}}" bindinput="onPlateSuffixInput" placeholder="如 A12345 或 D123456" maxlength="7" />
+      </view>
+      <text class="field-hint">首位为车牌登记地区；支持普通与新能源车牌</text>
+    </view>
+
+    <view class="field">
+      <text class="label">可载乘客数（不含司机）</text>
+      <picker mode="selector" range="{{capacityRange}}" value="{{capacityIndex}}" bindchange="onCapacityChange">
+        <view class="picker-field">
+          <text>{{form.passengerCapacity}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">颜色</text>
+      <view class="color-chips">
+        <view wx:for="{{colorOptions}}" wx:key="*this" class="chip {{form.color === item && !colorCustom ? 'on' : ''}}" data-color="{{item}}" bindtap="onColorSelect">{{item}}</view>
+      </view>
+      <input wx:if="{{colorCustom}}" class="input color-custom" value="{{form.colorCustom}}" bindinput="onColorCustomInput" placeholder="请输入其他颜色" />
+    </view>
+
+    <button class="btn-primary save-btn" bindtap="onSave">保存</button>
+    <button wx:if="{{onboarding || setup}}" class="skip-btn" bindtap="onSkip">稍后再填</button>
+  </view>
+
+  <view class="picker-mask" wx:if="{{showBrandPicker}}" bindtap="closeBrandPicker">
+    <view class="picker-panel" catchtap="noop">
+      <view class="panel-hd">
+        <text class="panel-title">选择品牌</text>
+        <text class="panel-close" bindtap="closeBrandPicker">×</text>
+      </view>
+      <view class="common-row">
+        <text class="common-label">常用</text>
+        <view class="chip-row">
+          <view wx:for="{{commonBrands}}" wx:key="*this" class="chip on-light" data-brand="{{item}}" bindtap="selectBrand">{{item}}</view>
+        </view>
+      </view>
+      <view class="index-bar">
+        <text wx:for="{{indexLetters}}" wx:key="*this" class="index-item" data-letter="{{item}}" bindtap="scrollToLetter">{{item}}</text>
+      </view>
+      <scroll-view scroll-y class="brand-scroll" scroll-into-view="{{brandScrollInto}}">
+        <view wx:for="{{brandGroups}}" wx:key="letter" id="brand-{{item.letter}}" class="brand-group">
+          <view class="group-letter">{{item.letter}}</view>
+          <view wx:for="{{item.brands}}" wx:for-item="brand" wx:key="*this" class="brand-item" data-brand="{{brand}}" bindtap="selectBrand">{{brand}}</view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <view class="picker-mask" wx:if="{{showPrefixPicker}}" bindtap="closePrefixPicker">
+    <view class="picker-panel" catchtap="noop">
+      <view class="panel-hd">
+        <text class="panel-title">选择地区</text>
+        <text class="panel-close" bindtap="closePrefixPicker">×</text>
+      </view>
+      <view class="common-row">
+        <text class="common-label">常用</text>
+        <view class="chip-row">
+          <view wx:for="{{commonPrefixes}}" wx:key="*this" class="chip on-light prefix-chip" data-abbr="{{item}}" bindtap="selectPrefix">{{item}}</view>
+        </view>
+      </view>
+      <scroll-view scroll-y class="prefix-scroll">
+        <view wx:for="{{prefixGroups}}" wx:key="letter" class="brand-group">
+          <view class="group-letter">{{item.letter}}</view>
+          <view wx:for="{{item.items}}" wx:for-item="pref" wx:key="*this" class="brand-item prefix-char" data-abbr="{{pref}}" bindtap="selectPrefix">{{pref}}</view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

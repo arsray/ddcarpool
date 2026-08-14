@@ -1,0 +1,26 @@
+<view class="container" wx:if="{{order}}">
+  <view class="order-card card">
+    <text class="source-corner" wx:if="{{sourceTag}}">{{sourceTag}}</text>
+    <view class="detail-head">
+      <view class="status-row">
+        <text class="status {{statusClass}}">{{order.status}}</text>
+        <text class="status-sub" wx:if="{{statusSubline}}"> · {{statusSubline}}</text>
+      </view>
+    </view>
+
+    <view class="detail-section" wx:for="{{sections}}" wx:key="label">
+      <view class="detail-label">{{item.label}}</view>
+      <view class="detail-value">{{item.value}}</view>
+    </view>
+  </view>
+
+  <view class="action-bar action-bar-{{actions.length}}" wx:if="{{actions.length}}">
+    <button
+      wx:for="{{actions}}"
+      wx:key="label"
+      class="action-btn {{item.danger ? 'danger' : item.success ? 'success' : 'default'}}"
+      bindtap="onAction"
+      data-action="{{item.label}}"
+    >{{item.label}}</button>
+  </view>
+</view>

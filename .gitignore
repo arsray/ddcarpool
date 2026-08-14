@@ -1,16 +1,11 @@
 # 微信开发者工具
 project.private.config.json
 
+# 本地云环境配置（含 cloudEnvId，勿提交）
+miniprogram/config/env.js
+
+# 系统
+.DS_Store
+
 # 依赖
 node_modules/
-miniprogram_npm/
-
-# 日志与系统文件
-*.log
-.DS_Store
-Thumbs.db
-
-# 环境配置（勿提交密钥）
-.env
-.env.local
-miniprogram/config/env.js
