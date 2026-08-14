@@ -1,3 +1,5 @@
+@import '../mine/m1-shared.wxss';
+
 .field-card { padding: 0; overflow: hidden; }
 .field-row { display:flex; justify-content:space-between; padding:28rpx; border-bottom:1rpx solid #f1f5f9; }
 .field-row:last-child { border-bottom:none; }
