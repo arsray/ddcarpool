@@ -1,9 +1,15 @@
 /**
- * M3 — order 模块
- * 接口契约见 docs/MODULE_CONTRACTS.md
+ * M3 — order 模块公共 API
+ * 契约：docs/MODULE_CONTRACTS.md · DATA_MODEL v2
  */
 
-const { DEFAULT_POINTS } = require('./constants')
+const { DEFAULT_POINTS } = require('./constants/points')
+const { computeMatchScore } = require('./match')
+const {
+  ORDER_STATUS,
+  STATUS_LABELS,
+  FILTER_BUCKETS
+} = require('./constants/status')
 
 function notImplemented(name) {
   const err = new Error(`${name} not implemented — M3 owner`)
@@ -11,27 +17,44 @@ function notImplemented(name) {
   throw err
 }
 
-async function listOpenOrders(_filters) {
+async function listOpenOrders(_options) {
   notImplemented('listOpenOrders')
-}
-
-async function getOrderById(_orderId) {
-  notImplemented('getOrderById')
 }
 
 async function createOrder(_input) {
   notImplemented('createOrder')
 }
 
-async function acceptOrder(_orderId, _accepter) {
+async function acceptOrder(_orderId, _driver) {
   notImplemented('acceptOrder')
 }
 
-async function cancelOrder(_orderId) {
+async function cancelOrder(_orderId, _options) {
   notImplemented('cancelOrder')
 }
 
-async function completeOrder(_orderId) {
+async function expireStaleOrders() {
+  notImplemented('expireStaleOrders')
+}
+
+async function startTrip(_orderId, _actorOpenId) {
+  notImplemented('startTrip')
+}
+
+async function getOrderById(_orderId) {
+  notImplemented('getOrderById')
+}
+
+async function listOrdersForUser(_openId, _filters) {
+  notImplemented('listOrdersForUser')
+}
+
+async function listConfiguredRoutes() {
+  const { DEFAULT_CONFIGURED_ROUTES } = require('./constants/routes')
+  return DEFAULT_CONFIGURED_ROUTES
+}
+
+async function completeOrder(_orderId, _actorOpenId) {
   notImplemented('completeOrder')
 }
 
@@ -50,11 +73,19 @@ function formatRoute(fromPointId, toPointId, points) {
 
 module.exports = {
   listOpenOrders,
-  getOrderById,
   createOrder,
   acceptOrder,
   cancelOrder,
+  expireStaleOrders,
+  startTrip,
   completeOrder,
+  getOrderById,
+  listOrdersForUser,
   listPoints,
-  formatRoute
+  listConfiguredRoutes,
+  formatRoute,
+  computeMatchScore,
+  ORDER_STATUS,
+  STATUS_LABELS,
+  FILTER_BUCKETS
 }
