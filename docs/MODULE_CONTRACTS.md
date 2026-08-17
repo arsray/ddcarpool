@@ -117,97 +117,72 @@ isDangerAction(action)
 
 ## M3 — order 模块
 
-**路径**：`miniprogram/modules/order/`
+**路径**：`miniprogram/modules/order/`  
+**Owner**：M3
 
-### 导出接口（M3 实现）
+**职责（P0）**：乘客创建订单、司机广场接单、POI/配置路线、顺路排序、订单状态机、过期关闭。
 
-```js
-// miniprogram/modules/order/index.js
+### 导出接口
 
-/**
- * 广场：待接取订单列表
- * @param {{ type?: 'seek'|'offer' }} filters
- * @returns {Promise<Order[]>}
- */
-listOpenOrders(filters)
+实现文件：`miniprogram/modules/order/index.js`
 
-/**
- * 订单详情
- * @param {string} orderId
- * @returns {Promise<Order|null>}
- */
-getOrderById(orderId)
+| 函数 | 优先级 | 说明 |
+|------|--------|------|
+| `listOpenOrders(options)` | P0 | 广场：`matching` + 未过期；默认 `matchScore` 降序 |
+| `createOrder(input)` | P0 | 乘客发单 → `matching` |
+| `acceptOrder(orderId, driver)` | P0 | 司机接单 → `pending_departure` |
+| `cancelOrder(orderId, options)` | P0 | 取消 → `closed` |
+| `expireStaleOrders()` | P0 | `matching` 且过点 → `closed` |
+| `startTrip(orderId, actorOpenId)` | P0 | → `in_progress` |
+| `completeOrder(orderId, actorOpenId)` | P0 | → `completed` |
+| `getOrderById(orderId)` | P0 | 详情 |
+| `listOrdersForUser(openId, filters)` | P0 | 我的订单（M1 可转调） |
+| `listPoints()` | P0 | POI 列表 |
+| `listConfiguredRoutes()` | P0 | 顺路配置 |
+| `formatRoute(fromPointId, toPointId, points?)` | P0 | `A → B` 文案 |
+| `computeMatchScore(order, context?)` | P0 | 顺路分 |
 
-/**
- * 创建订单
- * @param {CreateOrderInput} input
- * @returns {Promise<string>} 新订单 _id
- */
-createOrder(input)
+### 类型（CreateOrderInput）
 
-/**
- * 接取订单
- * @param {string} orderId
- * @param {{ openId: string, nickName: string }} accepter
- * @returns {Promise<void>}
- */
-acceptOrder(orderId, accepter)
+| 字段 | 类型 | 必填 |
+|------|------|:----:|
+| `fromPointId` | string | ✓ |
+| `toPointId` | string | ✓ |
+| `departTime` | string | ✓ |
+| `passengerCount` | number | ✓ |
+| `note` | string | |
+| `passengerOpenId` | string | ✓ |
+| `passengerName` | string | |
 
-/**
- * 取消订单
- * @param {string} orderId
- * @returns {Promise<void>}
- */
-cancelOrder(orderId)
+订单 `status` 枚举见 [`DATA_MODEL.md`](./DATA_MODEL.md) v2：`matching` | `pending_departure` | `in_progress` | `completed` | `closed`
 
-/**
- * 标记完成
- * @param {string} orderId
- * @returns {Promise<void>}
- */
-completeOrder(orderId)
+### 错误码
 
-/**
- * 固定点位列表
- * @returns {Promise<Point[]>}
- */
-listPoints()
-
-/**
- * 格式化路线文案
- * @param {string} fromPointId
- * @param {string} toPointId
- * @param {Point[]} [points]
- * @returns {string} 如「停车场 A 区 → 11 号线迪士尼站」
- */
-formatRoute(fromPointId, toPointId, points)
-```
-
-### 类型（参考）
-
-```js
-/**
- * @typedef {Object} CreateOrderInput
- * @property {'seek'|'offer'} type
- * @property {string} fromPointId
- * @property {string} toPointId
- * @property {string} departTime - YYYY-MM-DD HH:mm
- * @property {number} [seats]
- * @property {string} [note]
- * @property {string} publisherOpenId
- * @property {string} publisherName
- */
-```
+| code | 说明 |
+|------|------|
+| `NOT_IMPLEMENTED` | 接口占位，M3 实现中 |
+| `INVALID_DEPART_TIME` | 不在 7 日窗 |
+| `INVALID_POI` | POI 无效 |
+| `OVERLAPPING_ORDER` | 重叠时间窗已有有效单 |
+| `ORDER_NOT_FOUND` | 订单不存在 |
+| `INVALID_STATUS` | 状态不允许该操作 |
+| `SELF_ACCEPT` | 不能接自己的单 |
+| `ALREADY_ACCEPTED` | 已被接单 |
+| `TRIP_IN_PROGRESS_NO_CANCEL` | 行程中不可取消 |
 
 ### 依赖
 
-- M1：`ensureLogin()` 获取身份
+- M1：`ensureLogin()` → openId、展示名
 
 ### 被依赖
 
-- M2：主页列表
-- M1：我的订单（或 M1 调 order 模块查询）
-- M4：校验订单 status === 'matched'
+- M2：`listOpenOrders`、`formatRoute`
+- M1：`listOrdersForUser`；接单后通知
+- M4（P1）：`getOrderById` + 聊天准入状态
+
+### order-card 数据约定（M2）
+
+`properties.order` 至少包含：`_id`, `status`, `statusLabel`, `routeLabel`, `departTime`, `passengerCount`, `passengerName`, `driverName`, `matchScore`
 
 ---
 
@@ -247,7 +222,7 @@ sendMessage(orderId, content)
 ### 依赖
 
 - M1：`ensureLogin()`、`getProfile()`
-- M3：`getOrderById()` 校验订单状态与参与者
+- M3：`getOrderById()` 校验订单状态与参与者（P1：`pending_departure` | `in_progress` 可聊天）
 
 ---
 
@@ -307,7 +282,9 @@ sendMessage(orderId, content)
 
 | 检查点 | 参与模块 | 验证内容 |
 |--------|----------|----------|
-| CP1 | M2 + M3 | 主页能展示 M3 mock 订单数据 |
-| CP2 | M1 + M3 | 登录后能发布并在「我的」看到 |
-| CP3 | M3 + M4 | 已匹配订单能进入聊天 |
-| CP4 | 全部 | 完整用户路径验收（见 MVP_SCOPE.md） |
+| CP1 | M2 + M3 | 广场展示 `matching` 订单，顺路排序 |
+| CP2 | M1 + M3 | 发单 → 我的订单为 **匹配中** |
+| CP2b | M1 + M3 | 接单 → **待出发** + 通知乘客 |
+| CP3 | M3 | 待出发 → 行程中 → 已完成 |
+| CP4 | M3 + M4 | （P1）聊天 |
+| CP5 | 全部 | 完整路径见 MVP_SCOPE / PRD |
