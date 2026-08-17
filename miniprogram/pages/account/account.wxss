@@ -1,0 +1,10 @@
+@import '../mine/m1-shared.wxss';
+
+.field-card { padding: 0; overflow: hidden; }
+.field-row { display:flex; justify-content:space-between; padding:28rpx; border-bottom:1rpx solid #f1f5f9; }
+.field-row:last-child { border-bottom:none; }
+.label { color:#64748b; font-size:26rpx; }
+.value { font-size:28rpx; }
+.muted { color:#94a3b8; }
+.logout-btn { margin-top:40rpx; background:#64748b; color:#fff; border-radius:12rpx; }
+.logout-btn::after { border:none; }

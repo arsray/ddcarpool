@@ -1,0 +1,149 @@
+@import './m1-shared.wxss';
+
+.profile-head {
+  text-align: center;
+  padding: 32rpx 28rpx 36rpx;
+  border: none;
+  box-shadow: none;
+}
+
+.profile-head.theme-owner {
+  background: linear-gradient(160deg, #dbeafe 0%, #eff6ff 55%, #ffffff 100%);
+}
+
+.profile-head.theme-passenger {
+  background: linear-gradient(160deg, #ede9fe 0%, #f5f3ff 55%, #ffffff 100%);
+}
+
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 50%;
+  margin: 0 auto 16rpx;
+  color: #fff;
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.theme-owner .avatar {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.theme-passenger .avatar {
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+}
+
+.name {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.mode-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20rpx;
+}
+
+.mode-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  background: transparent;
+  padding: 0;
+}
+
+.mode-label.owner {
+  color: #1d4ed8;
+}
+
+.mode-label.passenger {
+  color: #6d28d9;
+}
+
+.mode-label-lg {
+  font-size: 34rpx;
+}
+
+.switch-btn-below {
+  font-size: 9rpx;
+  padding: 1rpx 8rpx;
+  font-weight: 400;
+  line-height: 1.3;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1rpx solid #fed7aa;
+  margin: 14rpx 0 0;
+}
+
+.switch-btn-below::after {
+  border: none;
+}
+
+.theme-link {
+  font-weight: 400;
+  font-size: 22rpx;
+}
+
+.theme-owner .theme-link {
+  color: #2563eb;
+}
+
+.theme-passenger .theme-link {
+  color: #7c3aed;
+}
+
+.filter-tab.theme-filter.on.owner {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.filter-tab.theme-filter.on.passenger {
+  background: #ede9fe;
+  color: #6d28d9;
+  border-color: #c4b5fd;
+}
+
+.link {
+  font-weight: 400;
+  color: #4f46e5;
+  font-size: 22rpx;
+}
+
+.filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.filter-tab {
+  font-size: 22rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #e2e8f0;
+  color: #64748b;
+  background: #fff;
+}
+
+.group-hd {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin: 8rpx 0 12rpx;
+  font-size: 22rpx;
+  color: #64748b;
+}
+
+.count {
+  color: #94a3b8;
+}
+
+.row-title.placeholder {
+  color: #64748b;
+}
+
+.row-sub.muted {
+  color: #94a3b8;
+}

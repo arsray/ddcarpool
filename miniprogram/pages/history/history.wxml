@@ -1,0 +1,25 @@
+<view class="container">
+  <view class="role-tabs" wx:if="{{showRoleTabs}}">
+    <view class="role-tab {{role==='passenger'?'on passenger':''}}" data-role="passenger" bindtap="switchRole">乘车人订单</view>
+    <view class="role-tab {{role==='owner'?'on owner':''}}" data-role="owner" bindtap="switchRole">车主订单</view>
+  </view>
+  <view class="filter-tabs">
+    <text wx:for="{{filters}}" wx:key="*this" class="filter-tab {{filter===item?'on':''}}" data-filter="{{item}}" bindtap="onFilter">{{item}}</text>
+  </view>
+
+  <block wx:if="{{orders.length}}">
+    <view class="row-item" wx:for="{{orders}}" wx:key="id" data-id="{{item.id}}" bindtap="goDetail">
+      <text class="source-corner" wx:if="{{item.sourceTag}}">{{item.sourceTag}}</text>
+      <view class="row-main">
+        <view class="row-title">{{item.from}} → {{item.to}}</view>
+        <view class="row-sub">
+          <text class="status {{item.statusClass}}">{{item.status}}</text>
+          <text class="note-text"> · {{item.scheduleLine}}</text>
+        </view>
+        <view class="row-hint" wx:if="{{item.listHint}}">{{item.listHint}}</view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </block>
+  <view class="empty-orders" wx:else>暂无订单</view>
+</view>

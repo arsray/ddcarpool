@@ -1,0 +1,80 @@
+.field { margin-bottom: 28rpx; }
+.label { display:block; font-size:24rpx; color:#64748b; margin-bottom:10rpx; }
+.input { background:#f8fafc; border:1rpx solid #e2e8f0; border-radius:12rpx; padding:20rpx 24rpx; font-size:28rpx; }
+.radio-group { display:flex; gap:32rpx; }
+.radio-item { display:flex; align-items:center; gap:8rpx; font-size:28rpx; }
+.save-btn { margin-top: 16rpx; }
+.skip-btn { margin-top: 20rpx; background: transparent; color: #64748b; font-size: 28rpx; }
+.skip-btn::after { border: none; }
+
+.picker-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1rpx solid #e2e8f0;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+}
+
+.picker-field .placeholder { color: #94a3b8; }
+.picker-field .arrow { color: #cbd5e1; font-size: 32rpx; }
+
+.plate-row { display: flex; gap: 16rpx; }
+.plate-prefix {
+  width: 96rpx;
+  text-align: center;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1rpx solid #bfdbfe;
+  border-radius: 12rpx;
+  padding: 20rpx 0;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.plate-suffix { flex: 1; }
+.field-hint { display: block; margin-top: 8rpx; font-size: 22rpx; color: #94a3b8; }
+
+.color-chips, .chip-row { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.chip {
+  font-size: 24rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #e2e8f0;
+  color: #64748b;
+  background: #fff;
+}
+.chip.on { background: #eff6ff; color: #2563eb; border-color: #93c5fd; }
+.chip.on-light { background: #f8fafc; border-color: #cbd5e1; }
+.color-custom { margin-top: 16rpx; }
+
+.picker-mask {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+.picker-panel {
+  width: 100%;
+  max-height: 75vh;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+.panel-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.panel-title { font-size: 30rpx; font-weight: 600; }
+.panel-sub { font-size: 22rpx; color: #94a3b8; margin: -8rpx 0 16rpx; }
+.panel-close { font-size: 40rpx; color: #94a3b8; padding: 0 8rpx; }
+.common-row { margin-bottom: 16rpx; }
+.common-label { font-size: 22rpx; color: #64748b; margin-bottom: 8rpx; display: block; }
+.index-bar { display: flex; flex-wrap: wrap; gap: 8rpx; margin-bottom: 12rpx; }
+.index-item { font-size: 22rpx; color: #2563eb; padding: 4rpx 10rpx; }
+.brand-scroll, .prefix-scroll { max-height: 48vh; }
+.prefix-chip { min-width: 64rpx; text-align: center; font-size: 30rpx; font-weight: 600; }
+.prefix-char { font-size: 32rpx; font-weight: 600; text-align: center; }
+.group-letter { font-size: 22rpx; color: #94a3b8; padding: 12rpx 0 8rpx; }
+.brand-item { padding: 20rpx 0; border-bottom: 1rpx solid #f1f5f9; font-size: 28rpx; }

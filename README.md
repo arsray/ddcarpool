@@ -1,6 +1,6 @@
 # DD 蹭车 · 内部捎带匹配小程序
 
-多人协作开发的微信小程序。当前仓库为**协作脚手架**，不含完整业务实现。
+多人协作开发的微信小程序。当前仓库为**协作脚手架**，M1 已提交 Profile / 我的订单 **Mock 预览**（见 [`docs/M1_PREVIEW.md`](docs/M1_PREVIEW.md)）。
 
 ## 开始前必读
 
@@ -8,15 +8,17 @@
 |------|------|
 | [docs/COLLABORATION.md](docs/COLLABORATION.md) | 分工、Git 流程、目录约定 |
 | [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) | MVP 范围与验收标准 |
-| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 数据库集合与字段 |
+| [docs/ORDER_INTEGRATION_GUIDE.md](docs/ORDER_INTEGRATION_GUIDE.md) | 订单状态机 · 跨模块集成（M2/M3/M4） |
+| [docs/ORDER_FLOWS_PM.md](docs/ORDER_FLOWS_PM.md) | 订单流转图（产品经理版） |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 云数据库集合（**Mock 阶段未与五态对齐**，见该文档顶部说明） |
 | [docs/MODULE_CONTRACTS.md](docs/MODULE_CONTRACTS.md) | 跨模块接口契约 |
 
 ## 快速开始
 
 1. 克隆仓库，用[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/stable.html)导入**项目根目录**
 2. 在 `project.config.json` 填入 AppID
-3. 复制 `miniprogram/config/env.example.js` → `miniprogram/config/env.js`，填入云环境 ID
-4. 编译运行，确认 Tab 页面可切换
+3. 复制 `miniprogram/config/env.example.js` → `miniprogram/config/env.js`，填入云环境 ID（`env.js` 不提交）
+4. 编译运行；**M1 预览**见 [docs/M1_PREVIEW.md](docs/M1_PREVIEW.md)
 
 ## 项目结构
 

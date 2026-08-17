@@ -4,10 +4,40 @@
 
 ## 全局约定
 
-### 身份
+### 身份与全局状态（`App.globalData` · M1 Mock 预览）
 
-- 登录态：`App.globalData.openId`（string | null）
-- 用户资料：`App.globalData.userProfile`（object | null）
+登录态与 Profile 预览数据由 `modules/auth/store.js` 同步至 `globalData`：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `openId` | string \| null | Mock openId（邮箱派生） |
+| `userProfile` | object \| null | `{ openId, nickName, avatarUrl, department, email }` |
+| `userInfo` | object \| null | Mock 登录用户 `{ email, displayName, phone, department }` |
+| `userMode` | `'owner' \| 'passenger'` | 当前 Profile 模式 |
+| `identities` | string[] | 已开通身份 `owner` / `passenger` |
+| `onboardingComplete` | boolean | 是否完成首次引导 |
+| `vehicle` | object \| null | 车辆信息 |
+| `preference` | object \| null | 乘车偏好 |
+| `habitTags` | string[] | 习惯标签 |
+| `historyOwner` | array | 车主订单 Mock 列表 |
+| `historyPassenger` | array | 乘车人订单 Mock 列表 |
+| `notifications` | array | 通知 Mock 列表 |
+
+`App` 实例方法（M1 页面可调用，**非** `modules/auth` 契约 export）：
+
+| 方法 | 说明 |
+|------|------|
+| `_syncAuth()` | 内部：store → globalData |
+| `loginWithEmail(email)` | Mock 登录 |
+| `routeAfterLogin()` | 登录后跳 onboarding 或「我的」 |
+| `logout()` | 退出 |
+| `setUserMode(mode)` | 切换车主/乘车人模式 |
+| `addIdentity(role)` | 添加身份 |
+| `completeOnboarding()` | 完成引导 |
+| `saveVehicle` / `savePreference` / `saveHabitTags` | 保存 Profile |
+| `hasIdentity(role)` / `getMissingIdentity()` | 身份查询 |
+
+跨模块请使用 **`modules/auth/index.js` 导出函数**，勿直接依赖 `store`（Mock 阶段页面仍有历史引用，后续收敛）。
 
 ### 错误处理
 
@@ -52,7 +82,25 @@ requestProfile()
  * @returns {Promise<Order[]>}
  */
 listMyOrders()
+
+/**
+ * 确保已登录；未登录 reLaunch 登录页
+ * @returns {boolean}
+ */
+requireLogin()
+
+/**
+ * 详情页操作按钮（Mock 规则，M3 接真数据后仍可用）
+ */
+statusActions(order, role)
+
+/**
+ * 是否危险操作（停止匹配、取消等）
+ */
+isDangerAction(action)
 ```
+
+> **Mock 阶段说明**：`store`、`order-status`、`order-display` 等 **未** 列入上表正式 export；M3 接真订单后 M1 改为调 `listMyOrders()` 与 M3 状态枚举。
 
 ### 依赖
 
@@ -239,6 +287,16 @@ sendMessage(orderId, content)
 | `/pages/publish/publish` | M3 | 发布订单 |
 | `/pages/detail/detail?orderId=` | M3 | 订单详情 |
 | `/pages/mine/mine` | M1 | 我的 |
+| `/pages/login/login` | M1 | 邮箱登录（Mock 预览） |
+| `/pages/onboarding/identity/identity` | M1 | 首次选择身份 |
+| `/pages/identity-manage/identity-manage` | M1 | 身份管理 |
+| `/pages/account/account` | M1 | 账号与安全 |
+| `/pages/vehicle/vehicle` | M1 | 车辆信息 |
+| `/pages/preference/preference` | M1 | 乘车偏好 |
+| `/pages/habit-tags/habit-tags` | M1 | 习惯标签 |
+| `/pages/history/history` | M1 | 订单历史列表 |
+| `/pages/history-detail/history-detail` | M1 | 订单历史详情 |
+| `/pages/notify/notify` | M1 | 通知中心 |
 | `/pages/chat/chat?orderId=` | M4 | 订单聊天 |
 
 新增页面必须 PR 更新 `app.json` 和本文档。

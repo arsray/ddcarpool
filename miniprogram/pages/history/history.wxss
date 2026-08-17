@@ -1,0 +1,27 @@
+@import '../mine/m1-shared.wxss';
+
+.role-tabs { display:flex; gap:16rpx; margin-bottom:20rpx; }
+.role-tab { flex:1; text-align:center; padding:16rpx; border-radius:999rpx; background:#fff; border:1rpx solid #e2e8f0; font-size:26rpx; color:#64748b; }
+.role-tab.on.owner { background:#2563eb; color:#fff; border-color:#2563eb; }
+.role-tab.on.passenger { background:#059669; color:#fff; border-color:#059669; }
+.filter-tabs { display:flex; flex-wrap:wrap; gap:12rpx; margin-bottom:20rpx; }
+.filter-tab { font-size:22rpx; padding:8rpx 16rpx; border-radius:999rpx; border:1rpx solid #e2e8f0; color:#64748b; background:#fff; }
+.filter-tab.on { background:#ede9fe; color:#5b21b6; border-color:#c4b5fd; }
+.note-text { color:#64748b; font-size:22rpx; }
+.row-item {
+  position: relative;
+}
+
+.source-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 18rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 0 16rpx 0 8rpx;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+}
+.row-hint { font-size:22rpx; color:#64748b; margin-top:8rpx; }
+.empty-orders { text-align:center; padding:80rpx 40rpx; color:#94a3b8; font-size:26rpx; }

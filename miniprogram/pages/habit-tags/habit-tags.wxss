@@ -1,0 +1,5 @@
+.tags { display:flex; flex-wrap:wrap; gap:12rpx; }
+.tag { font-size:24rpx; padding:10rpx 20rpx; border-radius:999rpx; border:1rpx solid #e2e8f0; background:#fff; color:#64748b; }
+.tag.on { background:#eff6ff; border-color:#93c5fd; color:#2563eb; }
+.hint { font-size:22rpx; color:#94a3b8; margin-top:16rpx; line-height:1.6; }
+.save-btn { margin-top: 24rpx; }

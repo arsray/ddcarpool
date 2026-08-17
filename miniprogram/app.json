@@ -1,9 +1,19 @@
 {
   "pages": [
+    "pages/login/login",
     "pages/index/index",
     "pages/publish/publish",
     "pages/detail/detail",
-    "pages/mine/mine"
+    "pages/mine/mine",
+    "pages/onboarding/identity/identity",
+    "pages/identity-manage/identity-manage",
+    "pages/account/account",
+    "pages/vehicle/vehicle",
+    "pages/preference/preference",
+    "pages/habit-tags/habit-tags",
+    "pages/history/history",
+    "pages/history-detail/history-detail",
+    "pages/notify/notify"
   ],
   "window": {
     "navigationBarBackgroundColor": "#003087",

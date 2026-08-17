@@ -1,0 +1,3 @@
+@import '../mine/m1-shared.wxss';
+
+.unread { font-weight: 700; }
