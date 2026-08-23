@@ -6,10 +6,29 @@
 const { ORDER_STATUS, CLOSE_REASON, STATUS_LABELS } = require('./constants/status')
 const { DEFAULT_POINTS } = require('./constants/points')
 const { validateCreateOrderInput } = require('./validate')
-const { parseDepartTime, getDepartWindowEnd, formatDepartTimeDisplay } = require('./time-slots')
-const { toHistoryItem, toOwnerHistoryItem } = require('./history-bridge')
-const { canTransition, targetStatusForAction } = require('./status-machine')
+const { parseDepartTime, getDepartWindowEnd, formatDepartTimeDisplay, formatHistoryTimeLabel } = require('./time-slots')
 const { comparePlazaOrders } = require('./plaza-sort')
+
+function getHistoryBridge() {
+  return require('./history-bridge')
+}
+
+function resolveStatusAction(status, action) {
+  const { targetStatusForAction, canTransition } = require('./status-machine')
+  const nextStatus = targetStatusForAction(status, action)
+  if (!nextStatus || !canTransition(status, nextStatus)) {
+    return null
+  }
+  return nextStatus
+}
+
+function isSeedOrderId(orderId) {
+  return String(orderId || '').startsWith('seed_')
+}
+
+function isSeedRenamedClone(orderId) {
+  return /^seed_.+_n[a-z0-9]+$/.test(String(orderId || ''))
+}
 
 function formatRoute(fromPointId, toPointId) {
   const from = DEFAULT_POINTS.find((point) => point.pointId === fromPointId)
@@ -171,17 +190,28 @@ function listOrdersForUser(openId, filters) {
     .sort((a, b) => parseDepartTime(b.departTime).getTime() - parseDepartTime(a.departTime).getTime())
 }
 
+function buildAcceptNotificationTitle(order) {
+  const { formatDateLabel } = getHistoryBridge()
+  const departDate = parseDepartTime(order.departTime)
+  const dateLabel = departDate ? formatDateLabel(departDate) : (order.departTime || '').slice(0, 10)
+  const timeLabel = formatHistoryTimeLabel(order)
+  const routeLabel = formatRoute(order.fromPointId, order.toPointId)
+  const schedule = [dateLabel, timeLabel].filter(Boolean).join(' ')
+  return `${schedule} ${routeLabel} 已被接单`
+}
+
 function appendPassengerNotification(order, title) {
   const list = wx.getStorageSync('notifications') || []
   const now = new Date()
   const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   list.unshift({
     id: `n_${Date.now()}`,
-    title: title || `${order.driverName || '司机'} 已接单`,
+    title: title || buildAcceptNotificationTitle(order),
     time: timeLabel,
     read: false,
     targetType: 'passenger',
-    targetId: order._id
+    targetId: order._id,
+    passengerOpenId: order.passengerOpenId || ''
   })
   wx.setStorageSync('notifications', list)
 }
@@ -219,8 +249,8 @@ function acceptOrder(orderId, driver) {
     throw makeError('INVALID_STATUS', '订单已过期')
   }
 
-  const nextStatus = targetStatusForAction(order.status, 'accept')
-  if (!nextStatus || !canTransition(order.status, nextStatus)) {
+  const nextStatus = resolveStatusAction(order.status, 'accept')
+  if (!nextStatus) {
     throw makeError('INVALID_STATUS', '订单当前不可接单')
   }
 
@@ -239,25 +269,54 @@ function acceptOrder(orderId, driver) {
   return enrichListItem(updated, {})
 }
 
+function completeOrder(orderId, actorOpenId) {
+  const orders = expireStaleOrdersInMemory(readAllOrders())
+  const order = orders.find((item) => item._id === orderId)
+  const driverOpenId = (actorOpenId || '').trim()
+
+  if (!order) {
+    throw makeError('ORDER_NOT_FOUND', '订单不存在')
+  }
+  if (!driverOpenId) {
+    throw makeError('NOT_LOGGED_IN', '请先登录')
+  }
+  if (order.driverOpenId !== driverOpenId) {
+    throw makeError('FORBIDDEN', '仅接单司机可完成订单')
+  }
+  if (![ORDER_STATUS.PENDING_DEPARTURE, ORDER_STATUS.IN_PROGRESS].includes(order.status)) {
+    throw makeError('INVALID_STATUS', '订单当前不可完成')
+  }
+
+  const nextStatus = resolveStatusAction(order.status, 'complete')
+  if (!nextStatus) {
+    throw makeError('INVALID_STATUS', '订单当前不可完成')
+  }
+
+  const timestamp = nowIso()
+  const updated = {
+    ...order,
+    status: nextStatus,
+    completedAt: timestamp,
+    updatedAt: timestamp
+  }
+
+  saveOrder(updated)
+  return enrichListItem(updated, {})
+}
+
 function getPassengerHistoryItems(openId) {
+  const { toHistoryItem } = getHistoryBridge()
   return listOrdersForUser(openId, { role: 'passenger' }).map(toHistoryItem)
 }
 
 function getDriverHistoryItems(openId) {
+  const { toOwnerHistoryItem } = getHistoryBridge()
   return listOrdersForUser(openId, { role: 'driver' }).map(toOwnerHistoryItem)
 }
 
 function expireStaleOrders() {
   expireStaleOrdersInMemory(readAllOrders())
   return { expired: true }
-}
-
-function isSeedOrderId(orderId) {
-  return String(orderId || '').startsWith('seed_')
-}
-
-function isSeedRenamedClone(orderId) {
-  return /^seed_.+_n[a-z0-9]+$/.test(String(orderId || ''))
 }
 
 /** 重置已接单订单为匹配中，便于广场接单流程自测 */
@@ -332,6 +391,7 @@ function replacePlazaSeedOrders(seedOrders) {
 module.exports = {
   createOrder,
   acceptOrder,
+  completeOrder,
   getOrderById,
   listOpenOrders,
   listDriverActiveOrders,

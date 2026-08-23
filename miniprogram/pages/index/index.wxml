@@ -24,6 +24,11 @@
     </view>
   </view>
 
+  <view
+    class="section-divider"
+    wx:if="{{hasOwnerIdentity && !isPassengerOnly && !loading && acceptedOrders.length}}"
+  ></view>
+
   <view class="filter-panel" wx:if="{{hasOwnerIdentity && !isPassengerOnly && !loading}}">
     <view class="filter-panel-head">
       <view class="filter-panel-title">筛选条件</view>
@@ -76,6 +81,7 @@
     <view class="order-list">
       <block wx:if="{{allOrders.length}}">
         <view class="order-section-title">匹配中</view>
+        <view class="order-list-hint" wx:if="{{!hasActiveFilters}}">未筛选时按出发时间排序展示全部</view>
         <block wx:if="{{hasActiveFilters}}">
           <view class="order-section-subtitle">符合条件</view>
           <view class="order-section-empty" wx:if="{{!matchedOrders.length}}">暂无完全符合条件的订单</view>

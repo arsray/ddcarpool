@@ -14,6 +14,7 @@ Page({
     isPassenger: false,
     isAssignedDriver: false,
     canAccept: false,
+    canComplete: false,
     fromPlaza: false
   },
 
@@ -56,6 +57,10 @@ Page({
         !isPassenger &&
         hasOwnerIdentity &&
         !item.driverOpenId
+      const canComplete =
+        isAssignedDriver &&
+        (item.status === order.ORDER_STATUS.PENDING_DEPARTURE ||
+          item.status === order.ORDER_STATUS.IN_PROGRESS)
 
       this.setData({
         loading: false,
@@ -65,7 +70,8 @@ Page({
         departTimeLabel: formatDepartTimeDisplay(item),
         isPassenger,
         isAssignedDriver,
-        canAccept
+        canAccept,
+        canComplete
       })
     } catch (error) {
       this.setData({ loading: false })
@@ -126,5 +132,46 @@ Page({
 
   backToPlaza() {
     wx.switchTab({ url: '/pages/index/index' })
+  },
+
+  onComplete() {
+    if (!this.data.canComplete || this.data.submitting) return
+
+    wx.showModal({
+      title: '确认完成',
+      content: '确认乘客已送达并完成本单？',
+      confirmText: '完成',
+      success: (res) => {
+        if (res.confirm) this.submitComplete()
+      }
+    })
+  },
+
+  async submitComplete() {
+    this.setData({ submitting: true })
+    try {
+      const openId = await auth.ensureLogin()
+      await order.completeOrder(this.data.orderId, openId)
+
+      auth.store.initFromStorage()
+      auth.store.syncGlobalData(app.globalData)
+
+      wx.showToast({ title: '订单已完成', icon: 'success' })
+      await this.loadOrder()
+    } catch (error) {
+      const messageMap = {
+        ORDER_NOT_FOUND: '订单不存在',
+        INVALID_STATUS: '订单当前不可完成',
+        FORBIDDEN: '仅接单司机可完成订单',
+        NOT_LOGGED_IN: '请先登录'
+      }
+      wx.showToast({
+        title: messageMap[error.code] || error.message || '操作失败',
+        icon: 'none'
+      })
+      await this.loadOrder()
+    } finally {
+      this.setData({ submitting: false })
+    }
   }
 })

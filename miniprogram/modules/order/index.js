@@ -63,8 +63,8 @@ async function listConfiguredRoutes() {
   return DEFAULT_CONFIGURED_ROUTES
 }
 
-async function completeOrder(_orderId, _actorOpenId) {
-  notImplemented('completeOrder')
+async function completeOrder(orderId, actorOpenId) {
+  return service.completeOrder(orderId, actorOpenId)
 }
 
 async function listPoints() {

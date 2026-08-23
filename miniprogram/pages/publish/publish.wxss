@@ -41,9 +41,27 @@
 
 .label-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 10rpx;
+  gap: 12rpx;
+}
+
+.label-line {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.label.inline {
+  display: inline;
+  margin-bottom: 0;
+}
+
+.label-link {
+  display: inline;
+  font-size: 24rpx;
+  color: #2563eb;
 }
 
 .label-row .label {

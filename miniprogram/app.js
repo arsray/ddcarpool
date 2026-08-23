@@ -8,8 +8,6 @@ try {
 
 const authStore = require('./modules/auth/store')
 const { flushNavQueue } = require('./modules/auth/nav')
-const { refreshPlazaSeedOrders } = require('./modules/order/seed-orders')
-const { resetPlazaAcceptedOrders } = require('./modules/order/service')
 
 /**  bump 版本号可再次触发一次性清空已接单，便于广场自测 */
 const PLAZA_ACCEPTED_RESET_VERSION = '20250823_v2'
@@ -27,6 +25,9 @@ App({
         traceUser: true
       })
     }
+
+    const { resetPlazaAcceptedOrders } = require('./modules/order/service')
+    const { refreshPlazaSeedOrders } = require('./modules/order/seed-orders')
 
     const plazaResetKey = `plaza_accepted_reset_${PLAZA_ACCEPTED_RESET_VERSION}`
     if (!wx.getStorageSync(plazaResetKey)) {

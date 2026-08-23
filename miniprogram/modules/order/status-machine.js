@@ -11,6 +11,7 @@ const ALLOWED_TRANSITIONS = {
   ]),
   [ORDER_STATUS.PENDING_DEPARTURE]: new Set([
     ORDER_STATUS.IN_PROGRESS,
+    ORDER_STATUS.COMPLETED,
     ORDER_STATUS.CLOSED
   ]),
   [ORDER_STATUS.IN_PROGRESS]: new Set([ORDER_STATUS.COMPLETED]),
@@ -31,7 +32,8 @@ function targetStatusForAction(status, action) {
     },
     pending_departure: {
       cancel: ORDER_STATUS.CLOSED,
-      start: ORDER_STATUS.IN_PROGRESS
+      start: ORDER_STATUS.IN_PROGRESS,
+      complete: ORDER_STATUS.COMPLETED
     },
     in_progress: {
       complete: ORDER_STATUS.COMPLETED

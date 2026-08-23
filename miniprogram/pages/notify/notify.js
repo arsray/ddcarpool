@@ -14,6 +14,14 @@ Page({
     if (!item) return;
     item.read = true;
     wx.setStorageSync('notifications', this.data.list);
+    auth.store.initFromStorage();
+    auth.store.syncGlobalData(app.globalData);
+    if (item.targetType === 'passenger' && item.targetId) {
+      wx.navigateTo({
+        url: `/pages/detail/detail?orderId=${item.targetId}`
+      });
+      return;
+    }
     wx.navigateTo({
       url: `/pages/history-detail/history-detail?id=${item.targetId}&role=${item.targetType}`
     });
