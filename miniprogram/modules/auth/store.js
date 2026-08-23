@@ -4,6 +4,12 @@
  */
 const { normalizeEmail } = require('./email')
 const { MOCK, MOCK_SEED_VERSION, cloneSeedOrders } = require('./mock')
+const {
+  SNAPSHOT_STORAGE_KEY,
+  findMockTestUser,
+  presetToSnapshot,
+  getMockTestUsers
+} = require('./mock-users')
 const { safeReLaunch, safeSwitchTab } = require('./nav')
 
 function mockOpenId(email) {
@@ -23,6 +29,30 @@ function toUserProfile(userInfo) {
 }
 
 /** 每次启动写入固定测试订单，避免本地空缓存覆盖 Mock */
+function mergePassengerOrders(seedPassenger, userInfo) {
+  try {
+    const openId = mockOpenId(userInfo && userInfo.email)
+    if (!openId) return seedPassenger
+    const { getPassengerHistoryItems } = require('../order/service')
+    const { mergeHistoryItems } = require('../order/history-bridge')
+    return mergeHistoryItems(getPassengerHistoryItems(openId), seedPassenger)
+  } catch (e) {
+    return seedPassenger
+  }
+}
+
+function mergeOwnerOrders(seedOwner, userInfo) {
+  try {
+    const openId = mockOpenId(userInfo && userInfo.email)
+    if (!openId) return seedOwner
+    const { getDriverHistoryItems } = require('../order/service')
+    const { mergeHistoryItems } = require('../order/history-bridge')
+    return mergeHistoryItems(getDriverHistoryItems(openId), seedOwner)
+  } catch (e) {
+    return seedOwner
+  }
+}
+
 function applyPreviewSeedOrders() {
   const seed = cloneSeedOrders()
   wx.setStorageSync('mockSeedVersion', MOCK_SEED_VERSION)
@@ -54,9 +84,9 @@ function initFromStorage() {
   state.habitTags = wx.getStorageSync('habitTags') || []
 
   const seed = applyPreviewSeedOrders()
-  state.historyOwner = seed.historyOwner
-  state.historyPassenger = seed.historyPassenger
-  state.notifications = seed.notifications
+  state.historyOwner = mergeOwnerOrders(seed.historyOwner, state.userInfo)
+  state.historyPassenger = mergePassengerOrders(seed.historyPassenger, state.userInfo)
+  state.notifications = wx.getStorageSync('notifications') || seed.notifications
 
   if (!state.identities.length && state.onboardingComplete === false && state.vehicle) {
     state.identities = ['owner']
@@ -191,6 +221,15 @@ function savePreference(preference) {
   wx.setStorageSync('preference', preference)
 }
 
+function getPreference() {
+  const stored = wx.getStorageSync('preference')
+  if (stored && typeof stored === 'object') {
+    state.preference = stored
+    return stored
+  }
+  return state.preference
+}
+
 function saveHabitTags(tags) {
   state.habitTags = tags
   wx.setStorageSync('habitTags', tags)
@@ -205,6 +244,78 @@ function getMissingIdentity() {
   if (!ids.includes('owner')) return 'owner'
   if (!ids.includes('passenger')) return 'passenger'
   return null
+}
+
+function readUserSnapshots() {
+  return wx.getStorageSync(SNAPSHOT_STORAGE_KEY) || {}
+}
+
+function writeUserSnapshots(snapshots) {
+  wx.setStorageSync(SNAPSHOT_STORAGE_KEY, snapshots)
+}
+
+function saveCurrentUserSnapshot() {
+  const email = state.userInfo && state.userInfo.email
+  if (!email) return
+
+  const snapshots = readUserSnapshots()
+  snapshots[email] = {
+    userInfo: wx.getStorageSync('userInfo') || state.userInfo,
+    identities: wx.getStorageSync('identities') || [],
+    onboardingComplete: !!wx.getStorageSync('onboardingComplete'),
+    userMode: wx.getStorageSync('userMode') || 'owner',
+    vehicle: wx.getStorageSync('vehicle') || null,
+    preference: wx.getStorageSync('preference') || null,
+    habitTags: wx.getStorageSync('habitTags') || [],
+    notifications: wx.getStorageSync('notifications') || []
+  }
+  writeUserSnapshots(snapshots)
+}
+
+function applyUserSnapshot(snapshot) {
+  wx.setStorageSync('loggedIn', true)
+  wx.setStorageSync('userInfo', snapshot.userInfo)
+  wx.setStorageSync('identities', snapshot.identities || [])
+  wx.setStorageSync('onboardingComplete', !!snapshot.onboardingComplete)
+  wx.setStorageSync('userMode', snapshot.userMode || 'owner')
+
+  if (snapshot.vehicle) {
+    wx.setStorageSync('vehicle', snapshot.vehicle)
+  } else {
+    wx.removeStorageSync('vehicle')
+  }
+
+  if (snapshot.preference) {
+    wx.setStorageSync('preference', snapshot.preference)
+  } else {
+    wx.removeStorageSync('preference')
+  }
+
+  if (snapshot.habitTags && snapshot.habitTags.length) {
+    wx.setStorageSync('habitTags', snapshot.habitTags)
+  } else {
+    wx.removeStorageSync('habitTags')
+  }
+
+  wx.setStorageSync('notifications', snapshot.notifications || [])
+}
+
+function switchMockUser(email) {
+  const normalized = normalizeEmail(email)
+  const preset = findMockTestUser(normalized)
+  if (!preset) {
+    const err = new Error('MOCK_USER_NOT_FOUND')
+    err.code = 'MOCK_USER_NOT_FOUND'
+    throw err
+  }
+
+  saveCurrentUserSnapshot()
+
+  const snapshots = readUserSnapshots()
+  const snapshot = snapshots[normalized] || presetToSnapshot(preset)
+  applyUserSnapshot(snapshot)
+  initFromStorage()
+  return preset
 }
 
 module.exports = {
@@ -222,8 +333,11 @@ module.exports = {
   completeOnboarding,
   saveVehicle,
   savePreference,
+  getPreference,
   saveHabitTags,
   hasIdentity,
   getMissingIdentity,
+  getMockTestUsers,
+  switchMockUser,
   applyPreviewSeedOrders
 }

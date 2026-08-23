@@ -1,22 +1,26 @@
-/** @file 配置路线种子 — 顺路计算 P0 */
+/** @file 配置路线种子 — 顺路计算 P0（pointIds 顺序与 POI sortOrder 对齐） */
 
 const DEFAULT_CONFIGURED_ROUTES = [
   {
-    routeId: 'backstage-main',
-    name: '主 backstage 走廊',
-    pointIds: ['cast-gate', 'office-tower', 'parking-a', 'parking-b'],
+    routeId: 'backstage-master',
+    name: 'Backstage 主走廊',
+    pointIds: [
+      'poi-01', 'poi-02', 'poi-03', 'poi-04', 'poi-05', 'poi-06',
+      'poi-07', 'poi-08', 'poi-09', 'poi-10', 'poi-11', 'poi-12',
+      'poi-13', 'poi-14'
+    ],
     enabled: true
   },
   {
-    routeId: 'to-metro',
-    name: '往地铁站方向',
-    pointIds: ['cast-gate', 'parking-a', 'metro-11'],
+    routeId: 'park-core',
+    name: '园区核心动线',
+    pointIds: ['poi-01', 'poi-02', 'poi-03', 'poi-04', 'poi-07', 'poi-08', 'poi-09'],
     enabled: true
   },
   {
-    routeId: 'hotel-loop',
-    name: '酒店区连线',
-    pointIds: ['office-tower', 'hotel-shdr', 'parking-b'],
+    routeId: 'hotel-external',
+    name: '酒店与外区',
+    pointIds: ['poi-08', 'poi-10', 'poi-11', 'poi-12', 'poi-13', 'poi-14'],
     enabled: true
   }
 ]

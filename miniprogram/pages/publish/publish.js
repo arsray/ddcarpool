@@ -1,8 +1,319 @@
+const app = getApp()
+const auth = require('../../modules/auth/index')
+const order = require('../../modules/order/index')
+const { PREFERENCE_NOTE_TAGS } = require('../../modules/auth/vehicle-data')
+const { MAX_NOTE_LENGTH, buildDatePickerOptions } = require('../../modules/order/validate')
+const {
+  buildAvailableSlotsForDate,
+  formatDepartTimeForStorage
+} = require('../../modules/order/time-slots')
+
+const COUNT_RANGE = Array.from({ length: 10 }, (_, index) => index + 1)
+
+function pickInitialSchedule(dateValues, now) {
+  for (let index = 0; index < dateValues.length; index += 1) {
+    const slots = buildAvailableSlotsForDate(dateValues[index], now)
+    if (slots.length) {
+      return {
+        dateIndex: index,
+        date: dateValues[index],
+        slots
+      }
+    }
+  }
+  return {
+    dateIndex: 0,
+    date: dateValues[0],
+    slots: buildAvailableSlotsForDate(dateValues[0], now)
+  }
+}
+
+function buildSlotViewState(dateStr, now) {
+  const slots = buildAvailableSlotsForDate(dateStr, now)
+  const selectedSlot = slots[0] || null
+  return {
+    timeSlots: slots,
+    timeLabels: slots.map((slot) => slot.label),
+    timeIndex: 0,
+    selectedSlot,
+    hasAvailableSlots: slots.length > 0,
+    formTimeWindow: selectedSlot ? selectedSlot.label : ''
+  }
+}
+
+function buildSelectedNoteMap(noteTags) {
+  const selectedNoteMap = {}
+  ;(noteTags || []).forEach((tag) => {
+    selectedNoteMap[tag] = true
+  })
+  return selectedNoteMap
+}
+
+function buildSubmitNote(selectedNoteMap, supplementNote) {
+  const noteTags = Object.keys(selectedNoteMap || {}).filter((key) => selectedNoteMap[key])
+  const parts = noteTags.slice()
+  const extra = (supplementNote || '').trim()
+  if (extra) parts.push(extra)
+  return parts.join(' · ')
+}
+
+function readPassengerPreference() {
+  auth.store.initFromStorage()
+  auth.store.syncGlobalData(app.globalData)
+  return auth.store.getPreference() || app.globalData.preference || {
+    defaultCount: 1,
+    note: '',
+    noteTags: []
+  }
+}
+
 Page({
   data: {
-    module: 'M3',
-    pageName: '发布订单',
-    owner: 'M3 订单生命周期 / 点位',
-    todo: '类型选择、起终点、出发时间、备注、提交'
+    hasPassengerIdentity: false,
+    loading: true,
+    submitting: false,
+    points: [],
+    pointNames: [],
+    fromIndex: -1,
+    toIndex: -1,
+    hasSelectedFrom: false,
+    hasSelectedTo: false,
+    dateValues: [],
+    dateLabels: [],
+    dateIndex: 0,
+    timeSlots: [],
+    timeLabels: [],
+    timeIndex: 0,
+    selectedSlot: null,
+    hasAvailableSlots: false,
+    countRange: COUNT_RANGE,
+    countIndex: 0,
+    noteTags: PREFERENCE_NOTE_TAGS,
+    selectedNoteMap: {},
+    form: {
+      fromPointId: '',
+      toPointId: '',
+      date: '',
+      timeWindow: '',
+      passengerCount: 1,
+      note: ''
+    },
+    routePreview: '',
+    maxNoteLength: MAX_NOTE_LENGTH,
+    noteLength: 0
+  },
+
+  onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 1 })
+    }
+    if (!auth.requireLogin()) return
+    this.bootstrap()
+  },
+
+  async bootstrap() {
+    const hasPassengerIdentity = app.hasIdentity('passenger')
+    this.setData({ hasPassengerIdentity, loading: true })
+
+    if (!hasPassengerIdentity) {
+      this.setData({ loading: false })
+      return
+    }
+
+    try {
+      const preference = readPassengerPreference()
+      const selectedNoteMap = buildSelectedNoteMap(preference.noteTags)
+      const supplementNote = preference.note || ''
+      const points = await order.listPoints()
+      const { values: dateValues, labels: dateLabels } = buildDatePickerOptions(new Date())
+      const countIndex = Math.max(0, (preference.defaultCount || 1) - 1)
+      const schedule = pickInitialSchedule(dateValues, new Date())
+      const slotState = buildSlotViewState(schedule.date, new Date())
+
+      this.setData({
+        points,
+        pointNames: points.map((point) => point.name),
+        dateValues,
+        dateLabels,
+        dateIndex: schedule.dateIndex,
+        countIndex,
+        fromIndex: -1,
+        toIndex: -1,
+        hasSelectedFrom: false,
+        hasSelectedTo: false,
+        routePreview: '',
+        selectedNoteMap,
+        ...slotState,
+        form: {
+          fromPointId: '',
+          toPointId: '',
+          date: schedule.date,
+          timeWindow: slotState.formTimeWindow,
+          passengerCount: COUNT_RANGE[countIndex],
+          note: supplementNote
+        },
+        noteLength: supplementNote.length,
+        loading: false
+      })
+    } catch (error) {
+      this.setData({ loading: false })
+      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+    }
+  },
+
+  refreshRoutePreview() {
+    const { form, hasSelectedFrom, hasSelectedTo } = this.data
+    if (!hasSelectedFrom || !hasSelectedTo || !form.fromPointId || !form.toPointId) {
+      this.setData({ routePreview: '' })
+      return
+    }
+    this.setData({
+      routePreview: order.formatRoute(form.fromPointId, form.toPointId, this.data.points)
+    })
+  },
+
+  onFromChange(e) {
+    const fromIndex = Number(e.detail.value)
+    const point = this.data.points[fromIndex]
+    this.setData({
+      fromIndex,
+      hasSelectedFrom: true,
+      'form.fromPointId': point ? point.pointId : ''
+    }, () => this.refreshRoutePreview())
+  },
+
+  onToChange(e) {
+    const toIndex = Number(e.detail.value)
+    const point = this.data.points[toIndex]
+    this.setData({
+      toIndex,
+      hasSelectedTo: true,
+      'form.toPointId': point ? point.pointId : ''
+    }, () => this.refreshRoutePreview())
+  },
+
+  onDateChange(e) {
+    const dateIndex = Number(e.detail.value)
+    const date = this.data.dateValues[dateIndex]
+    const slotState = buildSlotViewState(date, new Date())
+    this.setData({
+      dateIndex,
+      ...slotState,
+      'form.date': date,
+      'form.timeWindow': slotState.formTimeWindow
+    })
+  },
+
+  onTimeChange(e) {
+    const timeIndex = Number(e.detail.value)
+    const selectedSlot = this.data.timeSlots[timeIndex] || null
+    this.setData({
+      timeIndex,
+      selectedSlot,
+      'form.timeWindow': selectedSlot ? selectedSlot.label : ''
+    })
+  },
+
+  onCountChange(e) {
+    const countIndex = Number(e.detail.value)
+    this.setData({
+      countIndex,
+      'form.passengerCount': this.data.countRange[countIndex]
+    })
+  },
+
+  toggleNoteTag(e) {
+    const tag = e.currentTarget.dataset.tag
+    const selectedNoteMap = {
+      ...this.data.selectedNoteMap,
+      [tag]: !this.data.selectedNoteMap[tag]
+    }
+    if (!selectedNoteMap[tag]) delete selectedNoteMap[tag]
+    this.setData({ selectedNoteMap })
+  },
+
+  onNoteInput(e) {
+    const note = e.detail.value
+    this.setData({
+      'form.note': note,
+      noteLength: note.length
+    })
+  },
+
+  goAddPassengerIdentity() {
+    wx.navigateTo({ url: '/pages/onboarding/identity/identity?mode=add' })
+  },
+
+  goPreference() {
+    wx.navigateTo({ url: '/pages/preference/preference' })
+  },
+
+  async onSubmit() {
+    if (this.data.submitting) return
+
+    const { form, selectedSlot, selectedNoteMap } = this.data
+    const submitNote = buildSubmitNote(selectedNoteMap, form.note)
+
+    if (!form.date) {
+      wx.showToast({ title: '请选择出发日期', icon: 'none' })
+      return
+    }
+    if (!selectedSlot) {
+      wx.showToast({ title: '请选择出发时间窗', icon: 'none' })
+      return
+    }
+    if (!form.fromPointId || !this.data.hasSelectedFrom) {
+      wx.showToast({ title: '请选择出发地点', icon: 'none' })
+      return
+    }
+    if (!form.toPointId || !this.data.hasSelectedTo) {
+      wx.showToast({ title: '请选择目的地', icon: 'none' })
+      return
+    }
+    if (!form.passengerCount) {
+      wx.showToast({ title: '请选择出行人数', icon: 'none' })
+      return
+    }
+
+    this.setData({ submitting: true })
+
+    try {
+      const openId = await auth.ensureLogin()
+      const profile = await auth.getProfile()
+      const storedTime = formatDepartTimeForStorage(form.date, selectedSlot)
+      const created = await order.createOrder({
+        fromPointId: form.fromPointId,
+        toPointId: form.toPointId,
+        departTime: storedTime.departTime,
+        departTimeEnd: storedTime.departTimeEnd,
+        passengerCount: form.passengerCount,
+        note: submitNote,
+        passengerOpenId: openId,
+        passengerName: (profile && profile.nickName) || app.globalData.userInfo.displayName || '乘客'
+      })
+
+      auth.store.initFromStorage()
+      auth.store.syncGlobalData(app.globalData)
+
+      wx.showToast({ title: '发布成功', icon: 'success' })
+      setTimeout(() => {
+        wx.navigateTo({ url: `/pages/detail/detail?orderId=${created._id}` })
+      }, 400)
+    } catch (error) {
+      const messageMap = {
+        INVALID_POI: '请选择有效的上下车地点',
+        INVALID_DEPART_TIME: '请选择有效的 15 分钟时间窗',
+        OVERLAPPING_ORDER: '该时段已有进行中的订单',
+        INVALID_PASSENGER_COUNT: '出行人数无效',
+        INVALID_NOTE: `备注不超过 ${MAX_NOTE_LENGTH} 字`,
+        NOT_LOGGED_IN: '请先登录'
+      }
+      wx.showToast({
+        title: messageMap[error.code] || error.message || '发布失败',
+        icon: 'none'
+      })
+    } finally {
+      this.setData({ submitting: false })
+    }
   }
 })

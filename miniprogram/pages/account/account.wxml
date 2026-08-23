@@ -4,6 +4,7 @@
     <view class="field-row"><text class="label">手机号</text><text class="value muted">{{phoneText}}</text></view>
     <view class="field-row"><text class="label">MYID</text><text class="value muted">未绑定 ›</text></view>
   </view>
+
   <view class="row-item" bindtap="goIdentityManage">
     <view class="row-main">
       <view class="row-title">身份管理</view>
@@ -11,6 +12,31 @@
     </view>
     <text class="arrow">›</text>
   </view>
-  <view class="row-item" bindtap="viewAgreement"><view class="row-main"><view class="row-title">用户协议</view></view><text class="arrow">›</text></view>
+
+  <view class="row-item" bindtap="viewAgreement">
+    <view class="row-main"><view class="row-title">用户协议</view></view>
+    <text class="arrow">›</text>
+  </view>
+
+  <view class="mock-section">
+    <view class="section-title">Mock 测试账号</view>
+    <view class="section-desc">一键切换双角色，各自订单与偏好独立保存</view>
+    <view
+      class="mock-user-row {{currentEmail === item.email ? 'active' : ''}}"
+      wx:for="{{mockUsers}}"
+      wx:key="email"
+      data-email="{{item.email}}"
+      bindtap="onSwitchMockUser"
+    >
+      <view class="mock-user-main">
+        <view class="mock-user-label">{{item.label}}</view>
+        <view class="mock-user-sub">{{item.subtitle}}</view>
+        <view class="mock-user-email">{{item.email}}</view>
+      </view>
+      <text class="mock-user-check" wx:if="{{currentEmail === item.email}}">当前</text>
+      <text class="arrow" wx:else>切换</text>
+    </view>
+  </view>
+
   <button class="logout-btn" bindtap="onLogout">退出登录</button>
 </view>

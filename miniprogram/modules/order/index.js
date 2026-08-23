@@ -10,6 +10,7 @@ const {
   STATUS_LABELS,
   FILTER_BUCKETS
 } = require('./constants/status')
+const service = require('./service')
 
 function notImplemented(name) {
   const err = new Error(`${name} not implemented — M3 owner`)
@@ -17,16 +18,20 @@ function notImplemented(name) {
   throw err
 }
 
-async function listOpenOrders(_options) {
-  notImplemented('listOpenOrders')
+async function listOpenOrders(options) {
+  const enrichedOptions = { ...(options || {}) }
+  if (!enrichedOptions.computeMatchScore) {
+    enrichedOptions.computeMatchScore = computeMatchScore
+  }
+  return service.listOpenOrders(enrichedOptions)
 }
 
-async function createOrder(_input) {
-  notImplemented('createOrder')
+async function createOrder(input) {
+  return service.createOrder(input)
 }
 
-async function acceptOrder(_orderId, _driver) {
-  notImplemented('acceptOrder')
+async function acceptOrder(orderId, driver) {
+  return service.acceptOrder(orderId, driver)
 }
 
 async function cancelOrder(_orderId, _options) {
@@ -34,19 +39,23 @@ async function cancelOrder(_orderId, _options) {
 }
 
 async function expireStaleOrders() {
-  notImplemented('expireStaleOrders')
+  return service.expireStaleOrders()
 }
 
 async function startTrip(_orderId, _actorOpenId) {
   notImplemented('startTrip')
 }
 
-async function getOrderById(_orderId) {
-  notImplemented('getOrderById')
+async function getOrderById(orderId) {
+  return service.getOrderById(orderId)
 }
 
-async function listOrdersForUser(_openId, _filters) {
-  notImplemented('listOrdersForUser')
+async function listDriverActiveOrders(openId, options) {
+  return service.listDriverActiveOrders(openId, options)
+}
+
+async function listOrdersForUser(openId, filters) {
+  return service.listOrdersForUser(openId, filters)
 }
 
 async function listConfiguredRoutes() {
@@ -60,6 +69,8 @@ async function completeOrder(_orderId, _actorOpenId) {
 
 async function listPoints() {
   return DEFAULT_POINTS
+    .filter((point) => point.enabled !== false)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
 function formatRoute(fromPointId, toPointId, points) {
@@ -73,6 +84,7 @@ function formatRoute(fromPointId, toPointId, points) {
 
 module.exports = {
   listOpenOrders,
+  listDriverActiveOrders,
   createOrder,
   acceptOrder,
   cancelOrder,

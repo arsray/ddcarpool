@@ -1,10 +1,12 @@
 const app = getApp();
-const { requireLogin } = require('../../utils/util');
+const auth = require('../../modules/auth/index');
 
 Page({
   data: { list: [] },
   onShow() {
-    if (!requireLogin()) return;
+    if (!auth.requireLogin()) return;
+    auth.store.initFromStorage();
+    auth.store.syncGlobalData(app.globalData);
     this.setData({ list: app.globalData.notifications || [] });
   },
   onTap(e) {

@@ -29,6 +29,8 @@ Page({
 
   onShow() {
     if (!auth.requireLogin()) return
+    auth.store.initFromStorage()
+    auth.store.syncGlobalData(app.globalData)
     this.initRole(this.data.role)
     this.loadList()
   },

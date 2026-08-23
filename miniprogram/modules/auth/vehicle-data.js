@@ -86,6 +86,16 @@ function formatPreferenceSummary(preference) {
   return parts.join(' · ') || '无备注';
 }
 
+/** 发布搭车单时，将常用特殊要求与补充说明合并为备注默认值 */
+function buildOrderNoteFromPreference(preference) {
+  if (!preference) return '';
+  const parts = [...(preference.noteTags || [])];
+  if (preference.note && preference.note.trim()) {
+    parts.push(preference.note.trim());
+  }
+  return parts.join(' · ');
+}
+
 module.exports = {
   COMMON_BRANDS,
   BRAND_GROUPS,
@@ -98,5 +108,6 @@ module.exports = {
   HABIT_TAG_POOL,
   PREFERENCE_NOTE_TAGS,
   validatePlateSuffix,
-  formatPreferenceSummary
+  formatPreferenceSummary,
+  buildOrderNoteFromPreference
 };

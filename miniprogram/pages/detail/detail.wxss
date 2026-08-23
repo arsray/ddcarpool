@@ -1,0 +1,79 @@
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.status-tag {
+  font-size: 22rpx;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+}
+
+.role-tag {
+  font-size: 22rpx;
+  color: #64748b;
+}
+
+.route {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.hint {
+  font-size: 24rpx;
+  color: #64748b;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #edf2f7;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 26rpx;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: #1e293b;
+  text-align: right;
+}
+
+.btn-primary {
+  margin-top: 16rpx;
+  background: var(--color-primary, #003087);
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.btn-secondary {
+  margin-top: 16rpx;
+  background: #fff;
+  color: var(--color-primary, #003087);
+  border: 1rpx solid #bfdbfe;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.btn-secondary::after {
+  border: none;
+}

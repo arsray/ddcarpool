@@ -20,7 +20,9 @@ Owner: M3（订单 / 点位 / 顺路 / 状态机）
 ```
 order/
 ├── index.js           # 对外 API（仅 require 此文件）
-├── service.js         # TODO: 云库读写
+├── service.js         # 本地存储读写（Mock；后续换云库）
+├── validate.js        # createOrder 校验
+├── history-bridge.js  # M3 订单 → M1 历史列表格式
 ├── match.js
 ├── status-machine.js
 ├── constants.js       # 兼容 re-export

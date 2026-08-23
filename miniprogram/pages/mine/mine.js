@@ -22,8 +22,13 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 2 })
+    }
     if (!isTopPage('pages/mine/mine')) return
     if (!auth.requireLogin()) return
+    auth.store.initFromStorage()
+    auth.store.syncGlobalData(app.globalData)
     if (!app.globalData.onboardingComplete || !app.globalData.identities.length) {
       safeReLaunch('/pages/onboarding/identity/identity')
       return

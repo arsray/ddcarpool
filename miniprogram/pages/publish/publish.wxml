@@ -1,9 +1,125 @@
-<view class="container">
-  <view class="scaffold-banner">协作脚手架 · {{module}}</view>
-  <view class="card">
-    <view class="scaffold-title">{{pageName}}</view>
-    <view class="scaffold-desc">模块负责人：{{owner}}</view>
-    <view class="scaffold-desc">待实现：{{todo}}</view>
-    <view class="scaffold-meta">接口：modules/order → createOrder()、listPoints()</view>
-  </view>
+<view class="container tab-page">
+  <block wx:if="{{loading}}">
+    <view class="empty-state">加载中…</view>
+  </block>
+
+  <block wx:elif="{{!hasPassengerIdentity}}">
+    <view class="card empty-card">
+      <view class="empty-title">需要乘车人身份</view>
+      <view class="empty-desc">搭车单由乘客发布，请先添加乘车人身份并设置偏好。</view>
+      <button class="btn-primary" bindtap="goAddPassengerIdentity">添加乘车人身份</button>
+    </view>
+    <view class="tab-bottom-spacer"></view>
+  </block>
+
+  <block wx:else>
+    <view class="intro-card">
+      <view class="intro-title">发布搭车单</view>
+      <view class="intro-desc">请选择您的出发时间、出发地点及目的地，成功提交后订单将进入「匹配中」，司机可在广场中接单。</view>
+    </view>
+
+    <view class="card">
+      <view class="field">
+        <view class="field-row">
+          <view class="field-col">
+            <text class="label">出发日期</text>
+            <picker mode="selector" range="{{dateLabels}}" value="{{dateIndex}}" bindchange="onDateChange">
+              <view class="picker-field">
+                <text>{{dateLabels[dateIndex]}}</text>
+                <text class="arrow">›</text>
+              </view>
+            </picker>
+          </view>
+          <view class="field-col">
+            <text class="label">出发时间窗</text>
+            <picker
+              wx:if="{{hasAvailableSlots}}"
+              mode="selector"
+              range="{{timeLabels}}"
+              value="{{timeIndex}}"
+              bindchange="onTimeChange"
+            >
+              <view class="picker-field">
+                <text>{{form.timeWindow}}</text>
+                <text class="arrow">›</text>
+              </view>
+            </picker>
+            <view class="picker-field disabled" wx:else>
+              <text class="placeholder">当日可选时间窗已结束，请换日期</text>
+            </view>
+          </view>
+        </view>
+        <text class="field-hint">仅可选择今天起 7 日内</text>
+      </view>
+
+      <view class="field">
+        <view class="field-row">
+          <view class="field-col">
+            <text class="label">出发地点</text>
+            <picker mode="selector" range="{{pointNames}}" value="{{fromIndex >= 0 ? fromIndex : 0}}" bindchange="onFromChange">
+              <view class="picker-field">
+                <text class="{{hasSelectedFrom ? '' : 'placeholder'}}">{{hasSelectedFrom ? pointNames[fromIndex] : '请选择出发地点'}}</text>
+                <text class="arrow">›</text>
+              </view>
+            </picker>
+          </view>
+          <view class="field-col">
+            <text class="label">目的地</text>
+            <picker mode="selector" range="{{pointNames}}" value="{{toIndex >= 0 ? toIndex : 0}}" bindchange="onToChange">
+              <view class="picker-field">
+                <text class="{{hasSelectedTo ? '' : 'placeholder'}}">{{hasSelectedTo ? pointNames[toIndex] : '请选择目的地'}}</text>
+                <text class="arrow">›</text>
+              </view>
+            </picker>
+          </view>
+        </view>
+      </view>
+
+      <view class="route-preview" wx:if="{{routePreview}}">{{routePreview}}</view>
+
+      <view class="field">
+        <text class="label">出行人数</text>
+        <picker mode="selector" range="{{countRange}}" value="{{countIndex}}" bindchange="onCountChange">
+          <view class="picker-field">
+            <text>{{form.passengerCount}} 人</text>
+            <text class="arrow">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="field">
+        <text class="label">特殊要求 · 常用</text>
+        <view class="tags">
+          <view
+            wx:for="{{noteTags}}"
+            wx:key="*this"
+            class="tag {{selectedNoteMap[item] ? 'on' : ''}}"
+            data-tag="{{item}}"
+            bindtap="toggleNoteTag"
+          >{{item}}</view>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="label-row">
+          <text class="label">特殊要求 可在「乘车偏好」中设置</text>
+          <text class="counter">{{noteLength}}/{{maxNoteLength}}</text>
+        </view>
+        <textarea
+          class="textarea"
+          auto-height="{{false}}"
+          value="{{form.note}}"
+          bindinput="onNoteInput"
+          placeholder="可自由填写其他要求"
+          maxlength="{{maxNoteLength}}"
+        />
+      </view>
+
+      <button class="btn-primary submit-btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">
+        发布搭车单
+      </button>
+    </view>
+
+    <view class="tab-bottom-spacer"></view>
+  </block>
 </view>
