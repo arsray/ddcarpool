@@ -77,7 +77,7 @@ P0 仅支持 **乘客发布搭车单**；司机通过 **接单** 参与，不单
 | `toPointId` | string | 是 | 终点 POI |
 | `departTime` | string | 是 | 出发时间 `YYYY-MM-DD HH:mm`（本地/业务时区，团队统一） |
 | `passengerCount` | number | 是 | 出行人数，≥1 |
-| `note` | string | 否 | 备注，≤200 字 |
+| `note` | string | 否 | 备注，≤100 字（与 `validate.js` · `MAX_NOTE_LENGTH` 一致） |
 | `status` | string | 是 | 见上表 |
 | `closeReason` | string | 否 | 仅 `closed` |
 | `passengerOpenId` | string | 是 | 乘客 openId（发布者） |
@@ -123,6 +123,7 @@ matching ──司机接单──→ pending_departure ──出发──→ in_
 | `matching` | 取消 cancel | 乘客 | `closed` | closeReason=`cancelled_by_passenger` |
 | `matching` | 过期 expire | 系统 | `closed` | `departTime` 已过；closeReason=`expired` |
 | `pending_departure` | 出发 start | 司机 | `in_progress` | 写 startedAt；或到点自动触发（实现二选一，PRD 允许） |
+| `pending_departure` | 完成 complete | 司机或乘客 | `completed` | **Mock 短路**：本 PR UI 未暴露 `startTrip`，允许直接完成 |
 | `pending_departure` | 取消 cancel | 乘客或司机 | `closed` | P1 细化是否回 matching；P0 先 closed |
 | `in_progress` | 完成 complete | 司机或乘客 | `completed` | 写 completedAt；**P0 行程中不可取消** |
 | `in_progress` | 取消 | — | — | **不允许** |
@@ -209,4 +210,5 @@ matching ──司机接单──→ pending_departure ──出发──→ in_
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v2.1 | 2026-08-24 | 备注 ≤100 字；Mock 允许 `pending_departure` 直接 complete |
 | v2 | 2026-08-17 | M3 PR：五态、passengerCount、configured_routes、对齐 PRD v1.1 |
