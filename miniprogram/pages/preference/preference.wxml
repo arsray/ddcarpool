@@ -19,7 +19,7 @@
 
     <view class="field">
       <text class="label">特殊要求 · 补充说明</text>
-      <textarea class="textarea" value="{{form.note}}" bindinput="onNoteInput" placeholder="可自由填写其他要求" maxlength="200" />
+      <textarea class="textarea" value="{{form.note}}" bindinput="onNoteInput" placeholder="可自由填写其他要求" maxlength="100" />
     </view>
 
     <view class="hint">常用选项与补充说明一并保存；发起搭车单时作初始默认值</view>

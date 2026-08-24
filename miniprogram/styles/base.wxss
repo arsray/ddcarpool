@@ -52,3 +52,19 @@ page {
   padding: 80rpx 40rpx;
   color: var(--color-text-muted);
 }
+
+/** Tab 页内容区 — 底部留白由 .tab-bottom-spacer 撑开，避免被自定义 TabBar 遮挡 */
+.tab-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.container.tab-page {
+  padding-bottom: var(--space-md);
+}
+
+.tab-bottom-spacer,
+.list-bottom-spacer {
+  height: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
+  flex-shrink: 0;
+}

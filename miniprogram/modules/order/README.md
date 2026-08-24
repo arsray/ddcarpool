@@ -1,31 +1,37 @@
-# M3 — order 模块
+# M3 order 模块
 
-负责人：_待填写_
+Owner: M3（订单 / 点位 / 顺路 / 状态机）
 
-## 职责
+## 职责（P0）
 
-- 订单 CRUD 与状态机
-- 固定点位配置
-- 路线文案格式化
+- 乘客 `createOrder` → **matching**
+- 司机 `acceptOrder` → **pending_departure**
+- `startTrip` / `completeOrder` → **in_progress** / **completed**
+- `cancelOrder` / `expireStaleOrders` → **closed**
+- POI、configured_routes、顺路排序
 
-## 接口
+## 文档
 
-见 `docs/MODULE_CONTRACTS.md` → M3 order 模块
+- `docs/DATA_MODEL.md` v2
+- `docs/MODULE_CONTRACTS.md` M3 节
 
-## 数据
+## 目录
 
-- 集合 `orders`、`points`
-- 默认点位：`constants.js`
+```
+order/
+├── index.js           # 对外 API（仅 require 此文件）
+├── service.js         # 本地存储读写（Mock；后续换云库）
+├── validate.js        # createOrder 校验
+├── history-bridge.js  # M3 订单 → M1 历史列表格式
+├── match.js
+├── status-machine.js
+├── constants.js       # 兼容 re-export
+└── constants/
+    ├── status.js
+    ├── points.js
+    └── routes.js
+```
 
-## 实现状态
+## 错误码
 
-| 函数 | 状态 |
-|------|------|
-| `listOpenOrders` | stub |
-| `getOrderById` | stub |
-| `createOrder` | stub |
-| `acceptOrder` | stub |
-| `cancelOrder` | stub |
-| `completeOrder` | stub |
-| `listPoints` | stub（可返回 DEFAULT_POINTS） |
-| `formatRoute` | stub |
+见 `docs/MODULE_CONTRACTS.md` M3 节。

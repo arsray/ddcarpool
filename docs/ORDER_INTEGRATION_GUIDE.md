@@ -7,8 +7,28 @@
 【不适合】只关心「页面长什么样」——请看 M1 预览分支或 ORDER_FLOWS_PM.md  
 
 > **Owner**：M1 规则与「我的订单」展示；M3 订单生命周期；M4 Chat；M2 广场 UI。  
-> **配套**：[`ORDER_FLOWS_PM.md`](./ORDER_FLOWS_PM.md)（PM 流转图）、[`M1_ORDER_STATES.md`](./M1_ORDER_STATES.md)、[`MODULE_CONTRACTS.md`](./MODULE_CONTRACTS.md)、[`DATA_MODEL.md`](./DATA_MODEL.md)（云库待 M3 对齐本文）。  
+> **配套**：[`ORDER_FLOWS_PM.md`](./ORDER_FLOWS_PM.md)（PM 流转图）、[`M1_ORDER_STATES.md`](./M1_ORDER_STATES.md)、[`MODULE_CONTRACTS.md`](./MODULE_CONTRACTS.md)、[`DATA_MODEL.md`](./DATA_MODEL.md)（**v2 存库枚举 · P0 准绳**）。  
 > **在线**：https://github.com/arsray/ddcarpool/blob/feat/m1-profile/docs/ORDER_INTEGRATION_GUIDE.md
+
+---
+
+## ⚠️ M3 PR（v2）对齐说明 — **以 `DATA_MODEL.md` v2 为准**
+
+本指南 §2–§5 仍描述 **完整产品愿景**（含车主发布单、双实体 match）。**当前 P0 / Mock 实现** 以 [`DATA_MODEL.md`](./DATA_MODEL.md) v2 与 [`M3_INTEGRATION_STATUS.md`](./M3_INTEGRATION_STATUS.md) 为准：
+
+| 本指南（历史/愿景） | v2 存库枚举（M3 Mock） | UI 中文 |
+|---------------------|-------------------------|---------|
+| `open` | `matching` | 匹配中 |
+| `matched_pre` | `pending_departure` | 待出发 |
+| `matched_trip` | `in_progress` | 行程中 |
+| `completed` | `completed` | 已完成 |
+| `closed` | `closed` | 已关闭 |
+
+**P0 范围（v2）：** 仅 **乘客发单** + **司机广场接单**；无 `createOrder(offer/publish)`、无车主发布锚点单（Post-MVP / P2，见 DATA_MODEL § orders）。
+
+**Mock 缺口（不阻塞本 PR）：** `cancelOrder`、`startTrip` 在 [`MODULE_CONTRACTS.md`](./MODULE_CONTRACTS.md) 已标 **P1**；UI 从 `pending_departure` 直接 `completeOrder`，跳过「出发」步骤。
+
+下文 §1–§14 保留供 M4、车主发布副流程等后续迭代参考；实现 v2 五态时请优先读 DATA_MODEL + MODULE_CONTRACTS。
 
 ---
 
@@ -17,9 +37,11 @@
 | 角色 | 能做什么 |
 |------|----------|
 | **乘车人** | **仅发布**搭车单；**不可接单** |
-| **车主** | **发布**车主订单（匹配锚点）+ **接单**（广场浏览或匹配推荐里**主动选择**） |
+| **车主** | **接单**（广场浏览里**主动选择**）；**发布车主订单（匹配锚点）见 P2 / Post-MVP** |
 
-**铁律**：匹配 **永不自动完成**——无论是否有发布单、是否有推荐，都必须由 **车主接受某条乘车人搭车单** 才进入「待出发」。
+**铁律**：匹配 **永不自动完成**——必须由 **车主接受某条乘车人搭车单** 才进入「待出发」。
+
+> **P0（v2 · 本 PR）：** 仅实现乘车人发单 + 车主广场接单；§2 中「车主 · 发布」、§5.2 发布+推荐路径 **未在 Mock 中实现**，字段与状态以 DATA_MODEL v2 单实体 `orders` 为准。
 
 ---
 
@@ -39,17 +61,17 @@
 
 ## 3. 统一状态机（5 个一级状态）
 
-### 3.1 底层码 ↔ UI 展示 ↔ M1 预览常量
+### 3.1 底层码 ↔ UI 展示 ↔ v2 存库（M3 Mock）
 
-| 底层码（建议 M3 采用） | UI 中文 | M1 预览 `status` | 说明 |
-|------------------------|---------|-------------------|------|
-| `open` | **匹配中** | `匹配中` | 广场可见；等待车主接单 |
-| `matched_pre` | **待出发** | `待出发` | 已匹配，出发前 |
-| `matched_trip` | **行程中** | `行程中` | 出发窗口内（T-15 起，产品可配置） |
-| `completed` | **已完成** | `已完成` | 行程结束 |
-| `closed` | **已关闭** | `已关闭` | 取消 / 停止匹配 / 超时等 |
+| 本指南码 | v2 `orders.status` | UI 中文 | M1 预览 `status` | 说明 |
+|----------|-------------------|---------|-------------------|------|
+| `open` | **`matching`** | **匹配中** | `匹配中` | 广场可见；等待车主接单 |
+| `matched_pre` | **`pending_departure`** | **待出发** | `待出发` | 已匹配，出发前 |
+| `matched_trip` | **`in_progress`** | **行程中** | `行程中` | 出发后（Mock 可跳过，直接完成） |
+| `completed` | **`completed`** | **已完成** | `已完成` | 行程结束 |
+| `closed` | **`closed`** | **已关闭** | `已关闭` | 取消 / 停止匹配 / 超时等 |
 
-> **与旧 `DATA_MODEL.md` 的差异**：旧稿仅 `open | matched | completed | cancelled` 四态。联调时请 M3 扩展为上述五态，或增加 `subStatus` / `phase` 字段映射到 `matched_pre` / `matched_trip`。
+> **权威来源：** 存库与 API 以 [`DATA_MODEL.md`](./DATA_MODEL.md) v2 为准；上表「本指南码」仅便于对照 §4–§5 历史描述。
 
 ### 3.2 状态流转总图
 
@@ -408,17 +430,26 @@ M1 当前：`history-detail.js` → `triggerCancelNotify()` 仅 `console.info` �
 
 ## 12. 集成检查清单（Agent 可直接当 TODO）
 
-- [ ] **M3** `createOrder(seek)` → 乘车人单 `phase=open`
-- [ ] **M3** `createOrder(offer/publish)` → 车主发布单 `phase=open`, `createdFrom=publish`
-- [ ] **M3** `listOpenOrders` 仅返回 `phase=open` 的 seek 单（广场）
-- [ ] **M3** `acceptOrder` 原子匹配，双方 → `matched_pre`
-- [ ] **M3** 定时/触发：`matched_pre`→`matched_trip`→`completed`
+**P0 / Mock（`feat/m3-from-main`）— 以 DATA_MODEL v2 为准：**
+
+- [x] **M3** `createOrder` → 乘客单 `status=matching`
+- [x] **M3** `listOpenOrders` 仅返回 `matching` 且未过期（广场）
+- [x] **M3** `acceptOrder` → `pending_departure`
+- [x] **M3** `completeOrder`（Mock 允许 `pending_departure` → `completed`，跳过 `startTrip`）
+- [x] **M3** `expireStaleOrders`：`matching` 过期 → `closed`
+- [ ] **M3** `cancelOrder`（P1）
+- [ ] **M3** `startTrip`（P1）
+- [ ] **M3** `createOrder(offer/publish)` 车主发布锚点（P2 / Post-MVP）
+- [ ] **M4** `canEnterChat`：`pending_departure` | `in_progress`
+- [ ] **M1** 我的订单五态与 order 模块同步
+
+**完整愿景（含车主发布单 · 后续迭代）：**
+
+- [ ] **M3** `createOrder(offer/publish)` → 车主发布单，§5.2 推荐路径
 - [ ] **M3** `cancelOrder` / `stopMatching` 实现 §4 矩阵
-- [ ] **M3** 取消匹配时：publish 单回 `open`，seek 单回 `open`
-- [ ] **M3** 提供 `listMyOrders()` 映射 §6.1 视图模型
-- [ ] **M4** `canEnterChat` 对齐 §9
+- [ ] **M3** 取消匹配时：publish 单回 `matching`，seek 单回 `matching`
+- [ ] **M3** 定时/触发：`pending_departure`→`in_progress`→`completed`
 - [ ] **M4** Chat 绑定 `matchId` 或统一 `orderId` 策略
-- [ ] **全员** 更新 `DATA_MODEL.md` status 枚举与本文一致
 - [ ] **CP3** 已匹配订单可进 Chat（见 `MODULE_CONTRACTS.md`）
 
 ---
@@ -439,8 +470,8 @@ M1 当前：`history-detail.js` → `triggerCancelNotify()` 仅 `console.info` �
 |------|------|
 | 2026-08-13 | 初版产品讨论 → `M1_ORDER_STATES.md` |
 | 2026-08-13 | M1 预览实现 Mock + 列表/详情 UI |
-| 2026-08-13 | **本文**：跨模块集成指南，供 M2/M3/M4 与 Agent 对齐 |
+| 2026-08-24 | **v2 对齐**：顶部注明 DATA_MODEL v2 为准；§3.1 映射 `matching` 等；§12 拆分 P0 Mock vs 愿景清单 |
 
 ---
 
-**分享方式**：将本文链接或 `docs/ORDER_INTEGRATION_GUIDE.md` 发给对应模块；Agent 系统提示可附加：「订单规则以 `docs/ORDER_INTEGRATION_GUIDE.md` 为准，云库字段变更需同步 `DATA_MODEL.md`。」
+**分享方式**：将本文链接或 `docs/ORDER_INTEGRATION_GUIDE.md` 发给对应模块。**M3 PR / Mock 实现以 `docs/DATA_MODEL.md` v2 为存库准绳**；本文 §2–§5 车主发布等愿景段落供后续迭代对照。
