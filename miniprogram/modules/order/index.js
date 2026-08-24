@@ -11,6 +11,7 @@ const {
   FILTER_BUCKETS
 } = require('./constants/status')
 const service = require('./service')
+const cancelFlow = require('./cancel-flow')
 
 function notImplemented(name) {
   const err = new Error(`${name} not implemented — M3 owner`)
@@ -34,8 +35,8 @@ async function acceptOrder(orderId, driver) {
   return service.acceptOrder(orderId, driver)
 }
 
-async function cancelOrder(_orderId, _options) {
-  notImplemented('cancelOrder')
+async function cancelOrder(orderId, options) {
+  return service.cancelOrder(orderId, options)
 }
 
 async function expireStaleOrders() {
@@ -99,5 +100,6 @@ module.exports = {
   computeMatchScore,
   ORDER_STATUS,
   STATUS_LABELS,
-  FILTER_BUCKETS
+  FILTER_BUCKETS,
+  ...cancelFlow
 }

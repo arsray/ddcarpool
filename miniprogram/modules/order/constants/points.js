@@ -15,8 +15,9 @@ const DEFAULT_POINTS = [
   { pointId: 'poi-10', name: '迪士尼乐园酒店', sortOrder: 10, enabled: true },
   { pointId: 'poi-11', name: '玩具总动员酒店', sortOrder: 11, enabled: true },
   { pointId: 'poi-12', name: '申迪文化中心', sortOrder: 12, enabled: true },
-  { pointId: 'poi-13', name: '比斯特', sortOrder: 13, enabled: true },
-  { pointId: 'poi-14', name: '羽托邦', sortOrder: 14, enabled: true }
+  { pointId: 'poi-13', name: '迪心楼', sortOrder: 13, enabled: true },
+  { pointId: 'poi-14', name: '比斯特', sortOrder: 14, enabled: true },
+  { pointId: 'poi-15', name: '羽托邦', sortOrder: 15, enabled: true }
 ]
 
 function getPointById(pointId) {

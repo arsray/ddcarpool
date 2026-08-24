@@ -200,20 +200,47 @@ function buildAcceptNotificationTitle(order) {
   return `${schedule} ${routeLabel} 已被接单`
 }
 
-function appendPassengerNotification(order, title) {
+function appendNotification(entry) {
   const list = wx.getStorageSync('notifications') || []
   const now = new Date()
   const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   list.unshift({
     id: `n_${Date.now()}`,
-    title: title || buildAcceptNotificationTitle(order),
     time: timeLabel,
     read: false,
-    targetType: 'passenger',
-    targetId: order._id,
-    passengerOpenId: order.passengerOpenId || ''
+    ...entry
   })
   wx.setStorageSync('notifications', list)
+}
+
+function appendPassengerNotification(order, title) {
+  appendNotification({
+    title: title || buildAcceptNotificationTitle(order),
+    targetType: 'passenger',
+    targetId: order._id,
+    passengerOpenId: order.passengerOpenId || '',
+    recipientOpenId: order.passengerOpenId || ''
+  })
+}
+
+function buildPassengerCancelNotificationTitle(order) {
+  const routeLabel = formatRoute(order.fromPointId, order.toPointId)
+  return `乘客已取消搭车单 · ${routeLabel}`
+}
+
+function buildDriverReleaseNotificationTitle(order) {
+  const routeLabel = formatRoute(order.fromPointId, order.toPointId)
+  return `司机已取消匹配 · 您的订单重新匹配中 · ${routeLabel}`
+}
+
+function appendDriverNotification(order, title) {
+  if (!order.driverOpenId) return
+  appendNotification({
+    title: title || buildPassengerCancelNotificationTitle(order),
+    targetType: 'owner',
+    targetId: order._id,
+    recipientOpenId: order.driverOpenId
+  })
 }
 
 function makeError(code, message) {
@@ -304,6 +331,64 @@ function completeOrder(orderId, actorOpenId) {
   return enrichListItem(updated, {})
 }
 
+function cancelOrder(orderId, options) {
+  const orders = expireStaleOrdersInMemory(readAllOrders())
+  const order = orders.find((item) => item._id === orderId)
+  const actorOpenId = options && options.openId ? options.openId.trim() : ''
+
+  if (!order) {
+    throw makeError('ORDER_NOT_FOUND', '订单不存在')
+  }
+  if (!actorOpenId) {
+    throw makeError('NOT_LOGGED_IN', '请先登录')
+  }
+  if (order.status === ORDER_STATUS.IN_PROGRESS) {
+    throw makeError('TRIP_IN_PROGRESS_NO_CANCEL', '行程中不可取消')
+  }
+
+  const isPassenger = order.passengerOpenId === actorOpenId
+  const isDriver = order.driverOpenId === actorOpenId
+  if (!isPassenger && !isDriver) {
+    throw makeError('FORBIDDEN', '无权操作此订单')
+  }
+
+  const timestamp = nowIso()
+
+  if (
+    isPassenger &&
+    [ORDER_STATUS.MATCHING, ORDER_STATUS.PENDING_DEPARTURE].includes(order.status)
+  ) {
+    const updated = {
+      ...order,
+      status: ORDER_STATUS.CLOSED,
+      closeReason: CLOSE_REASON.CANCELLED_BY_PASSENGER,
+      closedAt: timestamp,
+      updatedAt: timestamp
+    }
+    saveOrder(updated)
+    if (order.driverOpenId) {
+      appendDriverNotification(updated, buildPassengerCancelNotificationTitle(updated))
+    }
+    return enrichListItem(updated, {})
+  }
+
+  if (isDriver && order.status === ORDER_STATUS.PENDING_DEPARTURE) {
+    const { matchedAt, ...rest } = order
+    const updated = {
+      ...rest,
+      status: ORDER_STATUS.MATCHING,
+      driverOpenId: '',
+      driverName: '',
+      updatedAt: timestamp
+    }
+    saveOrder(updated)
+    appendPassengerNotification(updated, buildDriverReleaseNotificationTitle(updated))
+    return enrichListItem(updated, {})
+  }
+
+  throw makeError('INVALID_STATUS', '订单当前不可取消')
+}
+
 function getPassengerHistoryItems(openId) {
   const { toHistoryItem } = getHistoryBridge()
   return listOrdersForUser(openId, { role: 'passenger' }).map(toHistoryItem)
@@ -391,6 +476,7 @@ function replacePlazaSeedOrders(seedOrders) {
 module.exports = {
   createOrder,
   acceptOrder,
+  cancelOrder,
   completeOrder,
   getOrderById,
   listOpenOrders,

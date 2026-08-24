@@ -1,32 +1,34 @@
 ## Summary
 
-M3 Mock 订单主路径：**乘客发单（matching）→ 司机接单（pending_departure）→ 完成（completed）**；广场筛选/接单、发布页、接单通知、custom-tab-bar 已打通。
+M3 Mock 增量：**cancelOrder**、广场筛选默认值/清除竞态修复、POI 扩展至 15 点、通知按用户过滤。
 
-- 五态 DATA_MODEL v2 + order 模块（Storage Mock）
-- 广场 `listOpenOrders` / `acceptOrder`；详情 `completeOrder`（Mock 跳过 `startTrip`）
-- 文档：[`M3_DEMO_FLOWS_PM.md`](./docs/M3_DEMO_FLOWS_PM.md)、[`M3_INTEGRATION_STATUS.md`](./docs/M3_INTEGRATION_STATUS.md)
+- `cancelOrder` Mock：乘客 → `closed`；司机 `pending_departure` → `matching`（回广场）
+- 广场筛选：首次进入默认今天 + 下一 15 分钟档；清除回「全部」；修复 picker 与 `onShow` 竞态
+- POI：`poi-13` 迪心楼 / `poi-14` 比斯特 / `poi-15` 羽托邦
+- 通知：`pages/notify/notify.js` 按 `recipientOpenId` 过滤
 
-## 契约 / 文档（Ray Review 已处理）
+## 文档
 
-- [x] **无契约 breaking 变更**（`cancelOrder` / `startTrip` 降为 **P1**；Mock 未实现）
-- [x] `ORDER_INTEGRATION_GUIDE.md` 注明 **以 DATA_MODEL v2 为准**；P0 仅乘客发单
-- [x] Mock 跳过「出发」：PR 说明 + DATA_MODEL / status-machine 已记录
+- [`M3_INTEGRATION_STATUS.md`](./docs/M3_INTEGRATION_STATUS.md)
+- [`DATA_MODEL.md`](./docs/DATA_MODEL.md) · 司机取消回 `matching`
+- [`MODULE_CONTRACTS.md`](./docs/MODULE_CONTRACTS.md) · `cancelOrder` Mock 已实现
+- [`M3_DEMO_FLOWS_PM.md`](./docs/M3_DEMO_FLOWS_PM.md)
 
 ## 请 Owner 确认（合并前）
 
-- [ ] **@M2** — `pages/index/` 广场 UI + `custom-tab-bar/` + Tab 底部留白
-- [ ] **@M1** — `auth/store` + Mock 账号切换（Bob / Alice）+ 通知跳详情
+- [ ] **@M2** — `pages/index/` 筛选 UI（默认/清除/分区）
+- [ ] **@M1** — `pages/notify/notify.js` 通知过滤
 
 ## Test plan
 
-- [ ] Alice 发布 → 广场 `matching` 可见
-- [ ] Bob 接单 → `pending_departure`，Alice 通知含路线/时间
-- [ ] Bob 详情页「完成」→ `completed`
-- [ ] 切换 Mock 账号：我的 → 账号与安全
-- [ ] 过期 matching → `closed`
+- [ ] Alice 发单 → Bob 广场可见
+- [ ] Bob 筛选 / 清除 / 接单
+- [ ] 乘客/司机取消（`detail` + `history-detail` 二次确认）
+- [ ] 司机取消后订单回广场 `matching`
+- [ ] Alice 通知页仅看到自己的通知
+- [ ] POI 15 点路线与种子单正常展示
 
 ## Follow-up（不阻塞）
 
-- 备注字数已在 DATA_MODEL 统一为 **100**（与 `validate.js` 一致）
-- `MVP_SCOPE.md` 已对齐 v2
+- `startTrip`（P1）、云库替换 Storage
 - Mock 移除计划见 `M3_INTEGRATION_STATUS.md` §10
