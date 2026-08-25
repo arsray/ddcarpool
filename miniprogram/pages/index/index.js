@@ -1,7 +1,7 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
-const { buildPlazaFilterView } = require('../../modules/order/plaza-filter')
+const { buildPlazaFilterView, buildDefaultPlazaFilters } = require('../../modules/order/plaza-filter')
 const { formatDateLabel } = require('../../modules/order/history-bridge')
 const { formatHistoryTimeLabel, parseDepartTime } = require('../../modules/order/time-slots')
 
@@ -77,7 +77,8 @@ Page({
     points: [],
     matchedOrders: [],
     otherOrders: [],
-    filters: { ...EMPTY_FILTERS },
+    filters: buildDefaultPlazaFilters(),
+    filtersTouched: false,
     filterDateLabels: ['全部'],
     filterDateValues: [''],
     filterDateIndex: 0,
@@ -188,6 +189,11 @@ Page({
     ]
   },
 
+  onLoad() {
+    this._plazaFiltersTouched = false
+    this._plazaFilters = null
+  },
+
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
@@ -205,15 +211,33 @@ Page({
     this.loadOrders()
   },
 
+  getPlazaFilters() {
+    if (this._plazaFiltersTouched) {
+      return this._plazaFilters || this.data.filters || { ...EMPTY_FILTERS }
+    }
+    return buildDefaultPlazaFilters()
+  },
+
+  commitPlazaFilters(nextFilters) {
+    this._plazaFiltersTouched = true
+    this._plazaFilters = { ...nextFilters }
+    this.updateFilters(this._plazaFilters)
+  },
+
   applyFilterView(allOrders, points, filters) {
     const enriched = enrichOrders(allOrders)
-    const view = buildPlazaFilterView(enriched, points, filters)
+    const view = buildPlazaFilterView(enriched, points, filters, new Date())
+    const normalized = view.filters
+    if (this._plazaFiltersTouched) {
+      this._plazaFilters = normalized
+    }
     this.setData({
       allOrders: enriched,
       points,
       matchedOrders: view.matchedOrders || [],
       otherOrders: view.otherOrders || [],
-      filters: view.filters,
+      filters: normalized,
+      filtersTouched: !!this._plazaFiltersTouched,
       filterDateLabels: view.filterDateLabels,
       filterDateValues: view.filterDateValues,
       filterDateIndex: view.filterDateIndex,
@@ -252,7 +276,7 @@ Page({
         order.listDriverActiveOrders(openId)
       ])
       const points = await order.listPoints()
-      this.applyFilterView(rawOrders, points, this.data.filters)
+      this.applyFilterView(rawOrders, points, this.getPlazaFilters())
       const acceptedOrders = enrichOrders(rawAccepted)
       applyHeroView(this, hasOwnerIdentity, isPassengerOnly, acceptedOrders)
       this.setData({
@@ -273,8 +297,8 @@ Page({
   onFilterDateChange(e) {
     const index = Number(e.detail.value)
     const date = this.data.filterDateValues[index] || ''
-    this.updateFilters({
-      ...this.data.filters,
+    this.commitPlazaFilters({
+      ...this.getPlazaFilters(),
       date,
       timeWindow: ''
     })
@@ -283,8 +307,8 @@ Page({
   onFilterTimeChange(e) {
     const index = Number(e.detail.value)
     const timeWindow = this.data.filterTimeValues[index] || ''
-    this.updateFilters({
-      ...this.data.filters,
+    this.commitPlazaFilters({
+      ...this.getPlazaFilters(),
       timeWindow
     })
   },
@@ -292,8 +316,8 @@ Page({
   onFilterFromChange(e) {
     const index = Number(e.detail.value)
     const fromPointId = this.data.filterFromValues[index] || ''
-    this.updateFilters({
-      ...this.data.filters,
+    this.commitPlazaFilters({
+      ...this.getPlazaFilters(),
       fromPointId
     })
   },
@@ -301,14 +325,14 @@ Page({
   onFilterToChange(e) {
     const index = Number(e.detail.value)
     const toPointId = this.data.filterToValues[index] || ''
-    this.updateFilters({
-      ...this.data.filters,
+    this.commitPlazaFilters({
+      ...this.getPlazaFilters(),
       toPointId
     })
   },
 
   onResetFilters() {
-    this.updateFilters({ ...EMPTY_FILTERS })
+    this.commitPlazaFilters({ ...EMPTY_FILTERS })
   },
 
   noop() {},

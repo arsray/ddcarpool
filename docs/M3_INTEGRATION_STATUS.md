@@ -5,9 +5,9 @@
 【何时阅读】联调、Review PR、或 Agent 需知「已实现什么」时  
 
 > **契约准绳：** [`DATA_MODEL.md`](./DATA_MODEL.md) v2（存库枚举）、[`MODULE_CONTRACTS.md`](./MODULE_CONTRACTS.md)、[`ORDER_INTEGRATION_GUIDE.md`](./ORDER_INTEGRATION_GUIDE.md)（完整愿景；P0 以 DATA_MODEL 为准）  
-> **本文件：** 描述 **`feat/m3-from-main` 分支实际代码**，可能与集成指南的「待实现」清单不同步——以本文件 + 代码为准。
+> **本文件：** 描述 **`feat/m3-driver-plaza` 分支实际代码**，可能与集成指南的「待实现」清单不同步——以本文件 + 代码为准。
 
-**PR：** `feat/m3-from-main` → `main`  
+**PR：** `feat/m3-driver-plaza` → `main`  
 **仓库：** https://github.com/arsray/ddcarpool
 
 ---
@@ -44,12 +44,12 @@
 | `createOrder` | ✅ | 校验 POI、时间窗、人数、备注 ≤100 字 |
 | `acceptOrder` | ✅ | matching → pending_departure；写乘客通知 |
 | `completeOrder` | ✅ | pending_departure / in_progress → completed |
+| `cancelOrder` | ✅ | 乘客取消 → closed；司机取消匹配 → matching |
 | `listOpenOrders` | ✅ | 广场匹配中；排除过期、排除 viewer 自己的单 |
 | `listDriverActiveOrders` | ✅ | pending_departure + in_progress |
 | `getOrderById` | ✅ | |
 | `expireStaleOrders` | ✅ | matching 过期 → closed |
 | `listPoints` / `formatRoute` / `computeMatchScore` | ✅ | |
-| `cancelOrder` | ❌ | 抛出 NOT_IMPLEMENTED |
 | `startTrip` | ❌ | 抛出 NOT_IMPLEMENTED |
 
 **存储键：** `m3_orders_v1`（`service.js`，接入云库时替换）
@@ -71,12 +71,25 @@ matching ──accept──→ pending_departure ──complete──→ complet
 
 ---
 
+## 4.1 广场排序（`plaza-sort.js`）
+
+`listOpenOrders` / 广场列表在 `comparePlazaOrders` 中按以下优先级 **升序** 排列：
+
+1. `departTime`（出发时间窗起点）
+2. 起点 POI `sortOrder`
+3. 终点 POI `sortOrder`
+4. **`createdAt` 升序**（先发布在前）
+
+筛选后 UI 分区（「符合条件 / 其他」）见 `plaza-filter.js`；分区内保持 `listOpenOrders` 既有顺序，不额外重排。
+
+---
+
 ## 5. 待其他模块接入 / 未完成
 
 ### M1
 
 - [ ] `getPassengerHistoryItems` / `getDriverHistoryItems` 与「我的订单」列表完全同步五态  
-- [ ] 通知按 `passengerOpenId` 过滤（当前 Mock 全局列表）  
+- [x] 通知按 `recipientOpenId` 过滤（`pages/notify/notify.js` Mock）  
 - [ ] 取消/关闭后的列表与弹窗文案  
 
 ### M2 — 请 Owner Review 并在此 PR 回复确认
@@ -94,7 +107,7 @@ matching ──accept──→ pending_departure ──complete──→ complet
 ### M3（后续）
 
 - [ ] 云开发 `orders` CRUD 替换 `service.js`  
-- [ ] `cancelOrder`（P1）、`startTrip`（P1）  
+- [ ] `startTrip`（P1）  
 - [ ] 车主「发布行程」副流程（P2）  
 - [ ] 移除 §10 Mock 专用逻辑  
 
