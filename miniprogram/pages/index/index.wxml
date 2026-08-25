@@ -1,6 +1,531 @@
 <page-meta page-style="{{acceptModalVisible ? 'overflow:hidden;height:100%;' : ''}}" />
+<!-- ===== M2 Homepage UI Prototype ===== -->
 
-<view class="container tab-page {{acceptModalVisible ? 'page-locked' : ''}}">
+<view class="m2-home tab-page" wx:if="{{uiPrototypeMode}}">
+
+  <!-- 车主 / 乘客切换 -->
+  <view class="m2-mode-switch">
+    <view
+      class="m2-mode-item {{homeMode === 'driver' ? 'active' : ''}}"
+      data-mode="driver"
+      bindtap="switchHomeMode"
+    >
+      车主
+    </view>
+
+    <view
+      class="m2-mode-item {{homeMode === 'passenger' ? 'active' : ''}}"
+      data-mode="passenger"
+      bindtap="switchHomeMode"
+    >
+      乘客
+    </view>
+  </view>
+
+
+  <!-- 今日迪闻 -->
+  <view class="m2-notice">
+    <view class="m2-notice-title">
+      <text class="m2-notice-icon">📢</text>
+      今日迪闻
+    </view>
+
+    <view class="m2-notice-content">
+      {{noticeText}}
+    </view>
+  </view>
+
+
+  <!-- ==================== -->
+  <!-- 车主模式 -->
+  <!-- ==================== -->
+
+  <block wx:if="{{homeMode === 'driver'}}">
+
+    <view class="m2-section-head">
+      <view>
+        <view class="m2-section-title">订单池</view>
+        <view class="m2-section-subtitle">看看有没有顺路的小伙伴</view>
+      </view>
+
+      <text class="m2-section-more">查看全部 ›</text>
+    </view>
+
+
+    <!-- 三笔 UI Prototype 订单 -->
+
+    <view
+      class="m2-order-card"
+      wx:for="{{prototypeOrders}}"
+      wx:key="id"
+    >
+
+      <view class="m2-order-time">
+        {{item.time}}
+      </view>
+
+      <view class="m2-route-row">
+        <view class="m2-route-visual">
+          <view class="m2-route-dot start"></view>
+          <view class="m2-route-line"></view>
+          <view class="m2-route-dot end"></view>
+        </view>
+
+        <view class="m2-route-content">
+          <view class="m2-route-point">
+            {{item.from}}
+          </view>
+
+          <view class="m2-route-point destination">
+            {{item.to}}
+          </view>
+        </view>
+      </view>
+
+
+      <view class="m2-system-tags">
+
+        <view class="m2-tag system">
+          {{item.passengerCount}}人
+        </view>
+
+        <view class="m2-tag match {{item.matchScore === 100 ? 'perfect' : ''}}">
+          顺路 {{item.matchScore}}%
+        </view>
+
+      </view>
+
+
+      <view class="m2-custom-tags" wx:if="{{item.tags.length}}">
+        <view
+          class="m2-tag custom"
+          wx:for="{{item.tags}}"
+          wx:for-item="tag"
+          wx:key="*this"
+        >
+          {{tag}}
+        </view>
+      </view>
+
+
+      <button
+        class="m2-accept-btn"
+        bindtap="showPrototypeAccept"
+      >
+        接单
+      </button>
+
+    </view>
+
+
+    <!-- 找顺路订单 -->
+
+    <view class="m2-trip-card">
+
+      <view class="m2-section-title">
+        找顺路订单
+      </view>
+
+      <view class="m2-section-subtitle">
+        输入你的行程，我们帮你筛一筛
+      </view>
+
+
+      <view class="m2-trip-fields">
+
+        <picker
+          mode="selector"
+          range="{{prototypePoints}}"
+          value="{{driverTripFromIndex}}"
+          bindchange="onDriverFromChange"
+        >
+
+          <view class="m2-trip-field">
+            <view class="m2-field-dot start"></view>
+
+            <view class="m2-field-main">
+              <view class="m2-field-label">起点</view>
+
+              <view class="m2-field-value">
+                {{prototypePoints[driverTripFromIndex]}}
+              </view>
+            </view>
+
+            <text class="m2-field-arrow">›</text>
+          </view>
+
+        </picker>
+
+
+        <view class="m2-trip-divider"></view>
+
+
+        <picker
+          mode="selector"
+          range="{{prototypePoints}}"
+          value="{{driverTripToIndex}}"
+          bindchange="onDriverToChange"
+        >
+
+          <view class="m2-trip-field">
+
+            <view class="m2-field-dot end"></view>
+
+            <view class="m2-field-main">
+              <view class="m2-field-label">终点</view>
+
+              <view class="m2-field-value">
+                {{prototypePoints[driverTripToIndex]}}
+              </view>
+            </view>
+
+            <text class="m2-field-arrow">›</text>
+
+          </view>
+
+        </picker>
+
+
+        <view class="m2-trip-divider"></view>
+
+
+        <view class="m2-trip-field">
+
+          <text class="m2-time-icon">◷</text>
+
+          <view class="m2-field-main">
+            <view class="m2-field-label">出发时间</view>
+
+            <view class="m2-field-value">
+              {{driverTripTime}}
+            </view>
+          </view>
+
+          <text class="m2-field-arrow">›</text>
+
+        </view>
+
+      </view>
+
+
+      <button
+        class="m2-primary-btn"
+        bindtap="showPrototypeMatch"
+      >
+        查看顺路订单
+      </button>
+
+    </view>
+
+  </block>
+
+
+  <!-- ==================== -->
+  <!-- 乘客模式 -->
+  <!-- ==================== -->
+
+  <block wx:if="{{homeMode === 'passenger'}}">
+
+    <view class="m2-trip-card passenger">
+
+      <view class="m2-section-title">
+        发布我的行程
+      </view>
+
+      <view class="m2-section-subtitle">
+        填写出发信息，等待顺路车主接单
+      </view>
+
+
+      <view class="m2-trip-fields">
+
+        <picker
+          mode="selector"
+          range="{{prototypePoints}}"
+          value="{{passengerFromIndex}}"
+          bindchange="onPassengerFromChange"
+        >
+
+          <view class="m2-trip-field">
+
+            <view class="m2-field-dot start"></view>
+
+            <view class="m2-field-main">
+              <view class="m2-field-label">起点</view>
+
+              <view class="m2-field-value">
+                {{prototypePoints[passengerFromIndex]}}
+              </view>
+            </view>
+
+            <text class="m2-field-arrow">›</text>
+
+          </view>
+
+        </picker>
+
+
+        <view class="m2-trip-divider"></view>
+
+
+        <picker
+          mode="selector"
+          range="{{prototypePoints}}"
+          value="{{passengerToIndex}}"
+          bindchange="onPassengerToChange"
+        >
+
+          <view class="m2-trip-field">
+
+            <view class="m2-field-dot end"></view>
+
+            <view class="m2-field-main">
+              <view class="m2-field-label">终点</view>
+
+              <view class="m2-field-value">
+                {{prototypePoints[passengerToIndex]}}
+              </view>
+            </view>
+
+            <text class="m2-field-arrow">›</text>
+
+          </view>
+
+        </picker>
+
+
+        <view class="m2-trip-divider"></view>
+
+
+        <view class="m2-trip-field">
+          <text class="m2-time-icon">◷</text>
+
+          <view class="m2-field-main">
+            <view class="m2-field-label">出发时间</view>
+
+            <view class="m2-field-value">
+              {{passengerTime}}
+            </view>
+          </view>
+
+          <text class="m2-field-arrow">›</text>
+        </view>
+
+
+        <view class="m2-trip-divider"></view>
+
+
+        <view class="m2-trip-field">
+
+          <text class="m2-passenger-icon">👤</text>
+
+          <view class="m2-field-main">
+            <view class="m2-field-label">同行人数</view>
+
+            <view class="m2-field-value">
+              {{passengerCount}} 人
+            </view>
+          </view>
+
+          <text class="m2-field-arrow">›</text>
+
+        </view>
+
+      </view>
+
+
+      <view class="m2-demand-title">
+        乘车需求
+      </view>
+
+      <view class="m2-demand-tags">
+
+        <view
+          class="m2-tag demand"
+          wx:for="{{passengerTags}}"
+          wx:key="*this"
+        >
+          {{item}}
+        </view>
+
+        <view class="m2-tag demand add">
+          ＋ 自定义
+        </view>
+
+      </view>
+
+
+      <button
+        class="m2-primary-btn"
+        bindtap="showPrototypePublish"
+      >
+        发布行程
+      </button>
+
+    </view>
+
+  </block>
+
+
+  <!-- ==================== -->
+  <!-- 功德排行榜 -->
+  <!-- ==================== -->
+
+  <view class="m2-ranking-card">
+
+    <view class="m2-ranking-head">
+
+      <view>
+
+        <view class="m2-section-title">
+          🏆 功德排行榜
+        </view>
+
+        <view class="m2-section-subtitle">
+          每一次顺路，都是一份功德
+        </view>
+
+      </view>
+
+      <view
+        class="m2-unlocked-badge"
+        wx:if="{{rankingUnlocked}}"
+      >
+        ✓ 今日已解锁
+      </view>
+
+    </view>
+
+
+    <view class="m2-ranking-tabs">
+
+      <view
+        class="m2-ranking-tab {{rankingTab === 'today' ? 'active' : ''}}"
+        data-tab="today"
+        bindtap="switchRankingTab"
+      >
+        今日榜
+      </view>
+
+      <view
+        class="m2-ranking-tab {{rankingTab === 'total' ? 'active' : ''}}"
+        data-tab="total"
+        bindtap="switchRankingTab"
+      >
+        总榜
+      </view>
+
+    </view>
+
+
+    <!-- 今日榜 -->
+
+    <block wx:if="{{rankingTab === 'today'}}">
+
+      <block wx:for="{{todayRanking}}" wx:key="rank">
+  <view
+    class="m2-ranking-row"
+    wx:if="{{rankingUnlocked || item.rank <= 3}}"
+  >
+    <view class="m2-ranking-position">
+      {{item.rank}}
+    </view>
+
+    <view class="m2-ranking-name">
+      {{rankingUnlocked ? item.name : item.maskedName}}
+    </view>
+
+    <view class="m2-ranking-merit">
+      {{item.merit}} 功德
+    </view>
+  </view>
+</block>
+
+</block>
+
+
+    <!-- 总榜 -->
+
+    <block wx:else>
+
+<block wx:for="{{totalRanking}}" wx:key="rank">
+  <view
+    class="m2-ranking-row"
+    wx:if="{{rankingUnlocked || item.rank <= 3}}"
+  >
+    <view class="m2-ranking-position">
+      {{item.rank}}
+    </view>
+
+    <view class="m2-ranking-name">
+      {{rankingUnlocked ? item.name : item.maskedName}}
+    </view>
+
+    <view class="m2-ranking-merit">
+      {{item.merit}} 功德
+    </view>
+  </view>
+</block>
+
+</block>
+
+
+    <view
+      class="m2-ranking-lock"
+      wx:if="{{!rankingUnlocked}}"
+      bindtap="openPromoModal"
+    >
+      🔒 看广告解锁完整排行榜
+      <text>›</text>
+    </view>
+
+  </view>
+
+
+  <view class="list-bottom-spacer"></view>
+
+</view>
+
+
+<!-- 推广内容 Prototype -->
+
+<view
+  class="m2-promo-mask"
+  wx:if="{{promoVisible}}"
+  bindtap="closePromoModal"
+>
+
+  <view
+    class="m2-promo-modal"
+    catchtap="noop"
+  >
+
+    <view class="m2-promo-close" bindtap="closePromoModal">
+      ×
+    </view>
+
+    <view class="m2-promo-placeholder">
+      <view class="m2-promo-icon">▶</view>
+      <view class="m2-promo-title">推广内容预留位</view>
+      <view class="m2-promo-desc">
+        后续可接视频、图片、活动宣传或二维码
+      </view>
+    </view>
+
+    <button
+      class="m2-primary-btn"
+      bindtap="completePromo"
+    >
+      模拟完成观看
+    </button>
+
+  </view>
+
+</view>
+<view
+  wx:if="{{!uiPrototypeMode}}"
+  class="container tab-page {{acceptModalVisible ? 'page-locked' : ''}}"
+>
   <view class="hero-card">
     <view class="hero-title">{{heroTitle}}</view>
     <view class="hero-todo-hint" wx:if="{{heroTodoHint}}">{{heroTodoHint}}</view>
