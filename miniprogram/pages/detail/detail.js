@@ -2,6 +2,13 @@ const app = getApp()
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
 const { formatDepartTimeDisplay } = require('../../modules/order/time-slots')
+const {
+  resolveCancelAction,
+  getCancelModalConfig,
+  getCancelSuccessTitle,
+  getCancelButtonLabel,
+  CANCEL_ERROR_MESSAGES
+} = order
 
 Page({
   data: {
@@ -15,6 +22,9 @@ Page({
     isAssignedDriver: false,
     canAccept: false,
     canComplete: false,
+    canCancel: false,
+    cancelKind: '',
+    cancelButtonLabel: '',
     fromPlaza: false
   },
 
@@ -61,6 +71,7 @@ Page({
         isAssignedDriver &&
         (item.status === order.ORDER_STATUS.PENDING_DEPARTURE ||
           item.status === order.ORDER_STATUS.IN_PROGRESS)
+      const cancelKind = resolveCancelAction(item, openId)
 
       this.setData({
         loading: false,
@@ -71,7 +82,10 @@ Page({
         isPassenger,
         isAssignedDriver,
         canAccept,
-        canComplete
+        canComplete,
+        canCancel: !!cancelKind,
+        cancelKind: cancelKind || '',
+        cancelButtonLabel: cancelKind ? getCancelButtonLabel(cancelKind) : ''
       })
     } catch (error) {
       this.setData({ loading: false })
@@ -132,6 +146,53 @@ Page({
 
   backToPlaza() {
     wx.switchTab({ url: '/pages/index/index' })
+  },
+
+  onCancel() {
+    if (!this.data.canCancel || this.data.submitting) return
+
+    const modal = getCancelModalConfig(this.data.cancelKind)
+    if (!modal) return
+
+    wx.showModal({
+      ...modal,
+      success: (res) => {
+        if (res.confirm) this.submitCancel()
+      }
+    })
+  },
+
+  async submitCancel() {
+    this.setData({ submitting: true })
+    try {
+      const openId = await auth.ensureLogin()
+      await order.cancelOrder(this.data.orderId, { openId })
+
+      auth.store.initFromStorage()
+      auth.store.syncGlobalData(app.globalData)
+
+      wx.showToast({
+        title: getCancelSuccessTitle(this.data.cancelKind),
+        icon: 'success'
+      })
+
+      if (this.data.fromPlaza) {
+        setTimeout(() => {
+          wx.switchTab({ url: '/pages/index/index' })
+        }, 400)
+        return
+      }
+
+      await this.loadOrder()
+    } catch (error) {
+      wx.showToast({
+        title: CANCEL_ERROR_MESSAGES[error.code] || error.message || '取消失败',
+        icon: 'none'
+      })
+      await this.loadOrder()
+    } finally {
+      this.setData({ submitting: false })
+    }
   },
 
   onComplete() {

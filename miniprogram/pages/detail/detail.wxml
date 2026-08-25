@@ -55,7 +55,15 @@
       bindtap="onComplete"
     >完成</button>
 
-    <button wx:if="{{isPassenger || (isAssignedDriver && !canComplete)}}" class="btn-primary" bindtap="goHistory">查看我的订单</button>
+    <button
+      wx:if="{{canCancel}}"
+      class="btn-danger"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+      bindtap="onCancel"
+    >{{cancelButtonLabel}}</button>
+
+    <button wx:if="{{isPassenger || (isAssignedDriver && !canComplete && !canCancel)}}" class="btn-primary" bindtap="goHistory">查看我的订单</button>
     <button wx:if="{{fromPlaza && order.status !== 'matching'}}" class="btn-secondary" bindtap="backToPlaza">返回广场</button>
   </block>
 </view>

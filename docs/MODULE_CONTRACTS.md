@@ -131,7 +131,7 @@ isDangerAction(action)
 | `listOpenOrders(options)` | P0 | 广场：`matching` + 未过期；默认 `matchScore` 降序 |
 | `createOrder(input)` | P0 | 乘客发单 → `matching` |
 | `acceptOrder(orderId, driver)` | P0 | 司机接单 → `pending_departure` |
-| `cancelOrder(orderId, options)` | P1 | 取消 → `closed`（Mock 未实现，见 [`M3_INTEGRATION_STATUS.md`](./M3_INTEGRATION_STATUS.md)） |
+| `cancelOrder(orderId, options)` | P1 | 乘客取消 → `closed`；司机取消匹配 → `matching`（Mock 已实现，见 [`M3_INTEGRATION_STATUS.md`](./M3_INTEGRATION_STATUS.md)） |
 | `expireStaleOrders()` | P0 | `matching` 且过点 → `closed` |
 | `startTrip(orderId, actorOpenId)` | P1 | → `in_progress`（Mock 未实现；本 PR UI 从 `pending_departure` 直接 `completeOrder`） |
 | `completeOrder(orderId, actorOpenId)` | P0 | → `completed` |

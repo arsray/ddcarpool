@@ -124,7 +124,8 @@ matching ──司机接单──→ pending_departure ──出发──→ in_
 | `matching` | 过期 expire | 系统 | `closed` | `departTime` 已过；closeReason=`expired` |
 | `pending_departure` | 出发 start | 司机 | `in_progress` | 写 startedAt；或到点自动触发（实现二选一，PRD 允许） |
 | `pending_departure` | 完成 complete | 司机或乘客 | `completed` | **Mock 短路**：本 PR UI 未暴露 `startTrip`，允许直接完成 |
-| `pending_departure` | 取消 cancel | 乘客或司机 | `closed` | P1 细化是否回 matching；P0 先 closed |
+| `pending_departure` | 取消 cancel | 乘客 | `closed` | closeReason=`cancelled_by_passenger` |
+| `pending_departure` | 取消匹配 release | 司机 | `matching` | 清空 driver*、matchedAt；搭车单回广场；**非 closed** |
 | `in_progress` | 完成 complete | 司机或乘客 | `completed` | 写 completedAt；**P0 行程中不可取消** |
 | `in_progress` | 取消 | — | — | **不允许** |
 

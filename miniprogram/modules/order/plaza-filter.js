@@ -2,7 +2,8 @@
  * 广场订单筛选 — 出发日期 / 时间 / 起点 / 终点
  */
 
-const { formatHistoryTimeLabel, parseDepartTime } = require('./time-slots')
+const { formatHistoryTimeLabel, parseDepartTime, buildAvailableSlotsForDate, buildDailyTimeSlots } = require('./time-slots')
+const { buildDatePickerOptions } = require('./validate')
 const { matchesPlazaRouteFilter } = require('./match')
 
 const ALL_VALUE = ''
@@ -42,6 +43,70 @@ function collectUniqueTimes(orders, dateFilter) {
   return Array.from(times).sort()
 }
 
+function formatDateStr(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function isSameCalendarDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+/** 车主广场筛选默认：今天（或最近可筛日期）+ 下一个 15 分钟时段 */
+function buildDefaultPlazaFilters(now) {
+  const baseNow = now || new Date()
+  const { values: dateValues } = buildDatePickerOptions(baseNow)
+
+  for (let i = 0; i < dateValues.length; i += 1) {
+    const date = dateValues[i]
+    const available = buildAvailableSlotsForDate(date, baseNow)
+    if (available.length) {
+      return {
+        date,
+        timeWindow: available[0].label,
+        fromPointId: ALL_VALUE,
+        toPointId: ALL_VALUE
+      }
+    }
+  }
+
+  return {
+    date: dateValues[0] || ALL_VALUE,
+    timeWindow: ALL_VALUE,
+    fromPointId: ALL_VALUE,
+    toPointId: ALL_VALUE
+  }
+}
+
+function collectSelectableDates(orders, now) {
+  const baseNow = now || new Date()
+  const dates = new Set(collectUniqueDates(orders))
+  buildDatePickerOptions(baseNow).values.forEach((dateStr) => dates.add(dateStr))
+  return Array.from(dates).sort()
+}
+
+function collectSelectableTimes(orders, dateFilter, now) {
+  const baseNow = now || new Date()
+  const times = new Set(collectUniqueTimes(orders, dateFilter))
+
+  if (!dateFilter) return Array.from(times).sort()
+
+  const day = parseDepartTime(`${dateFilter} 08:00`)
+  const isToday = day && isSameCalendarDay(day, baseNow)
+  const slotSource = isToday
+    ? buildAvailableSlotsForDate(dateFilter, baseNow)
+    : buildDailyTimeSlots()
+
+  slotSource.forEach((slot) => times.add(slot.label))
+  return Array.from(times).sort()
+}
+
 function buildPointOptions(points) {
   const list = points || []
   return {
@@ -50,16 +115,16 @@ function buildPointOptions(points) {
   }
 }
 
-function buildDateOptions(orders) {
-  const dates = collectUniqueDates(orders)
+function buildDateOptions(orders, now) {
+  const dates = collectSelectableDates(orders, now)
   return {
     labels: [ALL_LABEL, ...dates.map(formatFilterDateLabel)],
     values: [ALL_VALUE, ...dates]
   }
 }
 
-function buildTimeOptions(orders, dateFilter) {
-  const times = collectUniqueTimes(orders, dateFilter)
+function buildTimeOptions(orders, dateFilter, now) {
+  const times = collectSelectableTimes(orders, dateFilter, now)
   return {
     labels: [ALL_LABEL, ...times],
     values: [ALL_VALUE, ...times]
@@ -82,7 +147,7 @@ function applyPlazaFilters(orders, filters) {
   return (orders || []).filter((order) => matchesPlazaFilters(order, filters))
 }
 
-function normalizeFilters(filters, allOrders) {
+function normalizeFilters(filters, allOrders, now) {
   const next = {
     date: filters.date || ALL_VALUE,
     timeWindow: filters.timeWindow || ALL_VALUE,
@@ -90,13 +155,13 @@ function normalizeFilters(filters, allOrders) {
     toPointId: filters.toPointId || ALL_VALUE
   }
 
-  const dateOpts = buildDateOptions(allOrders)
+  const dateOpts = buildDateOptions(allOrders, now)
   if (next.date && !dateOpts.values.includes(next.date)) {
     next.date = ALL_VALUE
     next.timeWindow = ALL_VALUE
   }
 
-  const timeOpts = buildTimeOptions(allOrders, next.date)
+  const timeOpts = buildTimeOptions(allOrders, next.date, now)
   if (next.timeWindow && !timeOpts.values.includes(next.timeWindow)) {
     next.timeWindow = ALL_VALUE
   }
@@ -129,10 +194,11 @@ function partitionPlazaOrders(allOrders, filters) {
   return { matchedOrders, otherOrders }
 }
 
-function buildPlazaFilterView(allOrders, points, filters) {
-  const normalized = normalizeFilters(filters || {}, allOrders)
-  const dateOpts = buildDateOptions(allOrders)
-  const timeOpts = buildTimeOptions(allOrders, normalized.date)
+function buildPlazaFilterView(allOrders, points, filters, now) {
+  const baseNow = now || new Date()
+  const normalized = normalizeFilters(filters || {}, allOrders, baseNow)
+  const dateOpts = buildDateOptions(allOrders, baseNow)
+  const timeOpts = buildTimeOptions(allOrders, normalized.date, baseNow)
   const fromOpts = buildPointOptions(points)
   const toOpts = buildPointOptions(points)
   const { matchedOrders, otherOrders } = partitionPlazaOrders(allOrders, normalized)
@@ -160,6 +226,7 @@ function buildPlazaFilterView(allOrders, points, filters) {
 module.exports = {
   ALL_VALUE,
   ALL_LABEL,
+  buildDefaultPlazaFilters,
   buildPlazaFilterView,
   applyPlazaFilters,
   partitionPlazaOrders,
