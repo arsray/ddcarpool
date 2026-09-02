@@ -2,9 +2,10 @@ Component({
   data: {
     selected: 0,
     list: [
-      { pagePath: '/pages/index/index', text: '广场' },
-      { pagePath: '/pages/publish/publish', text: '发布' },
-      { pagePath: '/pages/mine/mine', text: '我的' }
+      { pagePath: '/pages/index/index', text: '车主', icon: 'owner' },
+      { pagePath: '/pages/publish/publish', text: '乘客', icon: 'passenger' },
+      { pagePath: '/pages/notify/notify', text: '消息', icon: 'message' },
+      { pagePath: '/pages/mine/mine', text: '我的', icon: 'mine' }
     ]
   },
 

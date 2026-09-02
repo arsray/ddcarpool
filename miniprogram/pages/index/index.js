@@ -28,10 +28,22 @@ function buildAcceptModalFields(orderItem) {
   }
 }
 
-function enrichOrders(list) {
+function enrichOrders(list, points) {
+  const pointList = points || []
+
   return (list || []).map((item) => {
     const { dateLabel, timeLabel } = buildAcceptModalFields(item)
-    return { ...item, dateLabel, timeLabel }
+
+    const fromPoint = pointList.find((point) => point.pointId === item.fromPointId)
+    const toPoint = pointList.find((point) => point.pointId === item.toPointId)
+
+    return {
+      ...item,
+      dateLabel,
+      timeLabel,
+      fromName: fromPoint ? fromPoint.name : '未知起点',
+      toName: toPoint ? toPoint.name : '未知终点'
+    }
   })
 }
 
@@ -104,11 +116,12 @@ Page({
     accepting: false,
 
     // ===== M2 Homepage UI Prototype =====
-    uiPrototypeMode: true,
+    uiPrototypeMode: false,
     
-    homeMode: 'driver',
+    userMode: app.globalData.userMode || 'owner',
     
-    noticeText: '明晚羽托邦暑假收官战🔥 名额有限！即刻联系xxx报名',
+    noticeText: '明晚羽托邦暑假收官战🔥即刻联系xxx报名',
+    noticeShouldScroll: false,
     
     prototypePoints: [
       '米奇大街',
@@ -194,6 +207,31 @@ Page({
     this._plazaFilters = null
   },
 
+  onReady() {
+    this.checkNoticeOverflow()
+  },
+  
+  checkNoticeOverflow() {
+    const query = wx.createSelectorQuery().in(this)
+    const isProd = !this.data.uiPrototypeMode
+    const scrollSel = isProd ? '.v1-notice-scroll' : '.m2-notice-scroll'
+    const contentSel = isProd ? '.v1-notice-content' : '.m2-notice-content'
+
+    query.select(scrollSel).boundingClientRect()
+    query.select(contentSel).boundingClientRect()
+
+    query.exec((res) => {
+      const container = res[0]
+      const content = res[1]
+
+      if (!container || !content) return
+
+      this.setData({
+        noticeShouldScroll: content.width > container.width
+      })
+    })
+  },
+
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
@@ -208,6 +246,11 @@ Page({
     if (!auth.requireLogin()) return
     auth.store.initFromStorage()
     auth.store.syncGlobalData(app.globalData)
+    
+    this.setData({
+      userMode: app.globalData.userMode || 'owner'
+    })
+    
     this.loadOrders()
   },
 
@@ -225,7 +268,7 @@ Page({
   },
 
   applyFilterView(allOrders, points, filters) {
-    const enriched = enrichOrders(allOrders)
+    const enriched = enrichOrders(allOrders, points)
     const view = buildPlazaFilterView(enriched, points, filters, new Date())
     const normalized = view.filters
     if (this._plazaFiltersTouched) {
@@ -277,7 +320,7 @@ Page({
       ])
       const points = await order.listPoints()
       this.applyFilterView(rawOrders, points, this.getPlazaFilters())
-      const acceptedOrders = enrichOrders(rawAccepted)
+      const acceptedOrders = enrichOrders(rawAccepted, points)
       applyHeroView(this, hasOwnerIdentity, isPassengerOnly, acceptedOrders)
       this.setData({
         acceptedOrders,
@@ -408,9 +451,14 @@ Page({
       url: `/pages/detail/detail?orderId=${orderId}&from=plaza`
     })
   },
-  switchHomeMode(e) {
+  switchUserMode(e) {
+    const mode = e.currentTarget.dataset.mode
+    if (!mode || mode === this.data.userMode) return
+  
+    app.setUserMode(mode)
+  
     this.setData({
-      homeMode: e.currentTarget.dataset.mode
+      userMode: app.globalData.userMode
     })
   },
   
@@ -490,11 +538,6 @@ Page({
   },
   goPublish() {
     wx.switchTab({ url: '/pages/publish/publish' })
-  },
-  switchHomeMode(e) {
-    this.setData({
-      homeMode: e.currentTarget.dataset.mode
-    })
   },
   
   switchRankingTab(e) {

@@ -13,6 +13,9 @@ function filterNotificationsForUser(list, openId) {
 Page({
   data: { list: [] },
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 2 })
+    }
     if (!auth.requireLogin()) return;
     auth.store.initFromStorage();
     auth.store.syncGlobalData(app.globalData);

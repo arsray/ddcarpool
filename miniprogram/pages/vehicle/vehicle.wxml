@@ -1,51 +1,74 @@
-<view class="container">
-  <view class="card">
-    <view class="field">
-      <text class="label">品牌</text>
-      <view class="picker-field" bindtap="openBrandPicker">
-        <text class="{{form.brand ? '' : 'placeholder'}}">{{form.brand || '请选择品牌'}}</text>
-        <text class="arrow">›</text>
+<view class="v1-onboard-page container">
+  <view class="v1-head">
+    <view class="v1-title">{{onboarding || setup ? '录入你的车辆' : '车辆信息'}}</view>
+    <view class="v1-sub">{{onboarding || setup ? '完善车辆信息，方便乘客识别' : '可随时修改，将用于后续发车'}}</view>
+  </view>
+
+  <view class="v1-form-card">
+    <view class="v1-field">
+      <text class="v1-label">品牌</text>
+      <view class="v1-picker" bindtap="openBrandPicker">
+        <text class="{{form.brand ? 'v1-picker-value' : 'v1-placeholder'}}">{{form.brand || '请选择品牌'}}</text>
+        <text class="v1-chevron">›</text>
       </view>
     </view>
 
-    <view class="field">
-      <text class="label">车型</text>
-      <radio-group class="radio-group" bindchange="onModelChange">
-        <label class="radio-item"><radio value="SUV" checked="{{form.modelType==='SUV'}}" color="#2563eb" />SUV</label>
-        <label class="radio-item"><radio value="轿车" checked="{{form.modelType==='轿车'}}" color="#2563eb" />轿车</label>
+    <view class="v1-field">
+      <text class="v1-label">车型</text>
+      <radio-group class="v1-radio-group" bindchange="onModelChange">
+        <label class="v1-radio-item"><radio value="SUV" checked="{{form.modelType==='SUV'}}" color="#003087" />SUV</label>
+        <label class="v1-radio-item"><radio value="轿车" checked="{{form.modelType==='轿车'}}" color="#003087" />轿车</label>
       </radio-group>
     </view>
 
-    <view class="field">
-      <text class="label">车牌号</text>
-      <view class="plate-row">
-        <view class="plate-prefix" bindtap="openPrefixPicker">{{form.platePrefix || '地区'}}</view>
-        <input class="input plate-suffix" value="{{form.plateSuffix}}" bindinput="onPlateSuffixInput" placeholder="如 A12345 或 D123456" maxlength="7" />
+    <view class="v1-field">
+      <text class="v1-label">车牌号</text>
+      <view class="v1-plate-row">
+        <view class="v1-plate-prefix" bindtap="openPrefixPicker">{{form.platePrefix || '地区'}}</view>
+        <input
+          class="v1-input v1-plate-suffix"
+          value="{{form.plateSuffix}}"
+          bindinput="onPlateSuffixInput"
+          placeholder="如 A12345 或 D123456"
+          maxlength="7"
+        />
       </view>
-      <text class="field-hint">首位为车牌登记地区；支持普通与新能源车牌</text>
+      <text class="v1-field-hint">首位为车牌登记地区；支持普通与新能源车牌</text>
     </view>
 
-    <view class="field">
-      <text class="label">可载乘客数（不含司机）</text>
+    <view class="v1-field">
+      <text class="v1-label">可载乘客数（不含司机）</text>
       <picker mode="selector" range="{{capacityRange}}" value="{{capacityIndex}}" bindchange="onCapacityChange">
-        <view class="picker-field">
-          <text>{{form.passengerCapacity}}</text>
-          <text class="arrow">›</text>
+        <view class="v1-picker">
+          <text class="v1-picker-value">{{form.passengerCapacity}}</text>
+          <text class="v1-chevron">›</text>
         </view>
       </picker>
     </view>
 
-    <view class="field">
-      <text class="label">颜色</text>
-      <view class="color-chips">
-        <view wx:for="{{colorOptions}}" wx:key="*this" class="chip {{form.color === item && !colorCustom ? 'on' : ''}}" data-color="{{item}}" bindtap="onColorSelect">{{item}}</view>
+    <view class="v1-field v1-field--last">
+      <text class="v1-label">颜色</text>
+      <view class="v1-chips">
+        <view
+          wx:for="{{colorOptions}}"
+          wx:key="*this"
+          class="v1-chip {{form.color === item && !colorCustom ? 'on' : ''}}"
+          data-color="{{item}}"
+          bindtap="onColorSelect"
+        >{{item}}</view>
       </view>
-      <input wx:if="{{colorCustom}}" class="input color-custom" value="{{form.colorCustom}}" bindinput="onColorCustomInput" placeholder="请输入其他颜色" />
+      <input
+        wx:if="{{colorCustom}}"
+        class="v1-input v1-color-custom"
+        value="{{form.colorCustom}}"
+        bindinput="onColorCustomInput"
+        placeholder="请输入其他颜色"
+      />
     </view>
-
-    <button class="btn-primary save-btn" bindtap="onSave">保存</button>
-    <button wx:if="{{onboarding || setup}}" class="skip-btn" bindtap="onSkip">稍后再填</button>
   </view>
+
+  <button class="v1-cta" bindtap="onSave">保存</button>
+  <button wx:if="{{onboarding || setup}}" class="v1-skip" bindtap="onSkip">稍后再填</button>
 
   <view class="picker-mask" wx:if="{{showBrandPicker}}" bindtap="closeBrandPicker">
     <view class="picker-panel" catchtap="noop">
@@ -56,7 +79,7 @@
       <view class="common-row">
         <text class="common-label">常用</text>
         <view class="chip-row">
-          <view wx:for="{{commonBrands}}" wx:key="*this" class="chip on-light" data-brand="{{item}}" bindtap="selectBrand">{{item}}</view>
+          <view wx:for="{{commonBrands}}" wx:key="*this" class="v1-chip on-light" data-brand="{{item}}" bindtap="selectBrand">{{item}}</view>
         </view>
       </view>
       <view class="index-bar">
@@ -80,7 +103,7 @@
       <view class="common-row">
         <text class="common-label">常用</text>
         <view class="chip-row">
-          <view wx:for="{{commonPrefixes}}" wx:key="*this" class="chip on-light prefix-chip" data-abbr="{{item}}" bindtap="selectPrefix">{{item}}</view>
+          <view wx:for="{{commonPrefixes}}" wx:key="*this" class="v1-chip on-light prefix-chip" data-abbr="{{item}}" bindtap="selectPrefix">{{item}}</view>
         </view>
       </view>
       <scroll-view scroll-y class="prefix-scroll">

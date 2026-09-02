@@ -1,3 +1,188 @@
-@import '../mine/m1-shared.wxss';
+/* ===== DDCarpool V1 — 消息 / 通知中心 ===== */
 
-.unread { font-weight: 700; }
+.v1-notify-page.container.tab-page {
+  padding: 16rpx 28rpx var(--space-md, 24rpx);
+  background: #F5F7FA;
+  box-sizing: border-box;
+}
+
+.v1-page-head {
+  margin-bottom: 16rpx;
+}
+
+.v1-page-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1F2937;
+  line-height: 1.35;
+}
+
+.v1-notify-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.v1-notify-item {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  min-height: 96rpx;
+  padding: 18rpx 20rpx;
+  background: #FFFFFF;
+  border: 1rpx solid #EDF0F4;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+}
+
+.v1-notify-item:active {
+  opacity: 0.92;
+}
+
+/* Icon container */
+.v1-notify-icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.v1-notify-icon--order,
+.v1-notify-icon--message {
+  background: #EAF1FB;
+}
+
+.v1-notify-icon--done {
+  background: #E8F8F0;
+}
+
+/* Order doc icon */
+.v1-icon-doc {
+  width: 22rpx;
+  height: 26rpx;
+  border: 2rpx solid #003087;
+  border-radius: 4rpx;
+  box-sizing: border-box;
+}
+
+.v1-icon-doc-line {
+  position: absolute;
+  left: 50%;
+  width: 12rpx;
+  height: 2rpx;
+  margin-left: -6rpx;
+  background: #003087;
+  border-radius: 1rpx;
+}
+
+.v1-icon-doc-line-1 {
+  top: 26rpx;
+}
+
+.v1-icon-doc-line-2 {
+  top: 32rpx;
+  width: 9rpx;
+  margin-left: -4.5rpx;
+}
+
+/* Message bubble icon */
+.v1-icon-bubble {
+  width: 24rpx;
+  height: 18rpx;
+  border: 2rpx solid #003087;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
+
+/* Done check icon */
+.v1-icon-check {
+  width: 14rpx;
+  height: 8rpx;
+  border-left: 2rpx solid #22B573;
+  border-bottom: 2rpx solid #22B573;
+  transform: rotate(-45deg);
+  margin-top: -2rpx;
+  box-sizing: border-box;
+}
+
+/* Body */
+.v1-notify-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.v1-notify-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.v1-notify-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  font-weight: 400;
+  color: #1F2937;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v1-notify-title--unread {
+  font-weight: 600;
+}
+
+.v1-notify-time {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #98A2B3;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.v1-notify-sub {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #667085;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v1-notify-arrow {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: #C4CBD4;
+  line-height: 1;
+}
+
+/* Empty state */
+.v1-empty {
+  padding: 120rpx 32rpx 80rpx;
+  text-align: center;
+}
+
+.v1-empty-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #98A2B3;
+  line-height: 1.4;
+}
+
+.v1-empty-sub {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #98A2B3;
+  line-height: 1.5;
+}

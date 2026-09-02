@@ -1,68 +1,83 @@
-<view class="container tab-page" wx:if="{{userInfo}}">
-  <view class="profile-head card theme-{{isOwner ? 'owner' : 'passenger'}}">
-    <view class="avatar">{{avatarLetter}}</view>
-    <view class="name">{{userInfo.displayName}}</view>
-    <view class="mode-block">
-      <text class="mode-label {{isOwner ? 'owner' : 'passenger'}} {{hasBothIdentities ? 'mode-label-lg' : ''}}">{{modeLabel}}</text>
-      <button wx:if="{{hasBothIdentities}}" class="switch-btn switch-btn-below" size="mini" bindtap="onSwitchMode">{{switchLabel}}</button>
+<view class="v1-mine-page container tab-page" wx:if="{{userInfo}}">
+  <view class="v1-profile">
+    <view class="v1-profile-avatar">{{avatarLetter}}</view>
+    <view class="v1-profile-main">
+      <view class="v1-profile-name">{{userInfo.displayName}}</view>
+      <view class="v1-profile-ids">
+        <text wx:if="{{hasBothIdentities}}">车主 · 乘客</text>
+        <text wx:else>{{isOwner ? '车主' : '乘客'}}</text>
+      </view>
+    </view>
+    <view wx:if="{{hasBothIdentities}}" class="v1-profile-action" bindtap="onSwitchMode">
+      <text class="v1-profile-action-text">{{switchLabel}}</text>
+      <text class="v1-chevron">›</text>
     </view>
   </view>
 
-  <block wx:if="{{isOwner}}">
-    <view class="section-title">我的车辆</view>
-    <view class="row-item" bindtap="goVehicle">
-      <view class="row-main">
-        <view class="row-title" wx:if="{{hasVehicle}}">🚗 {{vehicle.brand}} · {{vehicle.plate}}</view>
-        <view class="row-title placeholder" wx:else>未绑定车辆 · 点击填写</view>
-        <view class="row-sub" wx:if="{{hasVehicle}}">{{vehicle.modelType}} · {{vehicle.color || '未填颜色'}} · 可载{{vehicle.passengerCapacity}}人</view>
-        <view class="row-sub" wx:else>绑定车辆后可发布发车单</view>
+  <view class="v1-section">
+    <view class="v1-section-title">我的车辆</view>
+    <view class="v1-row-card" bindtap="goVehicle">
+      <view class="v1-row-main">
+        <block wx:if="{{hasVehicle}}">
+          <view class="v1-row-primary">{{vehicle.brand}} · {{vehicle.plate}}</view>
+          <view class="v1-row-secondary">{{vehicle.modelType}} · {{vehicle.color || '未填颜色'}} · 可载{{vehicle.passengerCapacity}}人</view>
+        </block>
+        <block wx:else>
+          <view class="v1-row-primary is-muted">未绑定车辆 · 点击填写</view>
+          <view class="v1-row-secondary">绑定车辆后可发布发车单</view>
+        </block>
       </view>
-      <text class="arrow">›</text>
+      <text class="v1-chevron">›</text>
     </view>
-
-    <view class="section-title">习惯标签</view>
-    <view class="row-item" bindtap="goHabitTags">
-      <view class="row-main">
-        <view class="row-title">{{habitSummary}}</view>
-      </view>
-      <text class="arrow">›</text>
-    </view>
-  </block>
-
-  <block wx:else>
-    <view class="section-title">乘车偏好</view>
-    <view class="row-item" bindtap="goPreference">
-      <view class="row-main">
-        <view class="row-title" wx:if="{{hasPreference}}">默认 {{preference.defaultCount}} 人 · {{preferenceSummary}}</view>
-        <view class="row-title placeholder" wx:else>未设置乘车偏好 · 点击填写</view>
-        <view class="row-sub" wx:if="{{!hasPreference}}">设置后发布搭车单更快捷</view>
-      </view>
-      <text class="arrow">›</text>
-    </view>
-  </block>
-
-  <view class="section-title">订单</view>
-  <view class="row-item" bindtap="goHistory">
-    <view class="row-main">
-      <view class="row-title">我的订单</view>
-      <view class="row-sub" wx:if="{{unfinishedCount > 0}}">{{unfinishedCount}} 单未完成</view>
-      <view class="row-sub muted" wx:else>暂无未完成订单</view>
-    </view>
-    <text class="arrow">›</text>
   </view>
 
-  <view class="section-title">设置</view>
-  <view class="row-item" bindtap="goAccount">
-    <view class="row-main"><view class="row-title">账号与安全</view></view>
-    <text class="arrow">›</text>
+  <view class="v1-section">
+    <view class="v1-section-title">乘车偏好</view>
+    <view class="v1-row-card" wx:if="{{isOwner}}" bindtap="goHabitTags">
+      <view class="v1-row-main">
+        <view class="v1-row-primary {{habitSummary == '未设置' ? 'is-muted' : ''}}">{{habitSummary}}</view>
+      </view>
+      <text class="v1-chevron">›</text>
+    </view>
+    <view class="v1-row-card" wx:else bindtap="goPreference">
+      <view class="v1-row-main">
+        <block wx:if="{{hasPreference}}">
+          <view class="v1-row-primary">默认 {{preference.defaultCount}} 人 · {{preferenceSummary}}</view>
+        </block>
+        <block wx:else>
+          <view class="v1-row-primary is-muted">未设置乘车偏好 · 点击填写</view>
+          <view class="v1-row-secondary">设置后发布搭车单更快捷</view>
+        </block>
+      </view>
+      <text class="v1-chevron">›</text>
+    </view>
   </view>
 
-  <view class="row-item" bindtap="goNotify">
-    <view class="row-main">
-      <view class="row-title">通知中心</view>
-      <view class="row-sub" wx:if="{{unreadCount > 0}}">{{unreadCount}} 条未读</view>
+  <view class="v1-section">
+    <view class="v1-section-title">我的订单</view>
+    <view class="v1-row-card v1-row-card--inline" bindtap="goHistory">
+      <view class="v1-row-primary {{unfinishedCount > 0 ? '' : 'is-muted'}}">
+        <text wx:if="{{unfinishedCount > 0}}">{{unfinishedCount}} 单未完成</text>
+        <text wx:else>暂无未完成订单</text>
+      </view>
+      <text class="v1-chevron">›</text>
     </view>
-    <text class="arrow">›</text>
+  </view>
+
+  <view class="v1-section">
+    <view class="v1-section-title">账号与设置</view>
+    <view class="v1-group-card">
+      <view class="v1-group-row" bindtap="goAccount">
+        <view class="v1-row-primary">账号与安全</view>
+        <text class="v1-chevron">›</text>
+      </view>
+      <view class="v1-group-divider"></view>
+      <view class="v1-group-row" bindtap="goNotify">
+        <view class="v1-row-primary">通知中心</view>
+        <view class="v1-row-meta" wx:if="{{unreadCount > 0}}">{{unreadCount}} 条未读</view>
+        <text class="v1-chevron">›</text>
+      </view>
+    </view>
   </view>
 
   <view class="tab-bottom-spacer"></view>

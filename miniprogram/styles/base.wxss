@@ -65,6 +65,6 @@ page {
 
 .tab-bottom-spacer,
 .list-bottom-spacer {
-  height: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
+  height: calc(96rpx + env(safe-area-inset-bottom) + 24rpx);
   flex-shrink: 0;
 }

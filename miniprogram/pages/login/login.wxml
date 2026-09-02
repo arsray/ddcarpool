@@ -1,29 +1,32 @@
-<view class="login-page">
-  <view class="login-card">
-    <view class="login-title">Cast 顺风车</view>
-    <view class="login-sub">Cast Member 内部顺风车</view>
+<view class="v1-login-page">
+  <view class="v1-brand">
+    <view class="v1-brand-en">DDCarpool</view>
+    <view class="v1-brand-zh">迪迪蹭车</view>
+    <view class="v1-brand-sub">和同事顺路同行</view>
+  </view>
 
-    <view class="field">
-      <text class="label">公司邮箱</text>
-      <view class="email-row {{emailError ? 'email-row-error' : ''}}">
+  <view class="v1-form-card">
+    <view class="v1-field">
+      <text class="v1-label">Disney Email</text>
+      <view class="v1-email-row {{emailError ? 'is-error' : ''}}">
         <input
-          class="email-prefix"
+          class="v1-email-prefix"
           type="text"
           placeholder="firstname.lastname"
           value="{{emailPrefix}}"
           bindinput="onEmailPrefixInput"
           bindblur="onEmailBlur"
         />
-        <text class="email-suffix">@disney.com</text>
+        <text class="v1-email-suffix">@disney.com</text>
       </view>
-      <text class="error-text" wx:if="{{emailError}}">{{emailError}}</text>
+      <text class="v1-error" wx:if="{{emailError}}">{{emailError}}</text>
     </view>
 
-    <view class="field">
-      <text class="label">验证码</text>
-      <view class="code-row">
+    <view class="v1-field">
+      <text class="v1-label">验证码</text>
+      <view class="v1-code-row">
         <input
-          class="input code-input {{codeError ? 'input-error' : ''}}"
+          class="v1-input v1-code-input {{codeError ? 'is-error' : ''}}"
           type="number"
           maxlength="6"
           placeholder="6 位验证码"
@@ -31,21 +34,21 @@
           bindinput="onCodeInput"
         />
         <button
-          class="code-btn {{canSendCode ? '' : 'code-btn-disabled'}}"
+          class="v1-code-btn {{canSendCode ? '' : 'is-disabled'}}"
           size="mini"
           disabled="{{!canSendCode}}"
           bindtap="sendCode"
         >{{sendText}}</button>
       </view>
-      <text class="error-text" wx:if="{{codeError}}">{{codeError}}</text>
+      <text class="v1-error" wx:if="{{codeError}}">{{codeError}}</text>
     </view>
 
     <button
-      class="btn-primary login-btn {{canSubmit ? '' : 'login-btn-disabled'}}"
+      class="v1-login-btn {{canSubmit ? '' : 'is-disabled'}}"
       disabled="{{!canSubmit}}"
       bindtap="onLogin"
     >注册或登录</button>
-
-    <view class="hint" wx:if="{{previewCode}}">预览模式：验证码 {{previewCode}}（正式版将发至邮箱）</view>
   </view>
+
+  <view class="v1-hint" wx:if="{{previewCode}}">预览模式：验证码 {{previewCode}}（正式版将发至邮箱）</view>
 </view>
