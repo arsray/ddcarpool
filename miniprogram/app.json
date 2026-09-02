@@ -13,7 +13,8 @@
     "pages/habit-tags/habit-tags",
     "pages/history/history",
     "pages/history-detail/history-detail",
-    "pages/notify/notify"
+    "pages/notify/notify",
+    "pages/chat/chat"
   ],
   "window": {
     "navigationBarBackgroundColor": "#003087",

@@ -3,6 +3,8 @@ const auth = require('../../modules/auth/index')
 const { getOngoingOrders } = require('../../modules/auth/mock')
 const { formatPreferenceSummary } = require('../../modules/auth/vehicle-data')
 const { safeReLaunch, isTopPage } = require('../../modules/auth/nav')
+const config = require('../../config/index')
+const notification = require('../../modules/notification/index')
 
 Page({
   data: {
@@ -21,14 +23,26 @@ Page({
     avatarLetter: 'J'
   },
 
-  onShow() {
+  async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 3 })
     }
     if (!isTopPage('pages/mine/mine')) return
     if (!auth.requireLogin()) return
-    auth.store.initFromStorage()
-    auth.store.syncGlobalData(app.globalData)
+    if (config.useCloud) {
+      try {
+        await auth.getProfile()
+        const [orders, notifications] = await Promise.all([
+          auth.listMyOrders(),
+          notification.listNotifications()
+        ])
+        app.globalData.cloudOrders = orders
+        app.globalData.notifications = notifications
+      } catch (error) {
+        wx.showToast({ title: '个人数据加载失败', icon: 'none' })
+      }
+    }
+    app._syncAuth()
     if (!app.globalData.onboardingComplete || !app.globalData.identities.length) {
       safeReLaunch('/pages/onboarding/identity/identity')
       return
@@ -42,7 +56,11 @@ Page({
     const isOwner = g.userMode === 'owner'
     const hasBoth = identities.includes('owner') && identities.includes('passenger')
     const list = isOwner ? (g.historyOwner || []) : (g.historyPassenger || [])
-    const unfinishedCount = getOngoingOrders(list).length
+    const unfinishedCount = config.useCloud
+      ? (app.globalData.cloudOrders || []).filter((item) =>
+        ['matching', 'pending_departure', 'in_progress'].includes(item.status)
+      ).length
+      : getOngoingOrders(list).length
 
     this.setData({
       userInfo: g.userInfo,
@@ -62,18 +80,22 @@ Page({
     })
   },
 
-  onSwitchMode() {
+  async onSwitchMode() {
     const next = this.data.isOwner ? 'passenger' : 'owner'
     if (!app.hasIdentity(next)) {
       wx.showToast({ title: '请先添加该身份', icon: 'none' })
       return
     }
-    app.setUserMode(next)
-    this.refresh()
-    wx.showToast({
-      title: next === 'owner' ? '已切换为车主模式' : '已切换为乘车人模式',
-      icon: 'none'
-    })
+    try {
+      await app.setUserMode(next)
+      this.refresh()
+      wx.showToast({
+        title: next === 'owner' ? '已切换为车主模式' : '已切换为乘车人模式',
+        icon: 'none'
+      })
+    } catch (error) {
+      wx.showToast({ title: '切换失败，请重试', icon: 'none' })
+    }
   },
 
   goVehicle() { wx.navigateTo({ url: '/pages/vehicle/vehicle' }) },

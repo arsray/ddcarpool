@@ -1,5 +1,8 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
+const config = require('../../config/index')
+const order = require('../../modules/order/index')
+const { toHistoryItem, toOwnerHistoryItem } = require('../../modules/order/history-bridge')
 const {
   FILTER_TABS,
   prepareOrderList
@@ -27,12 +30,11 @@ Page({
     this.initRole(options.role)
   },
 
-  onShow() {
+  async onShow() {
     if (!auth.requireLogin()) return
-    auth.store.initFromStorage()
-    auth.store.syncGlobalData(app.globalData)
+    app._syncAuth()
     this.initRole(this.data.role)
-    this.loadList()
+    await this.loadList()
   },
 
   initRole(roleFromRoute) {
@@ -59,7 +61,21 @@ Page({
     wx.setNavigationBarTitle({ title: navTitle })
   },
 
-  loadList() {
+  async loadList() {
+    if (config.useCloud) {
+      try {
+        const openId = await auth.ensureLogin()
+        const role = this.data.role === 'owner' ? 'driver' : 'passenger'
+        const list = await order.listOrdersForUser(openId, { role })
+        const mapped = list.map(this.data.role === 'owner' ? toOwnerHistoryItem : toHistoryItem)
+        this.setData({
+          orders: prepareOrderList(mapped, this.data.filter, this.data.role)
+        })
+      } catch (error) {
+        wx.showToast({ title: '订单加载失败', icon: 'none' })
+      }
+      return
+    }
     const list = this.data.role === 'owner'
       ? app.globalData.historyOwner
       : app.globalData.historyPassenger
@@ -68,14 +84,14 @@ Page({
     })
   },
 
-  switchRole(e) {
+  async switchRole(e) {
     this.setData({ role: e.currentTarget.dataset.role, filter: '全部' })
-    this.loadList()
+    await this.loadList()
   },
 
-  onFilter(e) {
+  async onFilter(e) {
     this.setData({ filter: e.currentTarget.dataset.filter })
-    this.loadList()
+    await this.loadList()
   },
 
   goDetail(e) {

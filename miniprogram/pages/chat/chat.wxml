@@ -1,11 +1,42 @@
-<view class="container">
-  <view class="scaffold-banner">协作脚手架 · {{module}}</view>
-  <view class="card">
-    <view class="scaffold-title">{{pageName}}</view>
-    <view class="scaffold-desc">模块负责人：{{owner}}</view>
-    <view class="scaffold-desc">待实现：{{todo}}</view>
-    <view class="scaffold-meta" wx:if="{{orderId}}">orderId: {{orderId}}</view>
-    <view class="scaffold-meta">接口：modules/chat → listMessages()、sendMessage()</view>
+<view class="chat-page">
+  <scroll-view
+    class="chat-list"
+    scroll-y
+    scroll-into-view="{{scrollTarget}}"
+    upper-threshold="40"
+    bindscrolltoupper="loadOlder"
+  >
+    <view class="chat-loading-more" wx:if="{{loadingMore}}">加载更早消息…</view>
+    <view class="chat-loading" wx:if="{{loading}}">加载中…</view>
+    <view class="chat-empty" wx:elif="{{!messages.length}}">还没有消息，开始沟通吧</view>
+    <view
+      wx:for="{{messages}}"
+      wx:key="_id"
+      id="message-{{item._id}}"
+      class="chat-row {{item.isMine ? 'chat-row--mine' : ''}}"
+    >
+      <view class="chat-meta">{{item.senderName}} · {{item.timeLabel}}</view>
+      <view class="chat-bubble">{{item.content}}</view>
+    </view>
+    <view class="chat-spacer"></view>
+  </scroll-view>
+
+  <view class="chat-compose">
+    <input
+      class="chat-input"
+      value="{{content}}"
+      maxlength="500"
+      placeholder="输入消息"
+      bindinput="onInput"
+      confirm-type="send"
+      bindconfirm="onSend"
+    />
+    <button
+      class="chat-send"
+      size="mini"
+      loading="{{sending}}"
+      disabled="{{sending || !content}}"
+      bindtap="onSend"
+    >发送</button>
   </view>
-  <view class="empty-state">聊天区域占位</view>
 </view>

@@ -58,9 +58,8 @@ function buildSubmitNote(selectedNoteMap, supplementNote) {
 }
 
 function readPassengerPreference() {
-  auth.store.initFromStorage()
-  auth.store.syncGlobalData(app.globalData)
-  return auth.store.getPreference() || app.globalData.preference || {
+  app._syncAuth()
+  return app.globalData.preference || {
     defaultCount: 1,
     note: '',
     noteTags: []
@@ -292,8 +291,7 @@ Page({
         passengerName: (profile && profile.nickName) || app.globalData.userInfo.displayName || '乘客'
       })
 
-      auth.store.initFromStorage()
-      auth.store.syncGlobalData(app.globalData)
+      app._syncAuth()
 
       wx.showToast({ title: '发布成功', icon: 'success' })
       setTimeout(() => {

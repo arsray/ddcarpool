@@ -20,10 +20,14 @@ Page({
     this.setData({ selectedMap });
   },
 
-  onSave() {
+  async onSave() {
     const tags = Object.keys(this.data.selectedMap).filter((k) => this.data.selectedMap[k]);
-    app.saveHabitTags(tags);
-    wx.showToast({ title: '已保存' });
-    setTimeout(() => wx.navigateBack(), 500);
+    try {
+      await app.saveHabitTags(tags);
+      wx.showToast({ title: '已保存' });
+      setTimeout(() => wx.navigateBack(), 500);
+    } catch (error) {
+      wx.showToast({ title: '保存失败，请重试', icon: 'none' });
+    }
   }
 });

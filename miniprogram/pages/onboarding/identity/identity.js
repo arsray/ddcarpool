@@ -37,7 +37,7 @@ Page({
     this.setData({ selected: role });
   },
 
-  onNext() {
+  async onNext() {
     const { selected, mode } = this.data;
     if (!selected) return;
 
@@ -46,18 +46,17 @@ Page({
         wx.showToast({ title: '你已拥有该身份', icon: 'none' });
         return;
       }
-    } else {
-      app.globalData.identities = [];
-      wx.setStorageSync('identities', []);
     }
 
-    app.addIdentity(selected);
-
-    const query = mode === 'add' ? 'setup=1' : 'onboarding=1';
-    const setupUrl = selected === 'owner'
-      ? `/pages/vehicle/vehicle?${query}`
-      : `/pages/preference/preference?${query}`;
-
-    wx.navigateTo({ url: setupUrl });
+    try {
+      await app.addIdentity(selected);
+      const query = mode === 'add' ? 'setup=1' : 'onboarding=1';
+      const setupUrl = selected === 'owner'
+        ? `/pages/vehicle/vehicle?${query}`
+        : `/pages/preference/preference?${query}`;
+      wx.navigateTo({ url: setupUrl });
+    } catch (error) {
+      wx.showToast({ title: '保存身份失败，请重试', icon: 'none' });
+    }
   }
 });

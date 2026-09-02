@@ -2,7 +2,8 @@
  * M1 — auth 模块
  * 接口契约见 docs/MODULE_CONTRACTS.md
  */
-const store = require('./store')
+const config = require('../../config/index')
+const store = config.useCloud ? require('./cloud-store') : require('./store')
 const { listMyOrdersFromStore } = require('./mapper')
 const { statusActions, isDangerAction } = require('./order-actions')
 const { safeReLaunch } = require('./nav')
@@ -24,7 +25,17 @@ function requireLogin() {
 
 async function ensureLogin() {
   store.initFromStorage()
-  const openId = store.getOpenId()
+  let openId = store.getOpenId()
+  if (!openId && config.useCloud && store.bootstrapCloudSession) {
+    await store.bootstrapCloudSession()
+    openId = store.getOpenId()
+    try {
+      const app = getApp()
+      if (app && app._syncAuth) app._syncAuth()
+    } catch (error) {
+      // App 尚未就绪时仅返回身份。
+    }
+  }
   if (!openId) {
     safeReLaunch('/pages/login/login')
     const err = new Error('NOT_LOGGED_IN')
@@ -36,6 +47,13 @@ async function ensureLogin() {
 
 async function getProfile() {
   store.initFromStorage()
+  if (config.useCloud && store.refreshUser) await store.refreshUser()
+  try {
+    const app = getApp()
+    if (app && app._syncAuth) app._syncAuth()
+  } catch (error) {
+    // App 尚未就绪时返回 store 中的最新值。
+  }
   return store.getUserProfile()
 }
 
@@ -48,8 +66,16 @@ async function requestProfile() {
 }
 
 async function listMyOrders() {
+  const openId = await ensureLogin()
+  if (config.useCloud) {
+    const order = require('../order/index')
+    const [passenger, driver] = await Promise.all([
+      order.listOrdersForUser(openId, { role: 'passenger' }),
+      order.listOrdersForUser(openId, { role: 'driver' })
+    ])
+    return [...passenger, ...driver]
+  }
   store.initFromStorage()
-  await ensureLogin()
   return listMyOrdersFromStore(store)
 }
 

@@ -40,13 +40,17 @@ Page({
       title: `添加${label}身份`,
       content: `添加后可在「我的」中切换${label}模式，是否继续？`,
       confirmText: '添加',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return;
-        app.addIdentity(role);
-        const url = role === 'owner'
-          ? '/pages/vehicle/vehicle?setup=1'
-          : '/pages/preference/preference?setup=1';
-        wx.navigateTo({ url });
+        try {
+          await app.addIdentity(role);
+          const url = role === 'owner'
+            ? '/pages/vehicle/vehicle?setup=1'
+            : '/pages/preference/preference?setup=1';
+          wx.navigateTo({ url });
+        } catch (error) {
+          wx.showToast({ title: '添加身份失败，请重试', icon: 'none' });
+        }
       }
     });
   }

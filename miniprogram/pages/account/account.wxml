@@ -18,7 +18,7 @@
     <text class="arrow">›</text>
   </view>
 
-  <view class="mock-section">
+  <view class="mock-section" wx:if="{{mockUsers.length}}">
     <view class="section-title">Mock 测试账号</view>
     <view class="section-desc">一键切换双角色，各自订单与偏好独立保存</view>
     <view

@@ -13,8 +13,7 @@ Page({
 
   onShow() {
     if (!auth.requireLogin()) return
-    auth.store.initFromStorage()
-    auth.store.syncGlobalData(app.globalData)
+    app._syncAuth()
     this.refresh()
   },
 

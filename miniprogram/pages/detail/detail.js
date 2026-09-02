@@ -21,7 +21,9 @@ Page({
     isPassenger: false,
     isAssignedDriver: false,
     canAccept: false,
+    canStart: false,
     canComplete: false,
+    canChat: false,
     canCancel: false,
     cancelKind: '',
     cancelButtonLabel: '',
@@ -48,8 +50,7 @@ Page({
 
     this.setData({ loading: true })
     try {
-      auth.store.initFromStorage()
-      auth.store.syncGlobalData(app.globalData)
+      app._syncAuth()
 
       const item = await order.getOrderById(this.data.orderId)
       if (!item) {
@@ -59,18 +60,29 @@ Page({
       }
 
       const openId = app.globalData.openId || (await auth.ensureLogin())
-      const isPassenger = item.passengerOpenId === openId
-      const isAssignedDriver = item.driverOpenId === openId
+      const isPassenger = item.viewerRole
+        ? item.viewerRole === 'passenger'
+        : item.passengerOpenId === openId
+      const isAssignedDriver = item.viewerRole
+        ? item.viewerRole === 'driver'
+        : item.driverOpenId === openId
       const hasOwnerIdentity = app.hasIdentity('owner')
       const canAccept =
         item.status === order.ORDER_STATUS.MATCHING &&
         !isPassenger &&
         hasOwnerIdentity &&
-        !item.driverOpenId
+        !item.driverOpenId &&
+        !item.viewerRole
       const canComplete =
         isAssignedDriver &&
         (item.status === order.ORDER_STATUS.PENDING_DEPARTURE ||
           item.status === order.ORDER_STATUS.IN_PROGRESS)
+      const canStart =
+        isAssignedDriver &&
+        item.status === order.ORDER_STATUS.PENDING_DEPARTURE
+      const canChat =
+        (isPassenger || isAssignedDriver) &&
+        [order.ORDER_STATUS.PENDING_DEPARTURE, order.ORDER_STATUS.IN_PROGRESS].includes(item.status)
       const cancelKind = resolveCancelAction(item, openId)
 
       this.setData({
@@ -82,7 +94,9 @@ Page({
         isPassenger,
         isAssignedDriver,
         canAccept,
+        canStart,
         canComplete,
+        canChat,
         canCancel: !!cancelKind,
         cancelKind: cancelKind || '',
         cancelButtonLabel: cancelKind ? getCancelButtonLabel(cancelKind) : ''
@@ -116,8 +130,7 @@ Page({
         name: (profile && profile.nickName) || app.globalData.userInfo.displayName || '司机'
       })
 
-      auth.store.initFromStorage()
-      auth.store.syncGlobalData(app.globalData)
+      app._syncAuth()
 
       wx.showToast({ title: '接单成功', icon: 'success' })
       await this.loadOrder()
@@ -144,6 +157,24 @@ Page({
     wx.navigateTo({ url: `/pages/history/history?role=${role}` })
   },
 
+  goChat() {
+    wx.navigateTo({ url: `/pages/chat/chat?orderId=${this.data.orderId}` })
+  },
+
+  async onStart() {
+    if (!this.data.canStart || this.data.submitting) return
+    this.setData({ submitting: true })
+    try {
+      await order.startTrip(this.data.orderId, await auth.ensureLogin())
+      wx.showToast({ title: '行程已开始', icon: 'success' })
+      await this.loadOrder()
+    } catch (error) {
+      wx.showToast({ title: error.message || '操作失败', icon: 'none' })
+    } finally {
+      this.setData({ submitting: false })
+    }
+  },
+
   backToPlaza() {
     wx.switchTab({ url: '/pages/index/index' })
   },
@@ -168,8 +199,7 @@ Page({
       const openId = await auth.ensureLogin()
       await order.cancelOrder(this.data.orderId, { openId })
 
-      auth.store.initFromStorage()
-      auth.store.syncGlobalData(app.globalData)
+      app._syncAuth()
 
       wx.showToast({
         title: getCancelSuccessTitle(this.data.cancelKind),
@@ -214,8 +244,7 @@ Page({
       const openId = await auth.ensureLogin()
       await order.completeOrder(this.data.orderId, openId)
 
-      auth.store.initFromStorage()
-      auth.store.syncGlobalData(app.globalData)
+      app._syncAuth()
 
       wx.showToast({ title: '订单已完成', icon: 'success' })
       await this.loadOrder()

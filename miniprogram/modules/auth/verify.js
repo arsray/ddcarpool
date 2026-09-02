@@ -1,8 +1,11 @@
 const { normalizeEmail } = require('./email');
+const config = require('../../config/index');
+const { callFunction } = require('../../utils/cloud');
 
 const COOLDOWN_MS = 60 * 1000;
 const EXPIRE_MS = 10 * 60 * 1000;
 const CODE_LEN = 6;
+const previewCodes = Object.create(null);
 
 function storageKey(email) {
   return `verify_${normalizeEmail(email)}`;
@@ -12,8 +15,22 @@ function generateCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function sendCode(email) {
+async function sendCode(email) {
   const normalized = normalizeEmail(email);
+  if (config.useCloud && !config.allowMockEmailVerification) {
+    const data = await callFunction('emailAuth', {
+      action: 'requestCode',
+      email: normalized
+    });
+    wx.setStorageSync(storageKey(normalized), {
+      email: normalized,
+      sentAt: Date.now(),
+      expiresAt: Date.now() + EXPIRE_MS,
+      mode: 'smtp'
+    });
+    return { ok: true, code: '', mode: 'smtp', data, message: '验证码已发送至您的邮箱，请查收' };
+  }
+
   const key = storageKey(normalized);
   const now = Date.now();
   const existing = wx.getStorageSync(key);
@@ -24,14 +41,15 @@ function sendCode(email) {
   }
 
   const code = generateCode();
+  previewCodes[normalized] = code;
   wx.setStorageSync(key, {
     email: normalized,
-    code,
     sentAt: now,
-    expiresAt: now + EXPIRE_MS
+    expiresAt: now + EXPIRE_MS,
+    mode: 'mock'
   });
 
-  return { ok: true, code, message: '验证码已发送至您的邮箱，请查收' };
+  return { ok: true, code, mode: 'mock', message: '开发预览验证码已生成' };
 }
 
 function getCooldownRemain(email) {
@@ -47,8 +65,25 @@ function hasSentCode(email) {
   return Date.now() < existing.expiresAt;
 }
 
-function verifyCode(email, input) {
+async function verifyCode(email, input) {
   const normalized = normalizeEmail(email);
+  if (config.useCloud && !config.allowMockEmailVerification) {
+    if (!input || !/^\d{6}$/.test(input)) {
+      return { ok: false, message: '请输入 6 位数字验证码' };
+    }
+    try {
+      await callFunction('emailAuth', {
+        action: 'verifyCode',
+        email: normalized,
+        code: input
+      });
+      wx.removeStorageSync(storageKey(normalized));
+      return { ok: true, email: normalized, mode: 'smtp' };
+    } catch (error) {
+      return { ok: false, code: error.code, message: error.message || '验证码错误或已过期' };
+    }
+  }
+
   const key = storageKey(normalized);
   const record = wx.getStorageSync(key);
 
@@ -57,17 +92,19 @@ function verifyCode(email, input) {
   }
   if (Date.now() > record.expiresAt) {
     wx.removeStorageSync(key);
+    delete previewCodes[normalized];
     return { ok: false, message: '验证码错误或已过期，请重新获取' };
   }
   if (!input || !/^\d{6}$/.test(input)) {
     return { ok: false, message: '请输入 6 位数字验证码' };
   }
-  if (input !== record.code) {
+  if (input !== previewCodes[normalized]) {
     return { ok: false, message: '验证码错误或已过期，请重新获取' };
   }
 
   wx.removeStorageSync(key);
-  return { ok: true, email: normalized };
+  delete previewCodes[normalized];
+  return { ok: true, email: normalized, mode: 'mock' };
 }
 
 module.exports = {
