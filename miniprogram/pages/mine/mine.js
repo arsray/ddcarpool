@@ -23,7 +23,7 @@ Page({
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2 })
+      this.getTabBar().setData({ selected: 3 })
     }
     if (!isTopPage('pages/mine/mine')) return
     if (!auth.requireLogin()) return
@@ -83,5 +83,5 @@ Page({
     wx.navigateTo({ url: `/pages/history/history?role=${this.data.isOwner ? 'owner' : 'passenger'}` })
   },
   goAccount() { wx.navigateTo({ url: '/pages/account/account' }) },
-  goNotify() { wx.navigateTo({ url: '/pages/notify/notify' }) }
+  goNotify() { wx.switchTab({ url: '/pages/notify/notify' }) }
 })

@@ -28,10 +28,22 @@ function buildAcceptModalFields(orderItem) {
   }
 }
 
-function enrichOrders(list) {
+function enrichOrders(list, points) {
+  const pointList = points || []
+
   return (list || []).map((item) => {
     const { dateLabel, timeLabel } = buildAcceptModalFields(item)
-    return { ...item, dateLabel, timeLabel }
+
+    const fromPoint = pointList.find((point) => point.pointId === item.fromPointId)
+    const toPoint = pointList.find((point) => point.pointId === item.toPointId)
+
+    return {
+      ...item,
+      dateLabel,
+      timeLabel,
+      fromName: fromPoint ? fromPoint.name : '未知起点',
+      toName: toPoint ? toPoint.name : '未知终点'
+    }
   })
 }
 
@@ -101,7 +113,93 @@ Page({
     acceptModalOrder: null,
     acceptDateLabel: '',
     acceptTimeLabel: '',
-    accepting: false
+    accepting: false,
+
+    // ===== M2 Homepage UI Prototype =====
+    uiPrototypeMode: false,
+    
+    userMode: app.globalData.userMode || 'owner',
+    
+    noticeText: '明晚羽托邦暑假收官战🔥即刻联系xxx报名',
+    noticeShouldScroll: false,
+    
+    prototypePoints: [
+      '米奇大街',
+      '演职人员活动中心',
+      'TD',
+      'PAB',
+      '梦幻世界',
+      '申迪',
+      '羽毛球馆'
+    ],
+    
+    driverTripFromIndex: 2,
+    driverTripToIndex: 5,
+    driverTripTime: '今天 18:30',
+    
+    passengerFromIndex: 3,
+    passengerToIndex: 6,
+    passengerTime: '明天 18:30',
+    passengerCount: 1,
+    
+    prototypeOrders: [
+      {
+        id: 'prototype-1',
+        time: '今天 12:00',
+        from: 'TD',
+        to: '申迪',
+        passengerCount: 1,
+        matchScore: 82,
+        tags: ['需准时', '不要特斯拉']
+      },
+      {
+        id: 'prototype-2',
+        time: '今天 15:00',
+        from: '演职人员活动中心',
+        to: 'PAB',
+        passengerCount: 2,
+        matchScore: 76,
+        tags: ['行李多']
+      },
+      {
+        id: 'prototype-3',
+        time: '明天 18:30',
+        from: 'PAB',
+        to: '羽毛球馆',
+        passengerCount: 1,
+        matchScore: 100,
+        tags: ['需要理想车型']
+      }
+    ],
+    
+    passengerTags: [
+      '需准时',
+      '行李多',
+      '不要特斯拉',
+      '需要理想车型'
+    ],
+    
+    rankingTab: 'today',
+    rankingUnlocked: false,
+    promoVisible: false,
+    
+    todayRanking: [
+      { rank: 1, maskedName: 'G**师傅', name: '高师傅', merit: 12 },
+      { rank: 2, maskedName: 'S**师傅', name: '孙师傅', merit: 9 },
+      { rank: 3, maskedName: 'W**师傅', name: '王师傅', merit: 7 },
+      { rank: 4, maskedName: 'L**师傅', name: '李师傅', merit: 6 },
+      { rank: 5, maskedName: 'Z**师傅', name: '张师傅', merit: 5 },
+      { rank: 6, maskedName: 'C**师傅', name: '陈师傅', merit: 3 }
+    ],
+    
+    totalRanking: [
+      { rank: 1, maskedName: 'G**师傅', name: '高师傅', merit: 386 },
+      { rank: 2, maskedName: 'W**师傅', name: '王师傅', merit: 342 },
+      { rank: 3, maskedName: 'S**师傅', name: '孙师傅', merit: 315 },
+      { rank: 4, maskedName: 'L**师傅', name: '李师傅', merit: 288 },
+      { rank: 5, maskedName: 'Z**师傅', name: '张师傅', merit: 261 },
+      { rank: 6, maskedName: 'C**师傅', name: '陈师傅', merit: 240 }
+    ]
   },
 
   onLoad() {
@@ -109,13 +207,50 @@ Page({
     this._plazaFilters = null
   },
 
+  onReady() {
+    this.checkNoticeOverflow()
+  },
+  
+  checkNoticeOverflow() {
+    const query = wx.createSelectorQuery().in(this)
+    const isProd = !this.data.uiPrototypeMode
+    const scrollSel = isProd ? '.v1-notice-scroll' : '.m2-notice-scroll'
+    const contentSel = isProd ? '.v1-notice-content' : '.m2-notice-content'
+
+    query.select(scrollSel).boundingClientRect()
+    query.select(contentSel).boundingClientRect()
+
+    query.exec((res) => {
+      const container = res[0]
+      const content = res[1]
+
+      if (!container || !content) return
+
+      this.setData({
+        noticeShouldScroll: content.width > container.width
+      })
+    })
+  },
+
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
     }
+  
+    // M2 Homepage UI Prototype：仅用于本地 UI 预览
+    if (this.data.uiPrototypeMode) {
+      this.setData({ loading: false })
+      return
+    }
+  
     if (!auth.requireLogin()) return
     auth.store.initFromStorage()
     auth.store.syncGlobalData(app.globalData)
+    
+    this.setData({
+      userMode: app.globalData.userMode || 'owner'
+    })
+    
     this.loadOrders()
   },
 
@@ -133,7 +268,7 @@ Page({
   },
 
   applyFilterView(allOrders, points, filters) {
-    const enriched = enrichOrders(allOrders)
+    const enriched = enrichOrders(allOrders, points)
     const view = buildPlazaFilterView(enriched, points, filters, new Date())
     const normalized = view.filters
     if (this._plazaFiltersTouched) {
@@ -185,7 +320,7 @@ Page({
       ])
       const points = await order.listPoints()
       this.applyFilterView(rawOrders, points, this.getPlazaFilters())
-      const acceptedOrders = enrichOrders(rawAccepted)
+      const acceptedOrders = enrichOrders(rawAccepted, points)
       applyHeroView(this, hasOwnerIdentity, isPassengerOnly, acceptedOrders)
       this.setData({
         acceptedOrders,
@@ -316,11 +451,169 @@ Page({
       url: `/pages/detail/detail?orderId=${orderId}&from=plaza`
     })
   },
-
+  switchUserMode(e) {
+    const mode = e.currentTarget.dataset.mode
+    if (!mode || mode === this.data.userMode) return
+  
+    app.setUserMode(mode)
+  
+    this.setData({
+      userMode: app.globalData.userMode
+    })
+  },
+  
+  switchRankingTab(e) {
+    this.setData({
+      rankingTab: e.currentTarget.dataset.tab
+    })
+  },
+  
+  onDriverFromChange(e) {
+    this.setData({
+      driverTripFromIndex: Number(e.detail.value)
+    })
+  },
+  
+  onDriverToChange(e) {
+    this.setData({
+      driverTripToIndex: Number(e.detail.value)
+    })
+  },
+  
+  onPassengerFromChange(e) {
+    this.setData({
+      passengerFromIndex: Number(e.detail.value)
+    })
+  },
+  
+  onPassengerToChange(e) {
+    this.setData({
+      passengerToIndex: Number(e.detail.value)
+    })
+  },
+  
+  showPrototypeMatch() {
+    wx.showToast({
+      title: 'UI 演示：匹配功能待联调',
+      icon: 'none'
+    })
+  },
+  
+  showPrototypePublish() {
+    wx.showToast({
+      title: 'UI 演示：发布功能待联调',
+      icon: 'none'
+    })
+  },
+  
+  showPrototypeAccept() {
+    wx.showToast({
+      title: 'UI 演示：接单功能沿用 M3',
+      icon: 'none'
+    })
+  },
+  
+  openPromoModal() {
+    this.setData({
+      promoVisible: true
+    })
+  },
+  
+  closePromoModal() {
+    this.setData({
+      promoVisible: false
+    })
+  },
+  
+  completePromo() {
+    this.setData({
+      promoVisible: false,
+      rankingUnlocked: true
+    })
+  
+    wx.showToast({
+      title: '今日排行榜已解锁',
+      icon: 'success'
+    })
+  },
   goPublish() {
     wx.switchTab({ url: '/pages/publish/publish' })
   },
-
+  
+  switchRankingTab(e) {
+    this.setData({
+      rankingTab: e.currentTarget.dataset.tab
+    })
+  },
+  
+  onDriverFromChange(e) {
+    this.setData({
+      driverTripFromIndex: Number(e.detail.value)
+    })
+  },
+  
+  onDriverToChange(e) {
+    this.setData({
+      driverTripToIndex: Number(e.detail.value)
+    })
+  },
+  
+  onPassengerFromChange(e) {
+    this.setData({
+      passengerFromIndex: Number(e.detail.value)
+    })
+  },
+  
+  onPassengerToChange(e) {
+    this.setData({
+      passengerToIndex: Number(e.detail.value)
+    })
+  },
+  
+  showPrototypeMatch() {
+    wx.showToast({
+      title: 'UI 演示：匹配功能待联调',
+      icon: 'none'
+    })
+  },
+  
+  showPrototypePublish() {
+    wx.showToast({
+      title: 'UI 演示：发布功能待联调',
+      icon: 'none'
+    })
+  },
+  
+  showPrototypeAccept() {
+    wx.showToast({
+      title: 'UI 演示：接单功能沿用 M3',
+      icon: 'none'
+    })
+  },
+  
+  openPromoModal() {
+    this.setData({
+      promoVisible: true
+    })
+  },
+  
+  closePromoModal() {
+    this.setData({
+      promoVisible: false
+    })
+  },
+  
+  completePromo() {
+    this.setData({
+      promoVisible: false,
+      rankingUnlocked: true
+    })
+  
+    wx.showToast({
+      title: '今日排行榜已解锁',
+      icon: 'success'
+    })
+  },
   goAddOwnerIdentity() {
     wx.navigateTo({ url: '/pages/onboarding/identity/identity?mode=add' })
   }

@@ -1,25 +1,51 @@
-<view class="container">
-  <view class="role-tabs" wx:if="{{showRoleTabs}}">
-    <view class="role-tab {{role==='passenger'?'on passenger':''}}" data-role="passenger" bindtap="switchRole">乘车人订单</view>
-    <view class="role-tab {{role==='owner'?'on owner':''}}" data-role="owner" bindtap="switchRole">车主订单</view>
+<view class="v1-history-page container">
+  <view class="v1-seg" wx:if="{{showRoleTabs}}">
+    <view
+      class="v1-seg-item {{role==='passenger'?'on passenger':''}}"
+      data-role="passenger"
+      bindtap="switchRole"
+    >乘车人订单</view>
+    <view
+      class="v1-seg-item {{role==='owner'?'on owner':''}}"
+      data-role="owner"
+      bindtap="switchRole"
+    >车主订单</view>
   </view>
-  <view class="filter-tabs">
-    <text wx:for="{{filters}}" wx:key="*this" class="filter-tab {{filter===item?'on':''}}" data-filter="{{item}}" bindtap="onFilter">{{item}}</text>
+
+  <view class="v1-filter">
+    <text
+      wx:for="{{filters}}"
+      wx:key="*this"
+      class="v1-filter-item {{filter===item?'on':''}}"
+      data-filter="{{item}}"
+      bindtap="onFilter"
+    >{{item}}</text>
   </view>
 
   <block wx:if="{{orders.length}}">
-    <view class="row-item" wx:for="{{orders}}" wx:key="id" data-id="{{item.id}}" bindtap="goDetail">
-      <text class="source-corner" wx:if="{{item.sourceTag}}">{{item.sourceTag}}</text>
-      <view class="row-main">
-        <view class="row-title">{{item.from}} → {{item.to}}</view>
-        <view class="row-sub">
-          <text class="status {{item.statusClass}}">{{item.status}}</text>
-          <text class="note-text"> · {{item.scheduleLine}}</text>
+    <view
+      class="v1-order-card"
+      wx:for="{{orders}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="v1-order-main">
+        <view class="v1-order-top">
+          <view class="v1-order-route">{{item.from}} → {{item.to}}</view>
+          <text class="v1-source" wx:if="{{item.sourceTag}}">{{item.sourceTag}}</text>
         </view>
-        <view class="row-hint" wx:if="{{item.listHint}}">{{item.listHint}}</view>
+        <view class="v1-order-meta">
+          <text class="v1-status {{item.statusClass}}">{{item.status}}</text>
+          <text class="v1-schedule">{{item.scheduleLine}}</text>
+        </view>
+        <view class="v1-order-hint" wx:if="{{item.listHint}}">{{item.listHint}}</view>
       </view>
-      <text class="arrow">›</text>
+      <text class="v1-chevron">›</text>
     </view>
   </block>
-  <view class="empty-orders" wx:else>暂无订单</view>
+  <view class="v1-empty" wx:else>
+    <view class="v1-empty-title">暂无订单</view>
+    <view class="v1-empty-sub">你的订单会显示在这里</view>
+  </view>
 </view>

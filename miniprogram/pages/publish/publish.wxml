@@ -1,37 +1,40 @@
-<view class="container tab-page">
+<view class="container tab-page v1-passenger-page">
   <block wx:if="{{loading}}">
-    <view class="empty-state">加载中…</view>
+    <view class="v1-empty">加载中…</view>
   </block>
 
   <block wx:elif="{{!hasPassengerIdentity}}">
-    <view class="card empty-card">
-      <view class="empty-title">需要乘车人身份</view>
-      <view class="empty-desc">搭车单由乘客发布，请先添加乘车人身份并设置偏好。</view>
-      <button class="btn-primary" bindtap="goAddPassengerIdentity">添加乘车人身份</button>
+    <view class="v1-role-badge">乘客</view>
+    <view class="v1-empty-card">
+      <view class="v1-empty-title">需要乘车人身份</view>
+      <view class="v1-empty-desc">搭车单由乘客发布，请先添加乘车人身份并设置偏好。</view>
+      <button class="v1-btn-primary" bindtap="goAddPassengerIdentity">添加乘车人身份</button>
     </view>
     <view class="tab-bottom-spacer"></view>
   </block>
 
   <block wx:else>
-    <view class="intro-card">
-      <view class="intro-title">发布搭车单</view>
-      <view class="intro-desc">请选择您的出发时间、出发地点及目的地，成功提交后订单将进入「匹配中」，司机可在广场中接单。</view>
+    <view class="v1-role-badge">乘客</view>
+
+    <view class="v1-page-head">
+      <view class="v1-page-title">发布我的行程</view>
+      <view class="v1-page-sub">填写出发信息，发布搭车需求</view>
     </view>
 
-    <view class="card">
-      <view class="field">
-        <view class="field-row">
-          <view class="field-col">
-            <text class="label">出发日期</text>
+    <view class="v1-form-card">
+      <view class="v1-field-block">
+        <view class="v1-field-row">
+          <view class="v1-field-col">
+            <text class="v1-label">出发日期</text>
             <picker mode="selector" range="{{dateLabels}}" value="{{dateIndex}}" bindchange="onDateChange">
-              <view class="picker-field">
-                <text>{{dateLabels[dateIndex]}}</text>
-                <text class="arrow">›</text>
+              <view class="v1-picker">
+                <text class="v1-picker-val">{{dateLabels[dateIndex]}}</text>
+                <text class="v1-picker-arrow">›</text>
               </view>
             </picker>
           </view>
-          <view class="field-col">
-            <text class="label">出发时间窗</text>
+          <view class="v1-field-col">
+            <text class="v1-label">出发时间</text>
             <picker
               wx:if="{{hasAvailableSlots}}"
               mode="selector"
@@ -39,87 +42,95 @@
               value="{{timeIndex}}"
               bindchange="onTimeChange"
             >
-              <view class="picker-field">
-                <text>{{form.timeWindow}}</text>
-                <text class="arrow">›</text>
+              <view class="v1-picker">
+                <text class="v1-picker-val">{{form.timeWindow}}</text>
+                <text class="v1-picker-arrow">›</text>
               </view>
             </picker>
-            <view class="picker-field disabled" wx:else>
-              <text class="placeholder">当日可选时间窗已结束，请换日期</text>
+            <view class="v1-picker v1-picker--disabled" wx:else>
+              <text class="v1-picker-placeholder">当日可选时间窗已结束，请换日期</text>
             </view>
           </view>
         </view>
-        <text class="field-hint">仅可选择今天起 7 日内</text>
+        <text class="v1-caption">仅可选择今天起 7 日内</text>
       </view>
 
-      <view class="field">
-        <view class="field-row">
-          <view class="field-col">
-            <text class="label">出发地点</text>
-            <picker mode="selector" range="{{pointNames}}" value="{{fromIndex >= 0 ? fromIndex : 0}}" bindchange="onFromChange">
-              <view class="picker-field">
-                <text class="{{hasSelectedFrom ? '' : 'placeholder'}}">{{hasSelectedFrom ? pointNames[fromIndex] : '请选择出发地点'}}</text>
-                <text class="arrow">›</text>
-              </view>
-            </picker>
-          </view>
-          <view class="field-col">
-            <text class="label">目的地</text>
-            <picker mode="selector" range="{{pointNames}}" value="{{toIndex >= 0 ? toIndex : 0}}" bindchange="onToChange">
-              <view class="picker-field">
-                <text class="{{hasSelectedTo ? '' : 'placeholder'}}">{{hasSelectedTo ? pointNames[toIndex] : '请选择目的地'}}</text>
-                <text class="arrow">›</text>
-              </view>
-            </picker>
-          </view>
+      <view class="v1-route-block">
+        <view class="v1-field">
+          <text class="v1-label v1-label--emph">出发地点</text>
+          <picker mode="selector" range="{{pointNames}}" value="{{fromIndex >= 0 ? fromIndex : 0}}" bindchange="onFromChange">
+            <view class="v1-picker v1-picker--route">
+              <view class="v1-route-dot v1-route-dot--start"></view>
+              <text class="v1-picker-val {{hasSelectedFrom ? '' : 'v1-picker-placeholder'}}">{{hasSelectedFrom ? pointNames[fromIndex] : '请选择出发地点'}}</text>
+              <text class="v1-picker-arrow">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="v1-field v1-field--last-route">
+          <text class="v1-label v1-label--emph">目的地</text>
+          <picker mode="selector" range="{{pointNames}}" value="{{toIndex >= 0 ? toIndex : 0}}" bindchange="onToChange">
+            <view class="v1-picker v1-picker--route">
+              <view class="v1-route-dot v1-route-dot--end"></view>
+              <text class="v1-picker-val {{hasSelectedTo ? '' : 'v1-picker-placeholder'}}">{{hasSelectedTo ? pointNames[toIndex] : '请选择目的地'}}</text>
+              <text class="v1-picker-arrow">›</text>
+            </view>
+          </picker>
         </view>
       </view>
 
-      <view class="route-preview" wx:if="{{routePreview}}">{{routePreview}}</view>
+      <view class="v1-route-preview" wx:if="{{routePreview}}">{{routePreview}}</view>
 
-      <view class="field">
-        <text class="label">出行人数</text>
+      <view class="v1-field">
         <picker mode="selector" range="{{countRange}}" value="{{countIndex}}" bindchange="onCountChange">
-          <view class="picker-field">
-            <text>{{form.passengerCount}} 人</text>
-            <text class="arrow">›</text>
+          <view class="v1-inline-label-row">
+            <text class="v1-label v1-label--inline">出行人数</text>
+            <view class="v1-inline-picker">
+              <text class="v1-inline-picker-val">{{form.passengerCount}}人</text>
+              <text class="v1-picker-arrow">›</text>
+            </view>
           </view>
         </picker>
       </view>
 
-      <view class="field">
-        <text class="label">特殊要求 · 常用</text>
-        <view class="tags">
+      <view class="v1-field">
+        <text class="v1-label">特殊要求</text>
+        <text class="v1-caption v1-caption--above-tags">选择适合你的标签</text>
+        <view class="v1-tags">
           <view
             wx:for="{{noteTags}}"
             wx:key="*this"
-            class="tag {{selectedNoteMap[item] ? 'on' : ''}}"
+            class="v1-tag {{selectedNoteMap[item] ? 'v1-tag--on' : ''}}"
             data-tag="{{item}}"
             bindtap="toggleNoteTag"
-          >{{item}}</view>
+          >
+            {{item}}
+          </view>
         </view>
       </view>
 
-      <view class="field">
-        <view class="label-row">
-          <view class="label-line">
-            <text class="label inline">特殊要求 可在「</text>
-            <text class="label-link" bindtap="goPreference">乘车偏好</text>
-            <text class="label inline">」中设置</text>
-          </view>
-          <text class="counter">{{noteLength}}/{{maxNoteLength}}</text>
+      <view class="v1-field v1-field--last">
+        <view class="v1-note-head">
+          <text class="v1-label">自定义要求</text>
+          <text class="v1-counter">{{noteLength}}/{{maxNoteLength}}</text>
         </view>
         <textarea
-          class="textarea"
+          class="v1-textarea"
           auto-height="{{false}}"
           value="{{form.note}}"
           bindinput="onNoteInput"
           placeholder="可自由填写其他要求"
           maxlength="{{maxNoteLength}}"
         />
+        <text class="v1-caption v1-caption--pref">可在「<text class="v1-caption-link" bindtap="goPreference">乘车偏好</text>」中预设常用标签</text>
       </view>
 
-      <button class="btn-primary submit-btn" loading="{{submitting}}" disabled="{{submitting}}" bindtap="onSubmit">
+      <button
+        class="v1-btn-primary v1-submit-btn"
+        loading="{{submitting}}"
+        disabled="{{submitting}}"
+        bindtap="onSubmit"
+      >
         发布搭车单
       </button>
     </view>

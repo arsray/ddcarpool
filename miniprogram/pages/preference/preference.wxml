@@ -1,29 +1,47 @@
-<view class="container">
-  <view class="card">
-    <view class="field">
-      <text class="label">默认乘车人数</text>
+<view class="v1-onboard-page container">
+  <view class="v1-head">
+    <view class="v1-title">{{onboarding || setup ? '设置乘车偏好' : '乘车偏好'}}</view>
+    <view class="v1-sub">{{onboarding || setup ? '帮助车主更了解你的乘车习惯' : '将作为发布搭车单时的默认值'}}</view>
+  </view>
+
+  <view class="v1-form-card">
+    <view class="v1-field">
+      <text class="v1-label">默认乘车人数</text>
       <picker mode="selector" range="{{countRange}}" value="{{countIndex}}" bindchange="onCountChange">
-        <view class="picker-field">
-          <text>{{form.defaultCount}} 人</text>
-          <text class="arrow">›</text>
+        <view class="v1-picker">
+          <text class="v1-picker-value">{{form.defaultCount}} 人</text>
+          <text class="v1-chevron">›</text>
         </view>
       </picker>
     </view>
 
-    <view class="field">
-      <text class="label">特殊要求 · 常用</text>
-      <view class="tags">
-        <view wx:for="{{noteTags}}" wx:key="*this" class="tag {{selectedNoteMap[item] ? 'on' : ''}}" data-tag="{{item}}" bindtap="toggleNoteTag">{{item}}</view>
+    <view class="v1-field">
+      <text class="v1-label">特殊要求 · 常用</text>
+      <view class="v1-tags">
+        <view
+          wx:for="{{noteTags}}"
+          wx:key="*this"
+          class="v1-tag {{selectedNoteMap[item] ? 'on' : ''}}"
+          data-tag="{{item}}"
+          bindtap="toggleNoteTag"
+        >{{item}}</view>
       </view>
     </view>
 
-    <view class="field">
-      <text class="label">特殊要求 · 补充说明</text>
-      <textarea class="textarea" value="{{form.note}}" bindinput="onNoteInput" placeholder="可自由填写其他要求" maxlength="100" />
+    <view class="v1-field v1-field--last">
+      <text class="v1-label">特殊要求 · 补充说明</text>
+      <textarea
+        class="v1-textarea"
+        value="{{form.note}}"
+        bindinput="onNoteInput"
+        placeholder="可自由填写其他要求"
+        maxlength="100"
+      />
     </view>
-
-    <view class="hint">常用选项与补充说明一并保存；发起搭车单时作初始默认值</view>
-    <button class="btn-primary save-btn" bindtap="onSave">保存</button>
-    <button wx:if="{{onboarding || setup}}" class="skip-btn" bindtap="onSkip">稍后再填</button>
   </view>
+
+  <view class="v1-hint">常用选项与补充说明一并保存；发起搭车单时作初始默认值</view>
+
+  <button class="v1-cta" bindtap="onSave">保存</button>
+  <button wx:if="{{onboarding || setup}}" class="v1-skip" bindtap="onSkip">稍后再填</button>
 </view>

@@ -30,11 +30,15 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "广场"
+        "text": "车主"
       },
       {
         "pagePath": "pages/publish/publish",
-        "text": "发布"
+        "text": "乘客"
+      },
+      {
+        "pagePath": "pages/notify/notify",
+        "text": "消息"
       },
       {
         "pagePath": "pages/mine/mine",

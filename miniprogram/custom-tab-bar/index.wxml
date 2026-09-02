@@ -1,12 +1,32 @@
 <view class="tab-bar">
-  <view
-    wx:for="{{list}}"
-    wx:key="text"
-    class="tab-bar-item {{selected === index ? 'active' : ''}}"
-    data-index="{{index}}"
-    bindtap="switchTab"
-  >
-    <text class="tab-icon">{{index === 0 ? '⌁' : index === 1 ? '＋' : '我'}}</text>
-    <text class="tab-text">{{item.text}}</text>
+  <view class="tab-bar-inner">
+    <view
+      wx:for="{{list}}"
+      wx:key="pagePath"
+      class="tab-bar-item {{selected === index ? 'active' : ''}}"
+      data-index="{{index}}"
+      bindtap="switchTab"
+    >
+      <view class="tab-icon tab-icon-{{item.icon}}">
+        <block wx:if="{{item.icon === 'owner'}}">
+          <view class="icon-car-body"></view>
+          <view class="icon-car-wheel icon-car-wheel-l"></view>
+          <view class="icon-car-wheel icon-car-wheel-r"></view>
+        </block>
+        <block wx:elif="{{item.icon === 'passenger'}}">
+          <view class="icon-person-head"></view>
+          <view class="icon-person-body"></view>
+        </block>
+        <block wx:elif="{{item.icon === 'message'}}">
+          <view class="icon-bubble"></view>
+          <view class="icon-bubble-tail"></view>
+        </block>
+        <block wx:else>
+          <view class="icon-profile-head"></view>
+          <view class="icon-profile-body"></view>
+        </block>
+      </view>
+      <text class="tab-text">{{item.text}}</text>
+    </view>
   </view>
 </view>
