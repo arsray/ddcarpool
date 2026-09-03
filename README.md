@@ -1,6 +1,6 @@
 # DD 蹭车 · 内部捎带匹配小程序
 
-多人协作开发的微信小程序。当前仓库为**协作脚手架**，M1 已提交 Profile / 我的订单 **Mock 预览**（见 [`docs/M1_PREVIEW.md`](docs/M1_PREVIEW.md)）。
+多人协作开发的微信小程序。项目支持本地 Mock 与微信云开发两种运行模式，团队联调以真实微信 openid 和云数据库为准。
 
 ## 开始前必读
 
@@ -12,13 +12,15 @@
 | [docs/ORDER_FLOWS_PM.md](docs/ORDER_FLOWS_PM.md) | 订单流转图（产品经理版） |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 云数据库集合（**Mock 阶段未与五态对齐**，见该文档顶部说明） |
 | [docs/MODULE_CONTRACTS.md](docs/MODULE_CONTRACTS.md) | 跨模块接口契约 |
+| [docs/CLOUD_DEPLOYMENT.md](docs/CLOUD_DEPLOYMENT.md) | 云环境、集合、索引、云函数和种子部署 |
 
 ## 快速开始
 
 1. 克隆仓库，用[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/stable.html)导入**项目根目录**
 2. 在 `project.config.json` 填入 AppID
 3. 复制 `miniprogram/config/env.example.js` → `miniprogram/config/env.js`，填入云环境 ID（`env.js` 不提交）
-4. 编译运行；**M1 预览**见 [docs/M1_PREVIEW.md](docs/M1_PREVIEW.md)
+4. 按 [云部署清单](docs/CLOUD_DEPLOYMENT.md) 创建集合、索引并部署云函数
+5. 编译运行；SMTP 未交付前仅开发环境可使用预览验证码
 
 ## 项目结构
 
@@ -36,7 +38,12 @@ ddcarpool/
 │   ├── styles/                 # M2 设计 token
 │   └── config/                 # 本地环境配置（env.js 不提交）
 ├── cloudfunctions/
-│   └── login/                  # M1
+│   ├── login/                  # 微信身份
+│   ├── user/                   # Profile
+│   ├── order/                  # 订单
+│   ├── notification/           # 通知
+│   ├── message/                # 聊天
+│   └── emailAuth/              # 邮箱验证
 └── project.config.json
 ```
 

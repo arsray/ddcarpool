@@ -1,28 +1,31 @@
-/**
- * M4 — chat 模块
- * 接口契约见 docs/MODULE_CONTRACTS.md
- */
-
-function notImplemented(name) {
-  const err = new Error(`${name} not implemented — M4 owner`)
-  err.code = 'NOT_IMPLEMENTED'
-  throw err
-}
+const config = require('../../config/index')
+const { callFunction } = require('../../utils/cloud')
 
 function canEnterChat(order, currentOpenId) {
-  if (!order || order.status !== 'matched') return false
+  if (!order || !['pending_departure', 'in_progress'].includes(order.status)) return false
+  if (order.viewerRole) return ['passenger', 'driver'].includes(order.viewerRole)
   return (
-    order.publisherOpenId === currentOpenId ||
-    order.accepterOpenId === currentOpenId
+    order.passengerOpenId === currentOpenId ||
+    order.driverOpenId === currentOpenId
   )
 }
 
-async function listMessages(_orderId) {
-  notImplemented('listMessages')
+async function listMessages(orderId, options) {
+  if (!config.useCloud) return { messages: [], hasMore: false }
+  return callFunction('message', {
+    action: 'list',
+    orderId,
+    before: options && options.before ? options.before : ''
+  })
 }
 
-async function sendMessage(_orderId, _content) {
-  notImplemented('sendMessage')
+async function sendMessage(orderId, content) {
+  if (!config.useCloud) {
+    const error = new Error('云聊天未启用')
+    error.code = 'CLOUD_DISABLED'
+    throw error
+  }
+  return callFunction('message', { action: 'send', orderId, content })
 }
 
 module.exports = {

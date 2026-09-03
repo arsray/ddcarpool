@@ -21,8 +21,12 @@ function resolveCancelAction(order, actorOpenId) {
   if (!order || !actorOpenId) return null
   if (order.status === ORDER_STATUS.IN_PROGRESS) return null
 
-  const isPassenger = order.passengerOpenId === actorOpenId
-  const isDriver = order.driverOpenId === actorOpenId
+  const isPassenger = order.viewerRole
+    ? order.viewerRole === 'passenger'
+    : order.passengerOpenId === actorOpenId
+  const isDriver = order.viewerRole
+    ? order.viewerRole === 'driver'
+    : order.driverOpenId === actorOpenId
 
   if (
     isPassenger &&

@@ -2,6 +2,7 @@ const app = getApp()
 const { validateEmailPrefix, normalizeLocalPart } = require('../../modules/auth/email')
 const { sendCode, verifyCode, getCooldownRemain } = require('../../modules/auth/verify')
 const { deferNavigate, isTopPage } = require('../../modules/auth/nav')
+const config = require('../../config/index')
 
 Page({
   data: {
@@ -18,7 +19,11 @@ Page({
 
   onShow() {
     if (!isTopPage('pages/login/login')) return
-    if (wx.getStorageSync('loggedIn')) {
+    if (
+      app.globalData.openId &&
+      app.globalData.userInfo &&
+      (app.globalData.userProfile.emailVerified || config.allowMockEmailVerification)
+    ) {
       deferNavigate(() => app.routeAfterLogin())
     }
   },
@@ -90,7 +95,7 @@ Page({
     this.setData({ cooldownTimer: timer })
   },
 
-  sendCode() {
+  async sendCode() {
     const result = this.validateEmailField(true)
     if (!result.ok) {
       wx.showToast({ title: result.message, icon: 'none' })
@@ -98,7 +103,13 @@ Page({
       return
     }
 
-    const sendResult = sendCode(result.email)
+    let sendResult
+    try {
+      sendResult = await sendCode(result.email)
+    } catch (error) {
+      wx.showToast({ title: error.message || '验证码发送失败', icon: 'none' })
+      return
+    }
     if (!sendResult.ok) {
       wx.showToast({ title: sendResult.message, icon: 'none' })
       if (sendResult.remain) {
@@ -112,7 +123,7 @@ Page({
     this.startCooldown(60)
   },
 
-  onLogin() {
+  async onLogin() {
     const emailResult = this.validateEmailField(true)
     if (!emailResult.ok) {
       wx.showToast({ title: emailResult.message, icon: 'none' })
@@ -126,14 +137,21 @@ Page({
       return
     }
 
-    const verifyResult = verifyCode(emailResult.email, code)
+    const verifyResult = await verifyCode(emailResult.email, code)
     if (!verifyResult.ok) {
       this.setData({ codeError: verifyResult.message })
       wx.showToast({ title: verifyResult.message, icon: 'none' })
       return
     }
 
-    app.loginWithEmail(verifyResult.email)
-    app.routeAfterLogin()
+    try {
+      await app.loginWithEmail(verifyResult.email, verifyResult.mode)
+      app.routeAfterLogin()
+    } catch (error) {
+      wx.showToast({
+        title: error.code === 'CLOUD_DISABLED' ? '请先配置云环境' : '登录失败，请稍后重试',
+        icon: 'none'
+      })
+    }
   }
 })

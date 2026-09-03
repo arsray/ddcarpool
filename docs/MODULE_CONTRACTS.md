@@ -4,31 +4,31 @@
 
 ## 全局约定
 
-### 身份与全局状态（`App.globalData` · M1 Mock 预览）
+### 身份与全局状态（`App.globalData`）
 
-登录态与 Profile 预览数据由 `modules/auth/store.js` 同步至 `globalData`：
+Cloud 模式由 `modules/auth/cloud-store.js` 以云端 `users` 为事实来源并同步至 `globalData`；Storage 仅保存非敏感 UI 缓存。Mock 模式保留旧 `store.js`。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `openId` | string \| null | Mock openId（邮箱派生） |
-| `userProfile` | object \| null | `{ openId, nickName, avatarUrl, department, email }` |
-| `userInfo` | object \| null | Mock 登录用户 `{ email, displayName, phone, department }` |
+| `openId` | string \| null | 真实微信 openid，仅来自 `login` 云函数 |
+| `userProfile` | object \| null | `{ openId, nickName, avatarUrl, department, email, emailVerified, emailVerificationMode }` |
+| `userInfo` | object \| null | 云端 Profile 缓存 `{ email, displayName, phone, department }` |
 | `userMode` | `'owner' \| 'passenger'` | 当前 Profile 模式 |
 | `identities` | string[] | 已开通身份 `owner` / `passenger` |
 | `onboardingComplete` | boolean | 是否完成首次引导 |
 | `vehicle` | object \| null | 车辆信息 |
 | `preference` | object \| null | 乘车偏好 |
 | `habitTags` | string[] | 习惯标签 |
-| `historyOwner` | array | 车主订单 Mock 列表 |
-| `historyPassenger` | array | 乘车人订单 Mock 列表 |
-| `notifications` | array | 通知 Mock 列表 |
+| `historyOwner` | array | 仅 Mock 兼容；Cloud 页面调用 order API |
+| `historyPassenger` | array | 仅 Mock 兼容；Cloud 页面调用 order API |
+| `notifications` | array | 当前用户通知的短期 UI 缓存 |
 
 `App` 实例方法（M1 页面可调用，**非** `modules/auth` 契约 export）：
 
 | 方法 | 说明 |
 |------|------|
 | `_syncAuth()` | 内部：store → globalData |
-| `loginWithEmail(email)` | Mock 登录 |
+| `loginWithEmail(email, verificationMode)` | 将已验证邮箱绑定到当前微信身份 |
 | `routeAfterLogin()` | 登录后跳 onboarding 或「我的」 |
 | `logout()` | 退出 |
 | `setUserMode(mode)` | 切换车主/乘车人模式 |
@@ -37,14 +37,15 @@
 | `saveVehicle` / `savePreference` / `saveHabitTags` | 保存 Profile |
 | `hasIdentity(role)` / `getMissingIdentity()` | 身份查询 |
 
-跨模块请使用 **`modules/auth/index.js` 导出函数**，勿直接依赖 `store`（Mock 阶段页面仍有历史引用，后续收敛）。
+跨模块请使用 **`modules/auth/index.js` 导出函数**，不要直接依赖 `store`。
 
 ### 错误处理
 
 模块 exported 函数：
 
-- 成功：返回数据或 `{ ok: true, data }`
-- 失败：`throw new Error('ERROR_CODE')` 或返回 `{ ok: false, code, message }`
+- 云函数成功：`{ ok: true, data }`
+- 云函数失败：`{ ok: false, code, message }`
+- 客户端云调用封装将失败响应转换为带稳定 `code` 的 Error；页面不得显示堆栈或内部错误。
 
 各模块在 README 中维护错误码表。
 
@@ -66,7 +67,7 @@
 ensureLogin()
 
 /**
- * 获取本地缓存的用户资料，无则返回 null
+ * 获取云端用户资料，无则返回 null
  * @returns {Promise<User|null>}
  */
 getProfile()
@@ -100,7 +101,7 @@ statusActions(order, role)
 isDangerAction(action)
 ```
 
-> **Mock 阶段说明**：`store`、`order-status`、`order-display` 等 **未** 列入上表正式 export；M3 接真订单后 M1 改为调 `listMyOrders()` 与 M3 状态枚举。
+Cloud 模式不提供 Bob/Alice 账号切换；开发期 Mock 邮箱验证只写入 `emailVerificationMode=mock`，不得令 `emailVerified=true`。
 
 ### 依赖
 
@@ -130,13 +131,13 @@ isDangerAction(action)
 |------|--------|------|
 | `listOpenOrders(options)` | P0 | 广场：`matching` + 未过期；默认 `matchScore` 降序 |
 | `createOrder(input)` | P0 | 乘客发单 → `matching` |
-| `acceptOrder(orderId, driver)` | P0 | 司机接单 → `pending_departure` |
+| `acceptOrder(orderId, driver?)` | P0 | 司机接单 → `pending_departure`；忽略客户端身份参数 |
 | `cancelOrder(orderId, options)` | P1 | 乘客取消 → `closed`；司机取消匹配 → `matching`（Mock 已实现，见 [`M3_INTEGRATION_STATUS.md`](./M3_INTEGRATION_STATUS.md)） |
 | `expireStaleOrders()` | P0 | `matching` 且过点 → `closed` |
 | `startTrip(orderId, actorOpenId)` | P1 | → `in_progress`（Mock 未实现；本 PR UI 从 `pending_departure` 直接 `completeOrder`） |
 | `completeOrder(orderId, actorOpenId)` | P0 | → `completed` |
 | `getOrderById(orderId)` | P0 | 详情 |
-| `listOrdersForUser(openId, filters)` | P0 | 我的订单（M1 可转调） |
+| `listOrdersForUser(openId?, filters)` | P0 | 我的订单；Cloud 模式忽略 openId 参数 |
 | `listPoints()` | P0 | POI 列表 |
 | `listConfiguredRoutes()` | P0 | 顺路配置 |
 | `formatRoute(fromPointId, toPointId, points?)` | P0 | `A → B` 文案 |
@@ -151,8 +152,8 @@ isDangerAction(action)
 | `departTime` | string | ✓ |
 | `passengerCount` | number | ✓ |
 | `note` | string | |
-| `passengerOpenId` | string | ✓ |
-| `passengerName` | string | |
+| `passengerOpenId` | string | 客户端可省略；服务端忽略 |
+| `passengerName` | string | 客户端可省略；服务端取 Profile |
 
 订单 `status` 枚举见 [`DATA_MODEL.md`](./DATA_MODEL.md) v2：`matching` | `pending_departure` | `in_progress` | `completed` | `closed`
 
@@ -206,9 +207,10 @@ canEnterChat(order, currentOpenId)
 /**
  * 订单消息列表
  * @param {string} orderId
- * @returns {Promise<Message[]>}
+ * @param {{before?: string}} options 游标
+ * @returns {Promise<{messages: Message[], hasMore: boolean}>}
  */
-listMessages(orderId)
+listMessages(orderId, options?)
 
 /**
  * 发送文字消息

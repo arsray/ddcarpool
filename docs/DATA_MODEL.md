@@ -13,7 +13,9 @@
 | `orders` | **M3** | 乘客搭车订单（P0 仅乘客发单 + 司机接单） |
 | `points` | **M3** | 预设 POI（无数据时用 `modules/order/constants/points.js`） |
 | `configured_routes` | **M3** | 顺路计算用配置路线（无数据时用 `constants/routes.js`） |
+| `notifications` | 维护者 | 当前用户站内通知 |
 | `messages` | M4 | 订单聊天（P1） |
+| `email_verifications` | 维护者 | 邮箱验证码摘要、限流和使用状态 |
 
 ---
 
@@ -66,6 +68,29 @@ export const FILTER_BUCKETS = {
 
 ---
 
+## users
+
+`openId` 只能由云函数从微信上下文写入。客户端提交的 openId 不参与身份判断。
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `openId` | string | 是 | 真实微信 openid，唯一索引 |
+| `email` | string | 否 | 标准化公司邮箱 |
+| `emailVerified` | boolean | 是 | 仅 SMTP 服务端校验成功时为 true |
+| `emailVerificationMode` | string | 否 | `smtp` 或仅开发使用的 `mock` |
+| `displayName` / `nickName` | string | 否 | 展示名 |
+| `avatarUrl` / `phone` / `department` | string | 否 | Profile |
+| `identities` | string[] | 是 | `owner` / `passenger` |
+| `userMode` | string | 是 | 当前 UI 模式 |
+| `onboardingComplete` | boolean | 是 | 是否完成引导 |
+| `vehicle` / `preference` | object | 否 | 车辆与乘车偏好 |
+| `habitTags` | string[] | 否 | 习惯标签 |
+| `createdAt` / `updatedAt` | Date | 是 | 服务端时间 |
+
+权限：仅云函数可读写。
+
+---
+
 ## orders
 
 P0 仅支持 **乘客发布搭车单**；司机通过 **接单** 参与，不单独发 `offer` 类型（车主先发行程见 P2，Post-MVP）。
@@ -76,6 +101,9 @@ P0 仅支持 **乘客发布搭车单**；司机通过 **接单** 参与，不单
 | `fromPointId` | string | 是 | 起点 POI（`points.pointId`） |
 | `toPointId` | string | 是 | 终点 POI |
 | `departTime` | string | 是 | 出发时间 `YYYY-MM-DD HH:mm`（本地/业务时区，团队统一） |
+| `departTimeEnd` | string | 是 | 时间窗结束 `HH:mm` |
+| `departTimeAt` | Date | 是 | 按 UTC+8 解析的可查询开始时间 |
+| `departTimeEndAt` | Date | 是 | 按 UTC+8 解析的可查询结束时间 |
 | `passengerCount` | number | 是 | 出行人数，≥1 |
 | `note` | string | 否 | 备注，≤100 字（与 `validate.js` · `MAX_NOTE_LENGTH` 一致） |
 | `status` | string | 是 | 见上表 |
@@ -98,12 +126,12 @@ P0 仅支持 **乘客发布搭车单**；司机通过 **接单** 参与，不单
 - `passengerOpenId` + `createdAt`
 - `driverOpenId` + `createdAt`
 
-**权限建议（P0 可云函数 enforce）**
+**权限**
 
-- 所有用户可读 `status === matching` 且 `departTime > now` 的订单（广场）
-- 乘客可写自己发布的 `matching` 订单（创建/取消）
-- 司机可写 `acceptOrder` 产生的字段
-- 参与者可读写 `pending_departure` / `in_progress` 的状态迁移（按操作表）
+- 客户端不可直接读写；所有操作经 `order` 云函数。
+- 广场仅由云函数返回未过期的 `matching` 订单。
+- 已匹配订单仅参与者可读，写操作按下方状态表授权。
+- 接单、重叠检查和通知写入在服务端事务中完成。
 
 ### 状态流转（P0 · 乘客搭车单 + 司机广场接单）
 
@@ -182,15 +210,53 @@ matching ──司机接单──→ pending_departure ──出发──→ in_
 | `content` | string | 是 | 正文 |
 | `createdAt` | Date | 是 | 发送时间 |
 
+消息按 `(orderId, createdAt)` 游标分页，每页最多 50 条；客户端不可直接读写。
+
 ---
 
-## 云函数（规划）
+## notifications
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `_id` | string | 自动 | 文档 ID |
+| `recipientOpenId` | string | 是 | 接收者 |
+| `title` | string | 是 | 通知文案 |
+| `targetId` | string | 是 | 订单 ID |
+| `targetType` | string | 是 | `passenger` / `owner` |
+| `read` | boolean | 是 | 已读状态 |
+| `createdAt` / `readAt` | Date | 是/否 | 服务端时间 |
+
+仅接收者可通过 `notification` 云函数列表和标记已读。
+
+---
+
+## email_verifications
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `openId` | string | 是 | 请求者真实微信 openid |
+| `emailNormalized` | string | 是 | 标准化公司邮箱 |
+| `codeDigest` | string | 是 | HMAC-SHA256 摘要，不保存明文 |
+| `createdAtMs` / `expiresAtMs` | number | 是 | 限流与过期判断 |
+| `attempts` | number | 是 | 校验失败次数，最多 5 次 |
+| `used` | boolean | 是 | 单次使用标记 |
+| `createdAt` / `usedAt` | Date | 是/否 | 服务端时间 |
+
+权限：仅 `emailAuth` 云函数读写。验证码 10 分钟有效、60 秒发送冷却。
+
+---
+
+## 云函数
 
 | 云函数 | Owner | 说明 |
 |--------|-------|------|
-| `login` | M1 | openId |
-| `order` | **M3** | 推荐：`acceptOrder` / 状态迁移 服务端校验 + 防并发双接 |
-| `message` | M4 | 发消息校验 |
+| `login` | 维护者 | 真实 openid 与当前用户状态 |
+| `user` | 维护者 | Profile、身份、车辆与偏好 |
+| `emailAuth` | 维护者 + M1 SMTP | 验证码摘要、限流、校验和发信适配 |
+| `order` | 维护者 | 订单 CRUD、事务化接单、状态迁移和过期任务 |
+| `notification` | 维护者 | 当前用户通知和已读状态 |
+| `message` | 维护者 | 参与者聊天与分页 |
+| `seedConfig` | 维护者 | 管理员幂等导入 POI / 路线 |
 
 ---
 

@@ -10,7 +10,8 @@ const {
   STATUS_LABELS,
   FILTER_BUCKETS
 } = require('./constants/status')
-const service = require('./service')
+const config = require('../../config/index')
+const service = config.useCloud ? require('./cloud-service') : require('./service')
 const cancelFlow = require('./cancel-flow')
 
 function notImplemented(name) {
@@ -43,8 +44,9 @@ async function expireStaleOrders() {
   return service.expireStaleOrders()
 }
 
-async function startTrip(_orderId, _actorOpenId) {
-  notImplemented('startTrip')
+async function startTrip(orderId, actorOpenId) {
+  if (!config.useCloud) notImplemented('startTrip')
+  return service.startTrip(orderId, actorOpenId)
 }
 
 async function getOrderById(orderId) {
@@ -60,6 +62,7 @@ async function listOrdersForUser(openId, filters) {
 }
 
 async function listConfiguredRoutes() {
+  if (config.useCloud) return service.listConfiguredRoutes()
   const { DEFAULT_CONFIGURED_ROUTES } = require('./constants/routes')
   return DEFAULT_CONFIGURED_ROUTES
 }
@@ -69,6 +72,7 @@ async function completeOrder(orderId, actorOpenId) {
 }
 
 async function listPoints() {
+  if (config.useCloud) return service.listPoints()
   return DEFAULT_POINTS
     .filter((point) => point.enabled !== false)
     .sort((a, b) => a.sortOrder - b.sortOrder)

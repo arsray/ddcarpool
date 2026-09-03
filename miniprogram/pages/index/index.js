@@ -244,8 +244,7 @@ Page({
     }
   
     if (!auth.requireLogin()) return
-    auth.store.initFromStorage()
-    auth.store.syncGlobalData(app.globalData)
+    app._syncAuth()
     
     this.setData({
       userMode: app.globalData.userMode || 'owner'
@@ -427,8 +426,7 @@ Page({
         name: (profile && profile.nickName) || app.globalData.userInfo.displayName || '司机'
       })
 
-      auth.store.initFromStorage()
-      auth.store.syncGlobalData(app.globalData)
+      app._syncAuth()
 
       wx.showToast({ title: '接单成功', icon: 'success' })
       this.resetAcceptModal()
@@ -451,15 +449,17 @@ Page({
       url: `/pages/detail/detail?orderId=${orderId}&from=plaza`
     })
   },
-  switchUserMode(e) {
+  async switchUserMode(e) {
     const mode = e.currentTarget.dataset.mode
     if (!mode || mode === this.data.userMode) return
   
-    app.setUserMode(mode)
-  
-    this.setData({
-      userMode: app.globalData.userMode
-    })
+    try {
+      await app.setUserMode(mode)
+      this.setData({ userMode: app.globalData.userMode })
+      await this.loadOrders()
+    } catch (error) {
+      wx.showToast({ title: '切换身份失败', icon: 'none' })
+    }
   },
   
   switchRankingTab(e) {

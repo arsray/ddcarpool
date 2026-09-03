@@ -1,6 +1,8 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
+const config = require('../../config/index')
+const { toHistoryItem, toOwnerHistoryItem } = require('../../modules/order/history-bridge')
 const { STATUS_CLASS } = require('../../modules/auth/order-status')
 const { buildDetailView } = require('../../modules/auth/order-display')
 const { DANGER_ACTIONS } = require('../../modules/auth/order-actions')
@@ -32,16 +34,29 @@ Page({
     this.setData({ role: options.role || 'owner', orderId: options.id })
   },
 
-  onShow() {
+  async onShow() {
     if (!auth.requireLogin()) return
-    this.loadDetail()
+    await this.loadDetail()
   },
 
-  loadDetail() {
-    const list = this.data.role === 'owner'
-      ? app.globalData.historyOwner
-      : app.globalData.historyPassenger
-    const orderItem = (list || []).find((i) => i.id === this.data.orderId)
+  async loadDetail() {
+    let orderItem
+    if (config.useCloud) {
+      try {
+        const cloudOrder = await order.getOrderById(this.data.orderId)
+        orderItem = this.data.role === 'owner'
+          ? toOwnerHistoryItem(cloudOrder)
+          : toHistoryItem(cloudOrder)
+      } catch (error) {
+        wx.showToast({ title: '订单加载失败', icon: 'none' })
+        return
+      }
+    } else {
+      const list = this.data.role === 'owner'
+        ? app.globalData.historyOwner
+        : app.globalData.historyPassenger
+      orderItem = (list || []).find((i) => i.id === this.data.orderId)
+    }
     if (!orderItem) {
       wx.showToast({ title: '未找到订单', icon: 'none' })
       return
@@ -72,7 +87,7 @@ Page({
       return
     }
     if (action === '进入 Chat') {
-      wx.showToast({ title: 'Chat 模块占位', icon: 'none' })
+      wx.navigateTo({ url: `/pages/chat/chat?orderId=${orderItem.m3OrderId || orderItem.id}` })
       return
     }
     if (action === '查看匹配推荐') {
@@ -149,8 +164,7 @@ Page({
       const openId = await auth.ensureLogin()
       await order.cancelOrder(orderId, { openId })
 
-      auth.store.initFromStorage()
-      auth.store.syncGlobalData(app.globalData)
+      app._syncAuth()
 
       wx.showToast({
         title: getCancelSuccessTitle(cancelKind),

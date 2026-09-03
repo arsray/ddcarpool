@@ -131,7 +131,7 @@ Page({
     this.setData({ 'form.platePrefix': abbr, showPrefixPicker: false });
   },
 
-  onSave() {
+  async onSave() {
     const form = { ...this.data.form };
     if (!form.brand) {
       wx.showToast({ title: '请选择品牌', icon: 'none' });
@@ -162,20 +162,24 @@ Page({
       color: finalColor
     };
 
-    app.saveVehicle(payload);
-    let title = '已保存';
-    if (this.data.setup) title = '车主身份已添加';
-    else if (this.data.onboarding) title = '车主信息已保存';
-    this.finishGuide(title);
+    try {
+      await app.saveVehicle(payload);
+      let title = '已保存';
+      if (this.data.setup) title = '车主身份已添加';
+      else if (this.data.onboarding) title = '车主信息已保存';
+      await this.finishGuide(title);
+    } catch (error) {
+      wx.showToast({ title: '车辆信息保存失败', icon: 'none' });
+    }
   },
 
   onSkip() {
     this.finishGuide('可稍后在「我的」中填写车辆');
   },
 
-  finishGuide(toastTitle) {
+  async finishGuide(toastTitle) {
     if (this.data.onboarding) {
-      app.completeOnboarding();
+      await app.completeOnboarding();
     }
     wx.showToast({ title: toastTitle, icon: 'none' });
     if (this.data.onboarding || this.data.setup) {

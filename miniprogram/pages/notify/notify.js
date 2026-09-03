@@ -1,39 +1,44 @@
 const app = getApp();
 const auth = require('../../modules/auth/index');
+const notification = require('../../modules/notification/index');
 
-function filterNotificationsForUser(list, openId) {
-  if (!openId) return list || [];
-  return (list || []).filter((item) => {
-    if (item.recipientOpenId) return item.recipientOpenId === openId;
-    if (item.passengerOpenId) return item.passengerOpenId === openId;
-    return true;
-  });
+function formatItem(item) {
+  const created = item.createdAt ? new Date(item.createdAt) : null;
+  const time = created && !Number.isNaN(created.getTime())
+    ? `${String(created.getHours()).padStart(2, '0')}:${String(created.getMinutes()).padStart(2, '0')}`
+    : item.time || '';
+  return { ...item, id: item._id || item.id, time };
 }
 
 Page({
-  data: { list: [] },
-  onShow() {
+  data: { list: [], loading: false },
+  async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
     if (!auth.requireLogin()) return;
-    auth.store.initFromStorage();
-    auth.store.syncGlobalData(app.globalData);
-    const openId = app.globalData.openId || '';
-    const list = filterNotificationsForUser(app.globalData.notifications || [], openId);
-    this.setData({ list });
+    this.setData({ loading: true });
+    try {
+      const list = await notification.listNotifications();
+      app.globalData.notifications = list;
+      this.setData({ list: list.map(formatItem) });
+    } catch (error) {
+      wx.showToast({ title: '消息加载失败', icon: 'none' });
+    } finally {
+      this.setData({ loading: false });
+    }
   },
-  onTap(e) {
+  async onTap(e) {
     const item = this.data.list.find((n) => n.id === e.currentTarget.dataset.id);
     if (!item) return;
-    item.read = true;
-    const openId = app.globalData.openId || '';
-    const all = app.globalData.notifications || [];
-    const nextAll = all.map((entry) => (entry.id === item.id ? { ...entry, read: true } : entry));
-    wx.setStorageSync('notifications', nextAll);
-    auth.store.initFromStorage();
-    auth.store.syncGlobalData(app.globalData);
-    this.setData({ list: filterNotificationsForUser(nextAll, openId) });
+    try {
+      await notification.markRead(item.id);
+      this.setData({
+        list: this.data.list.map((entry) => entry.id === item.id ? { ...entry, read: true } : entry)
+      });
+    } catch (error) {
+      wx.showToast({ title: '消息状态更新失败', icon: 'none' });
+    }
     if (item.targetType === 'passenger' && item.targetId) {
       wx.navigateTo({
         url: `/pages/detail/detail?orderId=${item.targetId}`

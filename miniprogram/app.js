@@ -1,12 +1,7 @@
-// SECURITY-REVIEW: 云环境 ID 从本地配置读取，勿硬编码或提交到仓库
-let envConfig = {}
-try {
-  envConfig = require('./config/env.js')
-} catch (e) {
-  console.warn('[ddcarpool] 未找到 config/env.js，请复制 env.example.js 并填入云环境 ID')
-}
-
-const authStore = require('./modules/auth/store')
+const config = require('./config/index')
+const authStore = config.useCloud
+  ? require('./modules/auth/cloud-store')
+  : require('./modules/auth/store')
 const { flushNavQueue } = require('./modules/auth/nav')
 
 /**  bump 版本号可再次触发一次性清空已接单，便于广场自测 */
@@ -17,26 +12,35 @@ App({
     this._navReady = false
     this._navQueue = []
 
-    if (!wx.cloud) {
+    if (config.useCloud && !wx.cloud) {
       console.error('请使用 2.2.3 或以上的基础库以使用云能力')
-    } else {
+    } else if (config.useCloud) {
       wx.cloud.init({
-        env: envConfig.cloudEnvId || undefined,
+        env: config.cloudEnvId,
         traceUser: true
       })
     }
 
-    const { resetPlazaAcceptedOrders } = require('./modules/order/service')
-    const { refreshPlazaSeedOrders } = require('./modules/order/seed-orders')
-
-    const plazaResetKey = `plaza_accepted_reset_${PLAZA_ACCEPTED_RESET_VERSION}`
-    if (!wx.getStorageSync(plazaResetKey)) {
-      resetPlazaAcceptedOrders()
-      wx.setStorageSync(plazaResetKey, '1')
+    if (!config.useCloud) {
+      const { resetPlazaAcceptedOrders } = require('./modules/order/service')
+      const { refreshPlazaSeedOrders } = require('./modules/order/seed-orders')
+      const plazaResetKey = `plaza_accepted_reset_${PLAZA_ACCEPTED_RESET_VERSION}`
+      if (!wx.getStorageSync(plazaResetKey)) {
+        resetPlazaAcceptedOrders()
+        wx.setStorageSync(plazaResetKey, '1')
+      }
+      refreshPlazaSeedOrders()
     }
-    refreshPlazaSeedOrders()
+
     authStore.initFromStorage()
     authStore.syncGlobalData(this.globalData)
+    if (config.useCloud && authStore.bootstrapCloudSession) {
+      authStore.bootstrapCloudSession()
+        .then(() => this._syncAuth())
+        .catch(() => {
+          // 登录页会展示可恢复的通用错误，启动阶段不暴露内部信息。
+        })
+    }
   },
 
   onShow() {
@@ -65,8 +69,8 @@ App({
     authStore.syncGlobalData(this.globalData)
   },
 
-  loginWithEmail(email) {
-    authStore.loginWithEmail(email)
+  async loginWithEmail(email, verificationMode) {
+    await authStore.loginWithEmail(email, verificationMode)
     this._syncAuth()
   },
 
@@ -79,33 +83,33 @@ App({
     this._syncAuth()
   },
 
-  setUserMode(mode) {
-    authStore.setUserMode(mode)
+  async setUserMode(mode) {
+    await authStore.setUserMode(mode)
     this._syncAuth()
   },
 
-  addIdentity(role) {
-    authStore.addIdentity(role)
+  async addIdentity(role) {
+    await authStore.addIdentity(role)
     this._syncAuth()
   },
 
-  completeOnboarding() {
-    authStore.completeOnboarding()
+  async completeOnboarding() {
+    await authStore.completeOnboarding()
     this._syncAuth()
   },
 
-  saveVehicle(vehicle) {
-    authStore.saveVehicle(vehicle)
+  async saveVehicle(vehicle) {
+    await authStore.saveVehicle(vehicle)
     this._syncAuth()
   },
 
-  savePreference(preference) {
-    authStore.savePreference(preference)
+  async savePreference(preference) {
+    await authStore.savePreference(preference)
     this._syncAuth()
   },
 
-  saveHabitTags(tags) {
-    authStore.saveHabitTags(tags)
+  async saveHabitTags(tags) {
+    await authStore.saveHabitTags(tags)
     this._syncAuth()
   },
 

@@ -26,7 +26,8 @@
 - [x] 仓库结构、文档、占位页面
 - [ ] 四人确认 `[MVP_SCOPE.md](./MVP_SCOPE.md)` 与 `[DATA_MODEL.md](./DATA_MODEL.md)`
 - [ ] 填写 CODEOWNERS 中的 GitHub 用户名
-- [ ] 配置小程序 AppID 与云开发环境
+- [x] 小程序 AppID（`project.config.json`）
+- [ ] 云开发环境 ID（各开发者本地 `miniprogram/config/env.js`）
 
 
 
@@ -122,8 +123,17 @@ miniprogram/
 
 1. 克隆仓库，用微信开发者工具导入项目根目录
 2. 复制 `miniprogram/config/env.example.js` 为 `env.js`（已 gitignore），填入云环境 ID
-3. 部署 `cloudfunctions/login`（M1 负责完善）
-4. 编译运行，确认五个占位页面可切换
+3. 按 [云开发部署清单](./CLOUD_DEPLOYMENT.md) 部署集合、索引、云函数和配置种子
+4. 编译运行，验证登录、发单、接单、通知和聊天
+
+## 云基线切换
+
+- 云接入代码由维护者在 `feat/shared-cloud-integration` 统一集成；M1 仅交付约定的 SMTP 发送适配。
+- 云接入合并前，不要从旧 `main` 新增长期功能分支。
+- 合并后执行 `git fetch origin`、`git checkout main`、`git pull --ff-only origin main`，再从 `origin/main` 创建新分支。
+- 旧 Mock 分支尚有未合并工作时，从新 `origin/main` 创建干净分支，只 cherry-pick 自己的业务提交。
+- 禁止使用 `--allow-unrelated-histories`；禁止提交 `env.js`、SMTP 凭据、验证码或环境密钥。
+- `users`、`orders`、`notifications`、`messages` 和 `email_verifications` 不允许客户端直接读写。
 
 
 
@@ -140,4 +150,5 @@ miniprogram/
 - [MVP 范围](./MVP_SCOPE.md)
 - [数据模型](./DATA_MODEL.md)
 - [模块接口契约](./MODULE_CONTRACTS.md)
+- [云开发部署清单](./CLOUD_DEPLOYMENT.md)
 
