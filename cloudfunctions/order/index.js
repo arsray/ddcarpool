@@ -68,8 +68,23 @@ async function currentProfile(openId) {
   const response = await db.collection('users').where({ openId }).limit(1).get()
   const user = response.data[0]
   return user
-    ? { name: cleanString(user.displayName || user.nickName, 40), identities: user.identities || [] }
-    : { name: '', identities: [] }
+    ? {
+        name: cleanString(user.displayName || user.nickName, 40),
+        identities: user.identities || [],
+        vehicle: user.vehicle || null
+      }
+    : { name: '', identities: [], vehicle: null }
+}
+
+function snapshotDriverVehicle(vehicle) {
+  if (!vehicle || typeof vehicle !== 'object') return null
+  const plate =
+    cleanString(vehicle.plate, 20) ||
+    `${cleanString(vehicle.platePrefix, 2)}${cleanString(vehicle.plateSuffix, 10)}`.trim()
+  const brand = cleanString(vehicle.brand, 40)
+  const color = cleanString(vehicle.color, 20)
+  if (!brand && !plate && !color) return null
+  return { brand, plate, color }
 }
 
 async function validatePoints(fromPointId, toPointId) {
@@ -235,14 +250,18 @@ async function acceptOrder(event, openId) {
     }
 
     const now = db.serverDate()
+    const driverVehicle = snapshotDriverVehicle(profile.vehicle)
+    const updateData = {
+      status: 'pending_departure',
+      driverOpenId: openId,
+      driverName: profile.name || '司机',
+      matchedAt: now,
+      updatedAt: now
+    }
+    if (driverVehicle) updateData.driverVehicle = driverVehicle
+
     await transaction.collection('orders').doc(orderId).update({
-      data: {
-        status: 'pending_departure',
-        driverOpenId: openId,
-        driverName: profile.name || '司机',
-        matchedAt: now,
-        updatedAt: now
-      }
+      data: updateData
     })
     await transaction.collection('notifications').add({
       data: notificationData(
@@ -290,6 +309,7 @@ async function cancelOrder(event, openId) {
           status: 'matching',
           driverOpenId: '',
           driverName: '',
+          driverVehicle: _.remove(),
           matchedAt: _.remove(),
           updatedAt: now
         }

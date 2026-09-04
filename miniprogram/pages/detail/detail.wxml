@@ -1,24 +1,4 @@
 <wxs module="fmt">
-function splitRoute(label) {
-  if (!label) return { from: '', to: '' }
-  var sep = ' → '
-  var i = label.indexOf(sep)
-  if (i < 0) return { from: label, to: '' }
-  return {
-    from: label.substring(0, i),
-    to: label.substring(i + sep.length)
-  }
-}
-function timePart(label) {
-  if (!label) return ''
-  var i = label.indexOf(' ')
-  return i < 0 ? label : label.substring(i + 1)
-}
-function datePart(label) {
-  if (!label) return ''
-  var i = label.indexOf(' ')
-  return i < 0 ? '' : label.substring(0, i)
-}
 function splitNote(note) {
   if (!note) return []
   var parts = note.split(' · ')
@@ -28,9 +8,6 @@ function splitNote(note) {
   }
   return out
 }
-module.exports.splitRoute = splitRoute
-module.exports.timePart = timePart
-module.exports.datePart = datePart
 module.exports.splitNote = splitNote
 </wxs>
 
@@ -40,121 +17,168 @@ module.exports.splitNote = splitNote
   </block>
 
   <block wx:elif="{{order}}">
-    <view class="v1-status-row">
-      <text class="v1-status-badge v1-status-badge--{{order.status}}">{{statusLabel}}</text>
-      <text class="v1-role-tag" wx:if="{{isPassenger}}">我发布的</text>
-      <text class="v1-role-tag" wx:elif="{{isAssignedDriver}}">我已接单</text>
+    <view class="v1-status-header v1-status-header--{{order.status}}">
+      <image
+        class="v1-status-header__watermark"
+        src="{{headerWatermark}}"
+        mode="aspectFit"
+        aria-hidden="true"
+      />
+      <view class="v1-status-header__inner">
+        <text class="v1-status-header__role" wx:if="{{roleLabel}}">{{roleLabel}}</text>
+        <text class="v1-status-header__status">{{statusLabel}}</text>
+        <text class="v1-status-header__hint" wx:if="{{statusHint}}">{{statusHint}}</text>
+      </view>
+    </view>
+
+    <view class="v1-driver-card" wx:if="{{showDriverCard}}">
+      <text class="v1-driver-card__title">车主信息</text>
+      <view class="v1-driver-card__body">
+        <view class="v1-driver-card__icon" aria-hidden="true">🚗</view>
+        <view class="v1-driver-card__main">
+          <text class="v1-driver-card__name">{{driverCard.driverName}}</text>
+          <view class="v1-driver-card__vehicle">
+            <text class="v1-driver-card__vehicle-item" wx:if="{{driverCard.brand}}">{{driverCard.brand}}</text>
+            <text class="v1-driver-card__vehicle-item" wx:if="{{driverCard.plate}}">{{driverCard.plate}}</text>
+            <text class="v1-driver-card__vehicle-item" wx:if="{{driverCard.color}}">{{driverCard.color}}</text>
+            <text
+              class="v1-driver-card__vehicle-item v1-driver-card__vehicle-item--muted"
+              wx:if="{{!driverCard.brand && !driverCard.plate && !driverCard.color}}"
+            >车辆信息待补充</text>
+          </view>
+        </view>
+      </view>
     </view>
 
     <view class="v1-trip-card">
-      <view class="v1-trip-head">
-        <view class="v1-time-block">
-          <view class="v1-time">{{fmt.timePart(departTimeLabel)}}</view>
-          <view class="v1-date" wx:if="{{fmt.datePart(departTimeLabel)}}">{{fmt.datePart(departTimeLabel)}}</view>
+      <view class="v1-info-row">
+        <view class="v1-info-icon v1-info-icon--time">
+          <view class="v1-info-icon__glyph v1-info-icon__glyph--time"></view>
         </view>
-        <view class="v1-count">{{order.passengerCount}} 人</view>
+        <view class="v1-info-main">
+          <text class="v1-info-label">出发时间窗</text>
+          <text class="v1-info-value v1-info-value--emphasis">{{timeWindowLabel}}</text>
+        </view>
       </view>
 
-      <view class="v1-route">
-        <view class="v1-route-row">
-          <view class="v1-route-dot v1-route-dot--start"></view>
-          <text class="v1-route-name">{{fmt.splitRoute(routeLabel).from}}</text>
+      <view class="v1-info-row">
+        <view class="v1-info-icon v1-info-icon--date">
+          <view class="v1-info-icon__glyph v1-info-icon__glyph--date"></view>
         </view>
-        <block wx:if="{{fmt.splitRoute(routeLabel).to}}">
-          <view class="v1-route-connector"></view>
-          <view class="v1-route-row">
-            <view class="v1-route-dot v1-route-dot--end"></view>
-            <text class="v1-route-name">{{fmt.splitRoute(routeLabel).to}}</text>
+        <view class="v1-info-main">
+          <text class="v1-info-label">出发日期</text>
+          <text class="v1-info-value">{{dateWeekLabel}}</text>
+        </view>
+      </view>
+
+      <view class="v1-info-row v1-info-row--route">
+        <view class="v1-info-icon v1-info-icon--route">
+          <view class="v1-info-icon__glyph v1-info-icon__glyph--map"></view>
+        </view>
+        <view class="v1-info-main">
+          <text class="v1-info-label">路线</text>
+          <view class="v1-route-stack">
+            <view class="v1-route-line">
+              <view class="v1-route-dot v1-route-dot--start"></view>
+              <text class="v1-route-name">{{fromName}}</text>
+            </view>
+            <view class="v1-route-connector" wx:if="{{toName}}"></view>
+            <view class="v1-route-line" wx:if="{{toName}}">
+              <view class="v1-route-dot v1-route-dot--end"></view>
+              <text class="v1-route-name">{{toName}}</text>
+            </view>
           </view>
-        </block>
+        </view>
       </view>
 
-      <view class="v1-hint" wx:if="{{order.status === 'matching' && isPassenger}}">等待司机在广场接单</view>
-      <view class="v1-hint" wx:elif="{{order.status === 'matching' && canAccept}}">确认顺路后可接单</view>
-      <view class="v1-hint" wx:elif="{{order.status === 'pending_departure'}}">已接单，请按出发时间窗出行</view>
-    </view>
-
-    <view class="v1-section">
-      <view class="v1-section-title">出行人员</view>
-      <view class="v1-group-card">
-        <view class="v1-group-row">
-          <text class="v1-group-label">乘客</text>
-          <text class="v1-group-value">{{order.passengerName}}</text>
+      <view class="v1-info-row {{order.note ? '' : 'v1-info-row--last'}}">
+        <view class="v1-info-icon v1-info-icon--passenger">
+          <view class="v1-info-icon__glyph v1-info-icon__glyph--passenger"></view>
         </view>
-        <block wx:if="{{order.driverName}}">
-          <view class="v1-group-divider"></view>
-          <view class="v1-group-row">
-            <text class="v1-group-label">司机</text>
-            <text class="v1-group-value">{{order.driverName}}</text>
+        <view class="v1-info-main">
+          <text class="v1-info-label">乘客</text>
+          <text class="v1-info-value">{{passengerLine}}</text>
+        </view>
+      </view>
+
+      <view class="v1-info-row v1-info-row--note v1-info-row--last" wx:if="{{order.note}}">
+        <view class="v1-info-icon v1-info-icon--notice">
+          <view class="v1-info-icon__glyph v1-info-icon__glyph--notice"></view>
+        </view>
+        <view class="v1-info-main">
+          <text class="v1-info-label">特殊要求</text>
+          <view class="v1-tags">
+            <view
+              class="v1-tag"
+              wx:for="{{fmt.splitNote(order.note)}}"
+              wx:for-item="tag"
+              wx:key="*this"
+            >{{tag}}</view>
           </view>
-        </block>
-      </view>
-    </view>
-
-    <view class="v1-section" wx:if="{{order.note}}">
-      <view class="v1-section-title">特殊要求</view>
-      <view class="v1-note-card">
-        <view class="v1-tags">
-          <view
-            class="v1-tag"
-            wx:for="{{fmt.splitNote(order.note)}}"
-            wx:for-item="tag"
-            wx:key="*this"
-          >{{tag}}</view>
         </view>
       </view>
     </view>
 
-    <view class="v1-actions">
-      <button
-        wx:if="{{canAccept}}"
-        class="v1-btn v1-btn--accent"
-        loading="{{submitting}}"
-        disabled="{{submitting}}"
-        bindtap="onAccept"
-      >确认接单</button>
+    <view class="v1-actions" wx:if="{{actions.length}}">
+      <block wx:if="{{actionRows.length}}">
+        <view
+          class="v1-actions__row"
+          wx:for="{{actionRows}}"
+          wx:for-item="row"
+          wx:for-index="rowIndex"
+          wx:key="rowIndex"
+        >
+          <button
+            wx:for="{{row}}"
+            wx:for-item="item"
+            wx:key="key"
+            class="v1-btn v1-btn--{{item.variant}} v1-btn--half"
+            loading="{{item.submitting && submitting}}"
+            disabled="{{item.submitting && submitting}}"
+            bindtap="onAction"
+            data-action="{{item.key}}"
+          >{{item.label}}</button>
+        </view>
+      </block>
 
-      <button
-        wx:if="{{canStart}}"
-        class="v1-btn v1-btn--primary"
-        loading="{{submitting}}"
-        disabled="{{submitting}}"
-        bindtap="onStart"
-      >开始行程</button>
+      <block wx:else>
+        <view class="v1-actions__primary" wx:if="{{actionGroups.primary.length}}">
+          <button
+            wx:for="{{actionGroups.primary}}"
+            wx:key="key"
+            class="v1-btn v1-btn--{{item.variant}}"
+            loading="{{item.submitting && submitting}}"
+            disabled="{{item.submitting && submitting}}"
+            bindtap="onAction"
+            data-action="{{item.key}}"
+          >{{item.label}}</button>
+        </view>
 
-      <button
-        wx:if="{{canComplete}}"
-        class="v1-btn v1-btn--primary"
-        loading="{{submitting}}"
-        disabled="{{submitting}}"
-        bindtap="onComplete"
-      >完成</button>
+        <view
+          class="v1-actions__grid {{actionGroups.secondary.length === 1 ? 'v1-actions__grid--single' : ''}}"
+          wx:if="{{actionGroups.secondary.length}}"
+        >
+          <button
+            wx:for="{{actionGroups.secondary}}"
+            wx:key="key"
+            class="v1-btn v1-btn--secondary v1-btn--grid"
+            bindtap="onAction"
+            data-action="{{item.key}}"
+          >{{item.label}}</button>
+        </view>
+      </block>
 
-      <button
-        wx:if="{{canCancel}}"
-        class="v1-btn v1-btn--danger"
-        loading="{{submitting}}"
-        disabled="{{submitting}}"
-        bindtap="onCancel"
-      >{{cancelButtonLabel}}</button>
-
-      <button
-        wx:if="{{canChat}}"
-        class="v1-btn v1-btn--secondary"
-        bindtap="goChat"
-      >联系同行人</button>
-
-      <button
-        wx:if="{{isPassenger || (isAssignedDriver && !canComplete && !canCancel)}}"
-        class="v1-btn v1-btn--secondary"
-        bindtap="goHistory"
-      >查看我的订单</button>
-
-      <button
-        wx:if="{{fromPlaza && order.status !== 'matching'}}"
-        class="v1-btn v1-btn--secondary"
-        bindtap="backToPlaza"
-      >返回广场</button>
+      <view class="v1-actions__danger" wx:if="{{actionGroups.danger.length}}">
+        <button
+          wx:for="{{actionGroups.danger}}"
+          wx:key="key"
+          class="v1-btn v1-btn--danger"
+          loading="{{item.submitting && submitting}}"
+          disabled="{{item.submitting && submitting}}"
+          bindtap="onAction"
+          data-action="{{item.key}}"
+        >{{item.label}}</button>
+      </view>
     </view>
   </block>
 </view>

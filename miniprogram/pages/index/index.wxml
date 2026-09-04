@@ -652,18 +652,62 @@ module.exports.splitNote = splitNote;
           <text class="v1-filter-val">{{filterTimeLabels[filterTimeIndex]}}</text>
         </view>
       </picker>
-      <picker class="v1-filter-picker" mode="selector" range="{{filterFromLabels}}" value="{{filterFromIndex}}" bindchange="onFilterFromChange">
-        <view class="v1-filter-chip">
+      <view class="v1-filter-picker v1-filter-picker--search">
+        <view class="v1-filter-search">
           <text class="v1-filter-key">出发</text>
-          <text class="v1-filter-val">{{filterFromLabels[filterFromIndex]}}</text>
+          <input
+            class="v1-filter-search-input"
+            value="{{filterFromQuery}}"
+            placeholder="请选择地点"
+            confirm-type="search"
+            bindinput="onFilterFromQueryInput"
+            bindfocus="onFilterFromFocus"
+            bindblur="onFilterFromBlur"
+          />
         </view>
-      </picker>
-      <picker class="v1-filter-picker" mode="selector" range="{{filterToLabels}}" value="{{filterToIndex}}" bindchange="onFilterToChange">
-        <view class="v1-filter-chip">
+        <scroll-view
+          scroll-y
+          class="v1-filter-suggestions"
+          wx:if="{{filterFromDropdownOpen}}"
+          catchtouchmove="noop"
+        >
+          <view
+            class="v1-filter-suggestion"
+            wx:for="{{filterFromSuggestions}}"
+            wx:key="pointId"
+            data-id="{{item.pointId}}"
+            catchtap="onSelectFilterFrom"
+          >{{item.name}}</view>
+        </scroll-view>
+      </view>
+      <view class="v1-filter-picker v1-filter-picker--search">
+        <view class="v1-filter-search">
           <text class="v1-filter-key">到达</text>
-          <text class="v1-filter-val">{{filterToLabels[filterToIndex]}}</text>
+          <input
+            class="v1-filter-search-input"
+            value="{{filterToQuery}}"
+            placeholder="请选择地点"
+            confirm-type="search"
+            bindinput="onFilterToQueryInput"
+            bindfocus="onFilterToFocus"
+            bindblur="onFilterToBlur"
+          />
         </view>
-      </picker>
+        <scroll-view
+          scroll-y
+          class="v1-filter-suggestions"
+          wx:if="{{filterToDropdownOpen}}"
+          catchtouchmove="noop"
+        >
+          <view
+            class="v1-filter-suggestion"
+            wx:for="{{filterToSuggestions}}"
+            wx:key="pointId"
+            data-id="{{item.pointId}}"
+            catchtap="onSelectFilterTo"
+          >{{item.name}}</view>
+        </scroll-view>
+      </view>
     </view>
   </view>
 
@@ -697,7 +741,7 @@ module.exports.splitNote = splitNote;
             <template is="v1OrderCard" data="{{item: item}}" />
           </block>
 
-          <view class="v1-section-subtitle v1-section-subtitle--gap" wx:if="{{otherOrders.length}}">其它顺路订单</view>
+          <view class="v1-section-subtitle v1-section-subtitle--gap" wx:if="{{otherOrders.length}}">其他待接订单</view>
           <block wx:for="{{otherOrders}}" wx:key="_id">
             <template is="v1OrderCard" data="{{item: item}}" />
           </block>

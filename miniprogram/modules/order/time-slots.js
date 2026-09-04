@@ -103,6 +103,19 @@ function isAlignedSlot(startTime) {
   return slots.some((slot) => slot.startTime === startTime)
 }
 
+function getNextSlotStartTotalMinutes(now) {
+  const baseNow = now || new Date()
+  const total = baseNow.getHours() * 60 + baseNow.getMinutes()
+  const remainder = total % SLOT_MINUTES
+  return remainder === 0 ? total : total + (SLOT_MINUTES - remainder)
+}
+
+function getNextSlotStartClock(now) {
+  const aligned = getNextSlotStartTotalMinutes(now)
+  if (aligned >= 24 * 60) return null
+  return formatClock(Math.floor(aligned / 60), aligned % 60)
+}
+
 function buildAvailableSlotsForDate(dateStr, now) {
   const baseNow = now || new Date()
   const allSlots = buildDailyTimeSlots()
@@ -116,7 +129,11 @@ function buildAvailableSlotsForDate(dateStr, now) {
 
   if (!isToday) return allSlots
 
+  const nextStartClock = getNextSlotStartClock(baseNow)
+  if (!nextStartClock) return []
+
   return allSlots.filter((slot) => {
+    if (slot.startTime < nextStartClock) return false
     const end = getSlotEndDateTime(dateStr, slot.startTime, slot.endTime)
     return end && end.getTime() > baseNow.getTime()
   })
@@ -201,6 +218,8 @@ module.exports = {
   DAY_START_MINUTES,
   DAY_END_MINUTES,
   buildDailyTimeSlots,
+  getNextSlotStartClock,
+  getNextSlotStartTotalMinutes,
   buildAvailableSlotsForDate,
   getDefaultSlotIndex,
   formatDepartTimeForStorage,

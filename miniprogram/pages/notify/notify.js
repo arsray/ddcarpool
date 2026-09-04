@@ -39,14 +39,10 @@ Page({
     } catch (error) {
       wx.showToast({ title: '消息状态更新失败', icon: 'none' });
     }
-    if (item.targetType === 'passenger' && item.targetId) {
+    if (item.targetId) {
       wx.navigateTo({
-        url: `/pages/detail/detail?orderId=${item.targetId}`
+        url: `/pages/detail/detail?orderId=${item.targetId}&from=history`
       });
-      return;
     }
-    wx.navigateTo({
-      url: `/pages/history-detail/history-detail?id=${item.targetId}&role=${item.targetType}`
-    });
   }
 });

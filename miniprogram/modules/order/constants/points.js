@@ -1,5 +1,6 @@
 /** @file 默认 POI — 无云库 points 数据时使用
  * sortOrder / pointId 序号供路线规划；name 为选择器展示文案（不含列表序号）
+ * 搜索别名见 modules/order/point-search.js
  */
 
 const DEFAULT_POINTS = [

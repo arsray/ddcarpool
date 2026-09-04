@@ -2,6 +2,7 @@ const app = getApp()
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
 const { buildPlazaFilterView, buildDefaultPlazaFilters } = require('../../modules/order/plaza-filter')
+const { filterPoints, getPointDisplayName } = require('../../modules/order/point-search')
 const { formatDateLabel } = require('../../modules/order/history-bridge')
 const { formatHistoryTimeLabel, parseDepartTime } = require('../../modules/order/time-slots')
 
@@ -17,7 +18,9 @@ const EMPTY_FILTERS = {
   date: '',
   timeWindow: '',
   fromPointId: '',
-  toPointId: ''
+  toPointId: '',
+  fromQuery: '',
+  toQuery: ''
 }
 
 function buildAcceptModalFields(orderItem) {
@@ -97,6 +100,12 @@ Page({
     filterTimeLabels: ['全部'],
     filterTimeValues: [''],
     filterTimeIndex: 0,
+    filterFromQuery: '',
+    filterToQuery: '',
+    filterFromSuggestions: [],
+    filterToSuggestions: [],
+    filterFromDropdownOpen: false,
+    filterToDropdownOpen: false,
     filterFromLabels: ['全部'],
     filterFromValues: [''],
     filterFromIndex: 0,
@@ -292,6 +301,12 @@ Page({
       filterToLabels: view.filterToLabels,
       filterToValues: view.filterToValues,
       filterToIndex: view.filterToIndex,
+      filterFromQuery: normalized.fromQuery || '',
+      filterToQuery: normalized.toQuery || '',
+      filterFromSuggestions: [],
+      filterToSuggestions: [],
+      filterFromDropdownOpen: false,
+      filterToDropdownOpen: false,
       hasActiveFilters: view.hasActiveFilters
     })
   },
@@ -355,21 +370,163 @@ Page({
     })
   },
 
-  onFilterFromChange(e) {
-    const index = Number(e.detail.value)
-    const fromPointId = this.data.filterFromValues[index] || ''
-    this.commitPlazaFilters({
-      ...this.getPlazaFilters(),
-      fromPointId
+  onFilterFromFocus() {
+    this._filterFromRevert = this.getPlazaFilters().fromPointId || ''
+    this.setData({
+      filterFromDropdownOpen: true,
+      filterToDropdownOpen: false,
+      filterFromSuggestions: filterPoints(this.data.points, this.data.filterFromQuery)
     })
   },
 
-  onFilterToChange(e) {
-    const index = Number(e.detail.value)
-    const toPointId = this.data.filterToValues[index] || ''
+  onFilterToFocus() {
+    this._filterToRevert = this.getPlazaFilters().toPointId || ''
+    this.setData({
+      filterToDropdownOpen: true,
+      filterFromDropdownOpen: false,
+      filterToSuggestions: filterPoints(this.data.points, this.data.filterToQuery)
+    })
+  },
+
+  onFilterFromBlur() {
+    setTimeout(() => {
+      if (this._poiPickerTapLock) {
+        this._poiPickerTapLock = false
+        return
+      }
+
+      const points = this.data.points
+      const draftQuery = String(this.data.filterFromQuery || '').trim()
+      const committed = this.getPlazaFilters()
+
+      if (!draftQuery) {
+        this.commitPlazaFilters({
+          ...committed,
+          fromQuery: '',
+          fromPointId: ''
+        })
+        this.setData({ filterFromDropdownOpen: false })
+        return
+      }
+
+      const revertId = this._filterFromRevert
+      this._filterFromRevert = ''
+      if (revertId) {
+        const point = points.find((item) => item.pointId === revertId)
+        if (point) {
+          this.setData({
+            filterFromQuery: point.name,
+            filterFromDropdownOpen: false
+          })
+          return
+        }
+      }
+
+      this.setData({
+        filterFromQuery: committed.fromPointId
+          ? getPointDisplayName(points, committed.fromPointId)
+          : '',
+        filterFromDropdownOpen: false
+      })
+    }, 200)
+  },
+
+  onFilterToBlur() {
+    setTimeout(() => {
+      if (this._poiPickerTapLock) {
+        this._poiPickerTapLock = false
+        return
+      }
+
+      const points = this.data.points
+      const draftQuery = String(this.data.filterToQuery || '').trim()
+      const committed = this.getPlazaFilters()
+
+      if (!draftQuery) {
+        this.commitPlazaFilters({
+          ...committed,
+          toQuery: '',
+          toPointId: ''
+        })
+        this.setData({ filterToDropdownOpen: false })
+        return
+      }
+
+      const revertId = this._filterToRevert
+      this._filterToRevert = ''
+      if (revertId) {
+        const point = points.find((item) => item.pointId === revertId)
+        if (point) {
+          this.setData({
+            filterToQuery: point.name,
+            filterToDropdownOpen: false
+          })
+          return
+        }
+      }
+
+      this.setData({
+        filterToQuery: committed.toPointId
+          ? getPointDisplayName(points, committed.toPointId)
+          : '',
+        filterToDropdownOpen: false
+      })
+    }, 200)
+  },
+
+  onFilterFromQueryInput(e) {
+    const fromQuery = e.detail.value
+    this.setData({
+      filterFromQuery: fromQuery,
+      filterFromSuggestions: filterPoints(this.data.points, fromQuery),
+      filterFromDropdownOpen: true,
+      filterToDropdownOpen: false
+    })
+  },
+
+  onFilterToQueryInput(e) {
+    const toQuery = e.detail.value
+    this.setData({
+      filterToQuery: toQuery,
+      filterToSuggestions: filterPoints(this.data.points, toQuery),
+      filterToDropdownOpen: true,
+      filterFromDropdownOpen: false
+    })
+  },
+
+  onSelectFilterFrom(e) {
+    const pointId = e.currentTarget.dataset.id
+    const point = this.data.points.find((item) => item.pointId === pointId)
+    if (!point) return
+    this._poiPickerTapLock = true
+    this.setData({
+      filterFromQuery: point.name,
+      filterFromSuggestions: filterPoints(this.data.points, ''),
+      filterFromDropdownOpen: false,
+      filterToDropdownOpen: false
+    })
     this.commitPlazaFilters({
       ...this.getPlazaFilters(),
-      toPointId
+      fromQuery: point.name,
+      fromPointId: point.pointId
+    })
+  },
+
+  onSelectFilterTo(e) {
+    const pointId = e.currentTarget.dataset.id
+    const point = this.data.points.find((item) => item.pointId === pointId)
+    if (!point) return
+    this._poiPickerTapLock = true
+    this.setData({
+      filterToQuery: point.name,
+      filterToSuggestions: filterPoints(this.data.points, ''),
+      filterToDropdownOpen: false,
+      filterFromDropdownOpen: false
+    })
+    this.commitPlazaFilters({
+      ...this.getPlazaFilters(),
+      toQuery: point.name,
+      toPointId: point.pointId
     })
   },
 

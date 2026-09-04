@@ -1,6 +1,6 @@
 /**
  * 广场 Mock 乘客订单 — 司机接单流程测试用
- * 每次启动按相对日期重建 seed_* 订单，保留用户自行发布的订单
+ * 每次启动按相对日期重建广场 seed_* 匹配单；用户真实订单（ord_*）单独保留
  */
 
 const { ORDER_STATUS } = require('./constants/status')
