@@ -73,6 +73,14 @@
 > **PR #6 代码在分支 `feat/m3-flow-optimization`，尚未 merge 到 `main`。**  
 > 仅 `git pull origin main` **拿不到**本 PR 的任何改动。
 
+### 团队开发约定（Ray · 2026-09）
+
+项目已接入微信云开发。**新功能以 Cloud 为验收标准**：
+
+1. 每人本地维护 `miniprogram/config/env.js`（不提交 Git），`useCloud: true` + 团队 `cloudEnvId`
+2. 可用 Mock（`useCloud: false`）快速改 UI，但 **PR 合并前必须在 Cloud 验通主路径**
+3. 修改 `cloudfunctions/**` 后，须在微信开发者工具 **上传并部署**，`git push` 不会更新云端
+
 ### 1. 拉取正确分支
 
 ```bash
@@ -85,23 +93,23 @@ git pull origin feat/m3-flow-optimization
 
 复制 `miniprogram/config/env.example.js` → `miniprogram/config/env.js`。
 
-**仅测 UI（Mock，无需云函数部署）：**
+**团队默认（推荐，与 Ray 本地一致）：**
 
 ```js
 module.exports = {
-  cloudEnvId: '',
-  useCloud: false,
+  cloudEnvId: 'cloudbase-xxxxxxxx',  // 向 Ray / M1 索取，勿提交仓库
+  useCloud: true,
   environment: 'development',
   allowMockEmailVerification: true
 }
 ```
 
-**测 Cloud 全链路：**
+**仅离线改 UI（不可作为 PR 唯一验收）：**
 
 ```js
 module.exports = {
-  cloudEnvId: '向 M1 维护者索取团队开发环境 ID',
-  useCloud: true,
+  cloudEnvId: '',
+  useCloud: false,
   environment: 'development',
   allowMockEmailVerification: true
 }
@@ -128,13 +136,14 @@ module.exports = {
 
 ### 5. 功能与依赖对照
 
-| 功能 | 需要本 PR 分支 | 需要部署 `order` 云函数 | Mock 可测 |
-|------|:--------------:|:------------------------:|:---------:|
-| POI 搜索 / 广场筛选 | ✅ | ❌ | ✅ |
-| 途经 / 同向路线匹配 | ✅ | ❌ | ✅ |
-| 详情页 CTA / 状态水印 | ✅ | ❌ | ✅ |
-| 接单后车主车辆卡片 | ✅ | ✅（Cloud） | ✅ |
-| 通知 → 统一详情页 | ✅ | ❌ | ✅（Mock 通知） |
+| 功能 | 需要本 PR 分支 | Cloud 验收 | Mock 仅作 UI 草稿 |
+|------|:--------------:|:----------:|:-----------------:|
+| POI 搜索 / 广场筛选 | ✅ | ✅ 推荐 | 可临时 |
+| 途经 / 同向路线匹配 | ✅ | ✅ 推荐 | 可临时 |
+| 详情页 CTA / 状态水印 | ✅ | ✅ 推荐 | 可临时 |
+| 接单后车主车辆卡片 | ✅ | ✅ **必须**（依赖 `order` 云函数） | 有 Mock 回退 |
+| 通知 → 统一详情页 | ✅ | ✅ 推荐 | 可临时 |
+| 聊天 | ✅ | ✅ **必须**（`message` 云函数） | 不可用 |
 
 ### 6. 常见问题
 
@@ -147,7 +156,7 @@ module.exports = {
 
 ### 7. 建议验证路径
 
-**Mock（5 分钟）：** 乘客发布（POI 下拉）→ 车主广场筛选 → 接单 → 详情页水印 / CTA / 车主卡片。
+**Cloud（PR 合并前必做）：** 配置 `env.js`（`useCloud: true`）→ 部署本 PR 变更的 `order` 云函数 → 发单 → 筛选接单 → 乘客详情 `driverVehicle` → 通知进详情 → `pending_departure` 可聊、`matching` 不可聊。
 
-**Cloud（15 分钟）：** 配置 `env.js` → 部署 `order` → 发单 → 筛选接单 → 乘客详情 `driverVehicle` → 通知进详情 → `pending_departure` 可聊天、`matching` 不可聊。
+**Mock（可选，仅 UI 草稿）：** 乘客发布 → 广场筛选 → 详情水印 / CTA；**不能替代 Cloud 验收。**
 

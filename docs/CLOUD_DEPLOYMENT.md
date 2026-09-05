@@ -2,18 +2,29 @@
 
 ## 1. 本地配置
 
-复制 `miniprogram/config/env.example.js` 为 `miniprogram/config/env.js`，填写团队开发环境 ID。该文件已被 `.gitignore` 忽略。
+复制 `miniprogram/config/env.example.js` 为 `miniprogram/config/env.js`，填写团队开发环境 ID。该文件已被 `.gitignore` 忽略，**每位开发者自行维护，不提交仓库**。
 
-开发环境可使用：
+`cloudEnvId` 向维护者 Ray / M1 索取（形如 `cloudbase-xxxxxxxx`）。
+
+**默认开发配置（与团队 Cloud 基线一致）：**
 
 ```js
 module.exports = {
-  cloudEnvId: '本地填写，不提交',
+  cloudEnvId: '向 Ray 索取的团队开发环境 ID',
   useCloud: true,
   environment: 'development',
   allowMockEmailVerification: true
 }
 ```
+
+### 开发约定（2026-09 起）
+
+| 阶段 | 做法 |
+|------|------|
+| 日常开发 | `useCloud: true` + 团队 `cloudEnvId` |
+| 仅离线改 UI | 可临时 `useCloud: false`，**不得**作为 PR 唯一验收依据 |
+| PR 合并前 | 必须在 Cloud 跑通本 PR 主路径；若改动了 `cloudfunctions/**`，须在开发者工具 **上传并部署** 对应云函数 |
+| 体验版 / 正式版 | `environment` 为 `trial` 或 `production`；`allowMockEmailVerification` 会被强制关闭 |
 
 体验版和正式版必须将 `environment` 设为 `trial` 或 `production`。这两个环境会强制关闭 Mock 邮箱验证。
 
