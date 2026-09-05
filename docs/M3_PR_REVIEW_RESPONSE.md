@@ -65,3 +65,89 @@
 ## 给 Reviewer 的一句话
 
 已按 main 聊天契约收口：matching 不可聊；`driverVehicle` 文档与 Cloud 展示逻辑已对齐服务端快照行为。
+
+---
+
+## Ray 联调指引
+
+> **PR #6 代码在分支 `feat/m3-flow-optimization`，尚未 merge 到 `main`。**  
+> 仅 `git pull origin main` **拿不到**本 PR 的任何改动。
+
+### 1. 拉取正确分支
+
+```bash
+git fetch origin
+git checkout feat/m3-flow-optimization
+git pull origin feat/m3-flow-optimization
+```
+
+### 2. 配置本地环境（`env.js` 不在 Git 中）
+
+复制 `miniprogram/config/env.example.js` → `miniprogram/config/env.js`。
+
+**仅测 UI（Mock，无需云函数部署）：**
+
+```js
+module.exports = {
+  cloudEnvId: '',
+  useCloud: false,
+  environment: 'development',
+  allowMockEmailVerification: true
+}
+```
+
+**测 Cloud 全链路：**
+
+```js
+module.exports = {
+  cloudEnvId: '向 M1 维护者索取团队开发环境 ID',
+  useCloud: true,
+  environment: 'development',
+  allowMockEmailVerification: true
+}
+```
+
+### 3. 微信开发者工具
+
+1. 导入项目根目录 `ddcarpool`（含 `project.config.json`）
+2. 确认 AppID 为占位符 `YOUR_APPID_HERE` 或使用团队测试号
+3. 编译运行
+
+### 4. 云函数部署（仅 Cloud 模式需要）
+
+`git pull` **不会**自动更新云端云函数，必须在开发者工具中手动上传。
+
+本 PR **仅修改** `cloudfunctions/order`（接单写入 `driverVehicle`、取消接单清除）。Cloud 联调时请：
+
+1. 在云开发面板选中**团队共用环境**（与 `env.js` 的 `cloudEnvId` 一致）
+2. 右键 `cloudfunctions/order` → **上传并部署：云端安装依赖**
+
+其余云函数若团队基线已部署过，本 PR **无需**重复上传。
+
+详细清单见 [`docs/CLOUD_DEPLOYMENT.md`](./CLOUD_DEPLOYMENT.md)。
+
+### 5. 功能与依赖对照
+
+| 功能 | 需要本 PR 分支 | 需要部署 `order` 云函数 | Mock 可测 |
+|------|:--------------:|:------------------------:|:---------:|
+| POI 搜索 / 广场筛选 | ✅ | ❌ | ✅ |
+| 途经 / 同向路线匹配 | ✅ | ❌ | ✅ |
+| 详情页 CTA / 状态水印 | ✅ | ❌ | ✅ |
+| 接单后车主车辆卡片 | ✅ | ✅（Cloud） | ✅ |
+| 通知 → 统一详情页 | ✅ | ❌ | ✅（Mock 通知） |
+
+### 6. 常见问题
+
+| 现象 | 可能原因 |
+|------|----------|
+| 拉 main 后界面没变化 | 应 checkout `feat/m3-flow-optimization` |
+| Cloud 发单/接单失败 | `env.js` 未配置或 `cloudEnvId` 错误 |
+| 接单后车主卡片无车辆信息 | 云端 `order` 云函数未部署本 PR 版本；或司机 Profile 未填车辆 |
+| 大部分 UI 正常但 Cloud 接口报错 | 检查云函数是否部署到与 `env.js` 相同的环境 |
+
+### 7. 建议验证路径
+
+**Mock（5 分钟）：** 乘客发布（POI 下拉）→ 车主广场筛选 → 接单 → 详情页水印 / CTA / 车主卡片。
+
+**Cloud（15 分钟）：** 配置 `env.js` → 部署 `order` → 发单 → 筛选接单 → 乘客详情 `driverVehicle` → 通知进详情 → `pending_departure` 可聊天、`matching` 不可聊。
+
