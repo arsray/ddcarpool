@@ -52,6 +52,16 @@ function getSearchablePoints(points) {
     .map(enrichPointForSearch)
 }
 
+const MIN_LATIN_QUERY_LENGTH = 2
+
+function isLatinToken(value) {
+  return /^[a-z0-9]+$/i.test(String(value || '').trim())
+}
+
+function canMatchLatinQuery(latinQuery) {
+  return latinQuery.length >= MIN_LATIN_QUERY_LENGTH
+}
+
 function pointMatchesQuery(point, rawQuery) {
   const query = String(rawQuery || '').trim()
   if (!query) return true
@@ -63,10 +73,18 @@ function pointMatchesQuery(point, rawQuery) {
 
   return enriched.searchTokens.some((token) => {
     if (!token) return false
-    if (String(token).includes(query)) return true
-    const latinToken = normalizeLatin(token)
-    if (!latinQuery) return false
-    return latinToken.includes(latinQuery) || latinToken.startsWith(latinQuery)
+    const text = String(token)
+    if (text.includes(query)) {
+      if (/[\u4e00-\u9fff]/.test(text)) return true
+      if (latinQuery && isLatinToken(text)) {
+        if (!canMatchLatinQuery(latinQuery)) return false
+        return normalizeLatin(text).startsWith(latinQuery)
+      }
+      return text.includes(query)
+    }
+    if (!latinQuery || !canMatchLatinQuery(latinQuery)) return false
+    const latinToken = normalizeLatin(text)
+    return latinToken.startsWith(latinQuery)
   })
 }
 

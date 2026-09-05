@@ -2,6 +2,7 @@ const config = require('./config/index')
 const authStore = config.useCloud
   ? require('./modules/auth/cloud-store')
   : require('./modules/auth/store')
+const notification = require('./modules/notification/index')
 const { flushNavQueue } = require('./modules/auth/nav')
 
 /** bump 版本号可再次触发一次性清空已接单，便于广场自测 */
@@ -42,7 +43,12 @@ App({
     authStore.syncGlobalData(this.globalData)
     if (config.useCloud && authStore.bootstrapCloudSession) {
       authStore.bootstrapCloudSession()
-        .then(() => this._syncAuth())
+        .then(() => {
+          this._syncAuth()
+          if (authStore.isLoggedIn()) {
+            return notification.refreshNotifications().catch(() => {})
+          }
+        })
         .catch(() => {
           // 登录页会展示可恢复的通用错误，启动阶段不暴露内部信息。
         })

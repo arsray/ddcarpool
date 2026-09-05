@@ -10,7 +10,8 @@ const {
   resolveCancelAction,
   getCancelModalConfig,
   getCancelSuccessTitle,
-  CANCEL_ERROR_MESSAGES
+  CANCEL_ERROR_MESSAGES,
+  CANCEL_KIND
 } = order
 
 const HEADER_WATERMARKS = {
@@ -86,19 +87,17 @@ Page({
       }
 
       const openId = app.globalData.openId || (await auth.ensureLogin())
-      const isPassenger = item.viewerRole
-        ? item.viewerRole === 'passenger'
-        : item.passengerOpenId === openId
-      const isAssignedDriver = item.viewerRole
-        ? item.viewerRole === 'driver'
-        : item.driverOpenId === openId
+      const isPassenger = item.viewerRole === 'passenger' ||
+        (!item.viewerRole && item.passengerOpenId === openId)
+      const isAssignedDriver = item.viewerRole === 'driver' ||
+        (!item.viewerRole && item.driverOpenId === openId)
       const hasOwnerIdentity = app.hasIdentity('owner')
       const canAccept =
         item.status === order.ORDER_STATUS.MATCHING &&
         !isPassenger &&
         hasOwnerIdentity &&
         !item.driverOpenId &&
-        !item.viewerRole
+        item.viewerRole !== 'passenger'
       const canComplete =
         isAssignedDriver &&
         (item.status === order.ORDER_STATUS.PENDING_DEPARTURE ||
@@ -107,7 +106,7 @@ Page({
         isAssignedDriver &&
         item.status === order.ORDER_STATUS.PENDING_DEPARTURE
       const canChat = chat.canEnterChat(item, openId)
-      const cancelKind = resolveCancelAction(item, openId)
+      const cancelKind = resolveCancelAction(item, openId, { isPassenger, isAssignedDriver })
       const routeLabel = order.formatRoute(item.fromPointId, item.toPointId)
       const routeParts = routeLabel.split(' → ')
       const departDate = parseDepartTime(item.departTime)
@@ -152,13 +151,17 @@ Page({
         headerWatermark: resolveHeaderWatermark(item.status)
       })
     } catch (error) {
-      this.setData({ loading: false })
+      this.setData({ loading: false, order: null, actions: [] })
       wx.showToast({ title: '加载失败', icon: 'none' })
     }
   },
 
   onAction(event) {
     const action = event.currentTarget.dataset.action
+    if (action === 'cancel_passenger' || action === 'cancel_driver') {
+      this.onCancel()
+      return
+    }
     const handlers = {
       accept: () => this.onAccept(),
       start: () => this.onStart(),
@@ -250,21 +253,59 @@ Page({
     wx.switchTab({ url: '/pages/index/index' })
   },
 
-  onCancel() {
-    if (!this.data.canCancel || this.data.submitting) return
+  resolveCancelKind() {
+    const { order, isPassenger, isAssignedDriver, cancelKind } = this.data
+    if (cancelKind) return cancelKind
+    if (!order || !order.status) return null
+    if (isPassenger && ['matching', 'pending_departure'].includes(order.status)) {
+      return CANCEL_KIND.PASSENGER_CANCEL
+    }
+    if (isAssignedDriver && order.status === 'pending_departure') {
+      return CANCEL_KIND.DRIVER_RELEASE
+    }
+    return resolveCancelAction(order, app.globalData.openId, { isPassenger, isAssignedDriver })
+  },
 
-    const modal = getCancelModalConfig(this.data.cancelKind)
-    if (!modal) return
+  onCancel() {
+    if (this.data.submitting) return
+
+    let cancelKind = this.resolveCancelKind()
+    if (!cancelKind && this.data.isPassenger) {
+      cancelKind = CANCEL_KIND.PASSENGER_CANCEL
+    } else if (!cancelKind && this.data.isAssignedDriver) {
+      cancelKind = CANCEL_KIND.DRIVER_RELEASE
+    }
+
+    const modal = getCancelModalConfig(cancelKind) || (
+      cancelKind === CANCEL_KIND.DRIVER_RELEASE
+        ? {
+          title: '取消匹配',
+          content: '将取消与对方的同行匹配。',
+          confirmText: '取消匹配',
+          cancelText: '返回'
+        }
+        : {
+          title: '取消搭车单',
+          content: '取消后将不再参与匹配。',
+          confirmText: '确认取消',
+          cancelText: '返回'
+        }
+    )
 
     wx.showModal({
-      ...modal,
+      title: modal.title,
+      content: modal.content,
+      confirmText: modal.confirmText,
+      cancelText: modal.cancelText,
+      showCancel: true,
       success: (res) => {
-        if (res.confirm) this.submitCancel()
+        if (res.confirm) this.submitCancel(cancelKind)
       }
     })
   },
 
-  async submitCancel() {
+  async submitCancel(cancelKind) {
+    const kind = cancelKind || this.data.cancelKind
     this.setData({ submitting: true })
     try {
       const openId = await auth.ensureLogin()
@@ -273,7 +314,7 @@ Page({
       app._syncAuth()
 
       wx.showToast({
-        title: getCancelSuccessTitle(this.data.cancelKind),
+        title: getCancelSuccessTitle(kind),
         icon: 'success'
       })
 

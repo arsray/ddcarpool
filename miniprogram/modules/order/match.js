@@ -15,8 +15,9 @@ function scoreOnRoute(routePointIds, fromPointId, toPointId) {
 }
 
 /**
- * 乘客订单起终点是否落在车主路线方向上的途经区间内
- * 例：车主 poi-01 → poi-08，订单 poi-03 → poi-06 视为同向途经
+ * 乘客订单起终点是否落在车主路线方向上的途经区间内（支持配置路线双向）
+ * 正向：车主 poi-01 → poi-15，订单 poi-02 → poi-08 视为同向途经
+ * 逆向：车主 poi-15 → poi-01，订单 poi-09 → poi-06 视为同向途经
  */
 function isOrderAlongDriverRoute(orderFromId, orderToId, driverFromId, driverToId, routes = DEFAULT_CONFIGURED_ROUTES) {
   if (!orderFromId || !orderToId || !driverFromId || !driverToId) return false
@@ -27,14 +28,20 @@ function isOrderAlongDriverRoute(orderFromId, orderToId, driverFromId, driverToI
     const pointIds = route.pointIds
     const driverFromIdx = pointIds.indexOf(driverFromId)
     const driverToIdx = pointIds.indexOf(driverToId)
-    if (driverFromIdx === -1 || driverToIdx === -1 || driverFromIdx >= driverToIdx) continue
-
     const orderFromIdx = pointIds.indexOf(orderFromId)
     const orderToIdx = pointIds.indexOf(orderToId)
-    if (orderFromIdx === -1 || orderToIdx === -1 || orderFromIdx >= orderToIdx) continue
 
-    if (orderFromIdx >= driverFromIdx && orderToIdx <= driverToIdx) {
-      return true
+    if (driverFromIdx === -1 || driverToIdx === -1 || orderFromIdx === -1 || orderToIdx === -1) {
+      continue
+    }
+
+    if (driverFromIdx < driverToIdx && orderFromIdx < orderToIdx) {
+      if (orderFromIdx >= driverFromIdx && orderToIdx <= driverToIdx) return true
+      continue
+    }
+
+    if (driverFromIdx > driverToIdx && orderFromIdx > orderToIdx) {
+      if (orderFromIdx <= driverFromIdx && orderToIdx >= driverToIdx) return true
     }
   }
 

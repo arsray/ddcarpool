@@ -27,19 +27,27 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 3 })
     }
+    notification.syncTabBarBadgeFromApp()
     if (!isTopPage('pages/mine/mine')) return
     if (!auth.requireLogin()) return
     if (config.useCloud) {
       try {
         await auth.getProfile()
-        const [orders, notifications] = await Promise.all([
-          auth.listMyOrders(),
-          notification.listNotifications()
-        ])
-        app.globalData.cloudOrders = orders
-        app.globalData.notifications = notifications
       } catch (error) {
-        wx.showToast({ title: '个人数据加载失败', icon: 'none' })
+        console.warn('[mine] profile load failed', error)
+        wx.showToast({ title: '个人资料加载失败', icon: 'none' })
+      }
+      try {
+        app.globalData.cloudOrders = await auth.listMyOrders()
+      } catch (error) {
+        console.warn('[mine] orders load failed', error)
+        wx.showToast({ title: '订单加载失败', icon: 'none' })
+      }
+      try {
+        await notification.refreshNotifications()
+      } catch (error) {
+        console.warn('[mine] notifications load failed', error)
+        notification.applyNotifications([])
       }
     }
     app._syncAuth()

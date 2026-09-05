@@ -522,6 +522,12 @@
   height: 72rpx;
   line-height: 72rpx;
   font-size: 26rpx;
+  text-align: center;
+}
+
+.v1-btn--disabled {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .v1-btn::after {

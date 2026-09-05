@@ -41,8 +41,13 @@ function resolveDriverVehicle(order) {
   }
 }
 
+function hasAssignedDriver(order) {
+  if (!order) return false
+  return Boolean(order.driverOpenId || order.driverName || order.driverVehicle)
+}
+
 function buildDriverCard(order, isPassenger) {
-  if (!isPassenger || !order || !order.driverOpenId) {
+  if (!isPassenger || !hasAssignedDriver(order)) {
     return { show: false }
   }
   if (!DRIVER_CARD_STATUSES.includes(order.status)) {
@@ -68,5 +73,6 @@ function buildDriverCard(order, isPassenger) {
 module.exports = {
   snapshotDriverVehicle,
   resolveDriverVehicle,
+  hasAssignedDriver,
   buildDriverCard
 }

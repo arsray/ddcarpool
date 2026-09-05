@@ -44,7 +44,11 @@ async function callFunction(name, data, options) {
     return result.data
   } catch (error) {
     if (error && error.code) throw error
-    throw makeError('CLOUD_CALL_FAILED', '云服务调用失败')
+    const detail = error && error.errMsg ? String(error.errMsg) : ''
+    throw makeError(
+      'CLOUD_CALL_FAILED',
+      detail ? `云服务调用失败（${name}）：${detail}` : `云服务调用失败（${name}）`
+    )
   } finally {
     clearTimeout(timer)
   }

@@ -90,6 +90,11 @@ function getUserProfile() {
   }
 }
 
+function setNotifications(notifications) {
+  state.notifications = Array.isArray(notifications) ? notifications : []
+  return state.notifications
+}
+
 function syncGlobalData(globalData) {
   globalData.openId = state.openId
   globalData.userProfile = getUserProfile()
@@ -227,6 +232,7 @@ module.exports = {
   initFromStorage,
   bootstrapCloudSession,
   refreshUser,
+  setNotifications,
   getState,
   isLoggedIn,
   getOpenId,

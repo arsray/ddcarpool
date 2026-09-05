@@ -60,6 +60,25 @@ function publicOrder(doc, viewerOpenId) {
   return { ...safe, viewerRole }
 }
 
+async function attachDriverDisplayFields(doc, viewerOpenId) {
+  if (!doc || doc.passengerOpenId !== viewerOpenId || !doc.driverOpenId) return doc
+  if (!['pending_departure', 'in_progress', 'completed'].includes(doc.status)) return doc
+
+  let driverName = doc.driverName
+  let driverVehicle = doc.driverVehicle
+  if (driverName && driverVehicle) return doc
+
+  const profile = await currentProfile(doc.driverOpenId)
+  if (!driverName) driverName = profile.name || '司机'
+  if (!driverVehicle) driverVehicle = snapshotDriverVehicle(profile.vehicle)
+
+  return {
+    ...doc,
+    driverName,
+    ...(driverVehicle ? { driverVehicle } : {})
+  }
+}
+
 function isParticipant(order, openId) {
   return order.passengerOpenId === openId || order.driverOpenId === openId
 }
@@ -205,7 +224,10 @@ async function listForUser(openId, role) {
     ? { passengerOpenId: openId }
     : { driverOpenId: openId }
   const response = await orders.where(query).orderBy('createdAt', 'desc').limit(PAGE_SIZE).get()
-  return response.data.map((item) => publicOrder(item, openId))
+  const docs = role === 'passenger'
+    ? await Promise.all(response.data.map((item) => attachDriverDisplayFields(item, openId)))
+    : response.data
+  return docs.map((item) => publicOrder(item, openId))
 }
 
 async function getById(orderId, openId) {
@@ -216,7 +238,8 @@ async function getById(orderId, openId) {
   if (order.status !== 'matching' && !isParticipant(order, openId)) {
     throw appError('FORBIDDEN', '无权查看此订单')
   }
-  return publicOrder(order, openId)
+  const enriched = await attachDriverDisplayFields(order, openId)
+  return publicOrder(enriched, openId)
 }
 
 function notificationData(recipientOpenId, title, targetId, targetType) {

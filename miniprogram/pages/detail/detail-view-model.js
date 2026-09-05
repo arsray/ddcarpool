@@ -146,9 +146,14 @@ function isCtaAvailable(key, ctx) {
     case 'complete':
       return ctx.canComplete
     case 'cancel_passenger':
-      return ctx.cancelKind === CANCEL_KIND.PASSENGER_CANCEL
+      if (ctx.cancelKind === CANCEL_KIND.PASSENGER_CANCEL) return true
+      return Boolean(
+        ctx.isPassenger &&
+        [ORDER_STATUS.MATCHING, ORDER_STATUS.PENDING_DEPARTURE].includes(ctx.status)
+      )
     case 'cancel_driver':
-      return ctx.cancelKind === CANCEL_KIND.DRIVER_RELEASE
+      if (ctx.cancelKind === CANCEL_KIND.DRIVER_RELEASE) return true
+      return Boolean(ctx.isAssignedDriver && ctx.status === ORDER_STATUS.PENDING_DEPARTURE)
     case 'chat':
       return ctx.canChat
     case 'history':
