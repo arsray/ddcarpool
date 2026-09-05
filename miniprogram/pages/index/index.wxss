@@ -224,10 +224,67 @@
   font-size: 24rpx;
   font-weight: 500;
   color: #1F2937;
-  text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: right;
+}
+
+.v1-filter-picker--search {
+  position: relative;
+  z-index: 20;
+}
+
+.v1-filter-picker--search:focus-within {
+  z-index: 40;
+}
+
+.v1-filter-search {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  height: 72rpx;
+  padding: 0 16rpx;
+  background: #F8FAFC;
+  border: 1rpx solid #E7ECF2;
+  border-radius: 16rpx;
+  box-sizing: border-box;
+}
+
+.v1-filter-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #1F2937;
+  text-align: right;
+}
+
+.v1-filter-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8rpx);
+  z-index: 50;
+  max-height: 320rpx;
+  background: #FFFFFF;
+  border: 1rpx solid #E7ECF2;
+  border-radius: 16rpx;
+  box-shadow: 0 12rpx 32rpx rgba(16, 24, 40, 0.08);
+  box-sizing: border-box;
+}
+
+.v1-filter-suggestion {
+  padding: 16rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #1F2937;
+  border-bottom: 1rpx solid #F1F5F9;
+}
+
+.v1-filter-suggestion:last-child {
+  border-bottom: none;
 }
 
 /* Order pool header */

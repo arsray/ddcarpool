@@ -8,6 +8,7 @@ const { DEFAULT_POINTS } = require('./constants/points')
 const { validateCreateOrderInput } = require('./validate')
 const { parseDepartTime, getDepartWindowEnd, formatDepartTimeDisplay, formatHistoryTimeLabel } = require('./time-slots')
 const { comparePlazaOrders } = require('./plaza-sort')
+const { snapshotDriverVehicle } = require('./driver-vehicle')
 
 function getHistoryBridge() {
   return require('./history-bridge')
@@ -254,6 +255,7 @@ function acceptOrder(orderId, driver) {
   const order = orders.find((item) => item._id === orderId)
   const driverOpenId = driver && driver.openId ? driver.openId.trim() : ''
   const driverName = (driver && driver.name ? driver.name : '司机').trim() || '司机'
+  const driverVehicle = snapshotDriverVehicle(driver && driver.vehicle)
 
   if (!order) {
     throw makeError('ORDER_NOT_FOUND', '订单不存在')
@@ -287,6 +289,7 @@ function acceptOrder(orderId, driver) {
     status: nextStatus,
     driverOpenId,
     driverName,
+    driverVehicle: driverVehicle || null,
     matchedAt: timestamp,
     updatedAt: timestamp
   }
@@ -373,7 +376,7 @@ function cancelOrder(orderId, options) {
   }
 
   if (isDriver && order.status === ORDER_STATUS.PENDING_DEPARTURE) {
-    const { matchedAt, ...rest } = order
+    const { matchedAt, driverVehicle, ...rest } = order
     const updated = {
       ...rest,
       status: ORDER_STATUS.MATCHING,
@@ -430,46 +433,46 @@ function resetPlazaAcceptedOrders() {
   return { resetCount }
 }
 
-/** 替换广场测试种子订单：已接单的模板不再克隆出新的匹配中单 */
+function isLegacyMockHistoryId(orderId) {
+  return /^[po]-/.test(String(orderId || ''))
+}
+
+/** 清除开发阶段种子单与 M1 假历史订单 */
+function purgeDevStageOrders() {
+  const existing = readAllOrders()
+  const kept = existing.filter(
+    (order) => !isSeedOrderId(order._id) && !isSeedRenamedClone(order._id)
+  )
+  writeAllOrders(kept)
+
+  wx.removeStorageSync('historyOwner')
+  wx.removeStorageSync('historyPassenger')
+
+  const notifications = wx.getStorageSync('notifications') || []
+  const cleanedNotifications = notifications.filter((item) => {
+    const targetId = item.targetId || ''
+    return !isLegacyMockHistoryId(targetId) && !isSeedOrderId(targetId)
+  })
+  wx.setStorageSync('notifications', cleanedNotifications)
+
+  return {
+    ordersKept: kept.length,
+    ordersRemoved: existing.length - kept.length,
+    notificationsKept: cleanedNotifications.length
+  }
+}
+
+/** 替换广场测试种子订单（仅保留 matching 广场单，不沉淀到历史） */
 function replacePlazaSeedOrders(seedOrders) {
   const existing = readAllOrders()
   const nonSeed = existing.filter(
     (order) => !isSeedOrderId(order._id) && !isSeedRenamedClone(order._id)
   )
-  const existingSeeds = existing.filter(
-    (order) => isSeedOrderId(order._id) && !isSeedRenamedClone(order._id)
-  )
 
-  const historySeeds = existingSeeds.filter((order) => order.status !== ORDER_STATUS.MATCHING)
-  const blockedTemplateIds = new Set(historySeeds.map((order) => order._id))
-  const matchingById = new Map(
-    existingSeeds
-      .filter((order) => order.status === ORDER_STATUS.MATCHING)
-      .map((order) => [order._id, order])
-  )
-
-  const freshMatching = (seedOrders || [])
-    .filter((template) => !blockedTemplateIds.has(template._id))
-    .map((template) => {
-      const current = matchingById.get(template._id)
-      if (!current) return template
-      return {
-        ...current,
-        fromPointId: template.fromPointId,
-        toPointId: template.toPointId,
-        departTime: template.departTime,
-        departTimeEnd: template.departTimeEnd,
-        passengerCount: template.passengerCount,
-        note: template.note,
-        updatedAt: nowIso()
-      }
-    })
-
-  writeAllOrders([...freshMatching, ...historySeeds, ...nonSeed])
+  writeAllOrders([...(seedOrders || []), ...nonSeed])
   return {
-    seeded: freshMatching.length,
-    kept: nonSeed.length + historySeeds.length,
-    skipped: blockedTemplateIds.size
+    seeded: (seedOrders || []).length,
+    kept: nonSeed.length
   }
 }
 
@@ -486,5 +489,6 @@ module.exports = {
   getDriverHistoryItems,
   expireStaleOrders,
   replacePlazaSeedOrders,
-  resetPlazaAcceptedOrders
+  resetPlazaAcceptedOrders,
+  purgeDevStageOrders
 }

@@ -96,7 +96,7 @@ Page({
 
   goDetail(e) {
     wx.navigateTo({
-      url: `/pages/history-detail/history-detail?id=${e.currentTarget.dataset.id}&role=${this.data.role}`
+      url: `/pages/detail/detail?orderId=${e.currentTarget.dataset.id}&from=history`
     })
   }
 })

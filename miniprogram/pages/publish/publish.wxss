@@ -171,6 +171,62 @@
   padding-top: 4rpx;
 }
 
+.v1-poi-search {
+  position: relative;
+}
+
+.v1-picker--input {
+  padding-right: 12rpx;
+}
+
+.v1-poi-input {
+  flex: 1;
+  min-width: 0;
+  height: 84rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1F2937;
+}
+
+.v1-poi-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8rpx);
+  z-index: 20;
+  max-height: 360rpx;
+  background: #FFFFFF;
+  border: 1rpx solid #E7ECF2;
+  border-radius: 16rpx;
+  box-shadow: 0 12rpx 32rpx rgba(16, 24, 40, 0.08);
+  box-sizing: border-box;
+}
+
+.v1-poi-suggestion {
+  padding: 18rpx 16rpx;
+  border-bottom: 1rpx solid #F1F5F9;
+}
+
+.v1-poi-suggestion:last-child {
+  border-bottom: none;
+}
+
+.v1-poi-suggestion__name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1F2937;
+  line-height: 1.35;
+}
+
+.v1-poi-suggestion__hint {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #98A2B3;
+  line-height: 1.35;
+}
+
 .v1-route-dot {
   width: 12rpx;
   height: 12rpx;

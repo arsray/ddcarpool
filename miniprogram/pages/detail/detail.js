@@ -1,14 +1,29 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
-const { formatDepartTimeDisplay } = require('../../modules/order/time-slots')
+const chat = require('../../modules/chat/index')
+const { formatDateLabel } = require('../../modules/order/history-bridge')
+const { formatHistoryTimeLabel, parseDepartTime } = require('../../modules/order/time-slots')
+const { buildDetailViewModel } = require('./detail-view-model')
+const { buildDriverCard } = require('../../modules/order/driver-vehicle')
 const {
   resolveCancelAction,
   getCancelModalConfig,
   getCancelSuccessTitle,
-  getCancelButtonLabel,
   CANCEL_ERROR_MESSAGES
 } = order
+
+const HEADER_WATERMARKS = {
+  matching: '/assets/detail-watermark-mickey.png',
+  pending_departure: '/assets/detail-watermark-stitch.png',
+  in_progress: '/assets/detail-watermark-stitch.png',
+  completed: '/assets/detail-watermark-woody.png',
+  closed: '/assets/detail-watermark-pluto.png'
+}
+
+function resolveHeaderWatermark(status) {
+  return HEADER_WATERMARKS[status] || HEADER_WATERMARKS.matching
+}
 
 Page({
   data: {
@@ -17,23 +32,34 @@ Page({
     order: null,
     routeLabel: '',
     statusLabel: '',
-    departTimeLabel: '',
+    roleLabel: '',
+    statusHint: '',
+    actions: [],
+    actionGroups: { primary: [], secondary: [], danger: [] },
+    actionRows: [],
+    timeWindowLabel: '',
+    dateWeekLabel: '',
+    fromName: '',
+    toName: '',
+    passengerLine: '',
+    showDriverCard: false,
+    driverCard: null,
     isPassenger: false,
     isAssignedDriver: false,
     canAccept: false,
-    canStart: false,
     canComplete: false,
-    canChat: false,
     canCancel: false,
     cancelKind: '',
-    cancelButtonLabel: '',
-    fromPlaza: false
+    fromPlaza: false,
+    fromHistory: false,
+    headerWatermark: HEADER_WATERMARKS.matching
   },
 
   onLoad(options) {
     this.setData({
-      orderId: options.orderId || '',
-      fromPlaza: options.from === 'plaza'
+      orderId: options.orderId || options.id || '',
+      fromPlaza: options.from === 'plaza',
+      fromHistory: options.from === 'history'
     })
   },
 
@@ -80,31 +106,71 @@ Page({
       const canStart =
         isAssignedDriver &&
         item.status === order.ORDER_STATUS.PENDING_DEPARTURE
-      const canChat =
-        (isPassenger || isAssignedDriver) &&
-        [order.ORDER_STATUS.PENDING_DEPARTURE, order.ORDER_STATUS.IN_PROGRESS].includes(item.status)
+      const canChat = chat.canEnterChat(item, openId)
       const cancelKind = resolveCancelAction(item, openId)
+      const routeLabel = order.formatRoute(item.fromPointId, item.toPointId)
+      const routeParts = routeLabel.split(' → ')
+      const departDate = parseDepartTime(item.departTime)
 
-      this.setData({
-        loading: false,
-        order: item,
-        routeLabel: order.formatRoute(item.fromPointId, item.toPointId),
-        statusLabel: order.STATUS_LABELS[item.status] || item.status,
-        departTimeLabel: formatDepartTimeDisplay(item),
+      const viewModel = buildDetailViewModel({
+        status: item.status,
         isPassenger,
         isAssignedDriver,
         canAccept,
         canStart,
         canComplete,
         canChat,
+        cancelKind,
+        fromPlaza: this.data.fromPlaza,
+        fallbackStatusLabel: order.STATUS_LABELS[item.status] || item.status
+      })
+      const driverCard = buildDriverCard(item, isPassenger)
+
+      this.setData({
+        loading: false,
+        order: item,
+        routeLabel,
+        statusLabel: viewModel.statusLabel,
+        roleLabel: viewModel.roleLabel,
+        statusHint: viewModel.statusHint,
+        actions: viewModel.actions,
+        actionGroups: viewModel.actionGroups,
+        actionRows: viewModel.actionRows,
+        timeWindowLabel: formatHistoryTimeLabel(item),
+        dateWeekLabel: departDate ? formatDateLabel(departDate) : '',
+        fromName: routeParts[0] || '',
+        toName: routeParts[1] || '',
+        passengerLine: `${item.passengerName || '乘客'} · ${item.passengerCount || 1}人`,
+        showDriverCard: driverCard.show,
+        driverCard: driverCard.show ? driverCard : null,
+        isPassenger,
+        isAssignedDriver,
+        canAccept,
+        canComplete,
         canCancel: !!cancelKind,
         cancelKind: cancelKind || '',
-        cancelButtonLabel: cancelKind ? getCancelButtonLabel(cancelKind) : ''
+        headerWatermark: resolveHeaderWatermark(item.status)
       })
     } catch (error) {
       this.setData({ loading: false })
       wx.showToast({ title: '加载失败', icon: 'none' })
     }
+  },
+
+  onAction(event) {
+    const action = event.currentTarget.dataset.action
+    const handlers = {
+      accept: () => this.onAccept(),
+      start: () => this.onStart(),
+      complete: () => this.onComplete(),
+      cancel_passenger: () => this.onCancel(),
+      cancel_driver: () => this.onCancel(),
+      chat: () => this.goChat(),
+      history: () => this.goHistory(),
+      plaza: () => this.backToPlaza()
+    }
+    const handler = handlers[action]
+    if (handler) handler()
   },
 
   onAccept() {
@@ -127,7 +193,8 @@ Page({
       const profile = await auth.getProfile()
       await order.acceptOrder(this.data.orderId, {
         openId,
-        name: (profile && profile.nickName) || app.globalData.userInfo.displayName || '司机'
+        name: (profile && profile.nickName) || app.globalData.userInfo.displayName || '司机',
+        vehicle: app.globalData.vehicle
       })
 
       app._syncAuth()
@@ -153,6 +220,10 @@ Page({
   },
 
   goHistory() {
+    if (this.data.fromHistory) {
+      wx.navigateBack()
+      return
+    }
     const role = this.data.isPassenger ? 'passenger' : 'owner'
     wx.navigateTo({ url: `/pages/history/history?role=${role}` })
   },
@@ -162,7 +233,7 @@ Page({
   },
 
   async onStart() {
-    if (!this.data.canStart || this.data.submitting) return
+    if (this.data.submitting) return
     this.setData({ submitting: true })
     try {
       await order.startTrip(this.data.orderId, await auth.ensureLogin())
@@ -213,6 +284,13 @@ Page({
         return
       }
 
+      if (this.data.fromHistory) {
+        setTimeout(() => {
+          wx.navigateBack()
+        }, 400)
+        return
+      }
+
       await this.loadOrder()
     } catch (error) {
       wx.showToast({
@@ -231,7 +309,7 @@ Page({
     wx.showModal({
       title: '确认完成',
       content: '确认乘客已送达并完成本单？',
-      confirmText: '完成',
+      confirmText: '订单完成',
       success: (res) => {
         if (res.confirm) this.submitComplete()
       }

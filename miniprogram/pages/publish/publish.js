@@ -7,6 +7,7 @@ const {
   buildAvailableSlotsForDate,
   formatDepartTimeForStorage
 } = require('../../modules/order/time-slots')
+const { filterPoints, getPointDisplayName } = require('../../modules/order/point-search')
 
 const COUNT_RANGE = Array.from({ length: 10 }, (_, index) => index + 1)
 
@@ -72,7 +73,12 @@ Page({
     loading: true,
     submitting: false,
     points: [],
-    pointNames: [],
+    fromQuery: '',
+    toQuery: '',
+    fromSuggestions: [],
+    toSuggestions: [],
+    fromDropdownOpen: false,
+    toDropdownOpen: false,
     fromIndex: -1,
     toIndex: -1,
     hasSelectedFrom: false,
@@ -107,7 +113,26 @@ Page({
       this.getTabBar().setData({ selected: 1 })
     }
     if (!auth.requireLogin()) return
+    if (this._returningFromPreference) {
+      this._returningFromPreference = false
+      this.refreshPreferenceFields()
+      return
+    }
     this.bootstrap()
+  },
+
+  refreshPreferenceFields() {
+    const preference = readPassengerPreference()
+    const selectedNoteMap = buildSelectedNoteMap(preference.noteTags)
+    const supplementNote = preference.note || ''
+    const countIndex = Math.max(0, (preference.defaultCount || 1) - 1)
+    this.setData({
+      countIndex,
+      selectedNoteMap,
+      'form.passengerCount': COUNT_RANGE[countIndex],
+      'form.note': supplementNote,
+      noteLength: supplementNote.length
+    })
   },
 
   async bootstrap() {
@@ -131,13 +156,18 @@ Page({
 
       this.setData({
         points,
-        pointNames: points.map((point) => point.name),
         dateValues,
         dateLabels,
         dateIndex: schedule.dateIndex,
         countIndex,
         fromIndex: -1,
         toIndex: -1,
+        fromQuery: '',
+        toQuery: '',
+        fromSuggestions: filterPoints(points, ''),
+        toSuggestions: filterPoints(points, ''),
+        fromDropdownOpen: false,
+        toDropdownOpen: false,
         hasSelectedFrom: false,
         hasSelectedTo: false,
         routePreview: '',
@@ -171,24 +201,174 @@ Page({
     })
   },
 
-  onFromChange(e) {
-    const fromIndex = Number(e.detail.value)
-    const point = this.data.points[fromIndex]
+  selectFromPoint(point) {
+    if (!point) return
+    this._poiPickerTapLock = true
+    const fromIndex = this.data.points.findIndex((item) => item.pointId === point.pointId)
     this.setData({
       fromIndex,
+      fromQuery: point.name,
+      fromSuggestions: filterPoints(this.data.points, ''),
+      fromDropdownOpen: false,
+      toDropdownOpen: false,
       hasSelectedFrom: true,
-      'form.fromPointId': point ? point.pointId : ''
+      'form.fromPointId': point.pointId
     }, () => this.refreshRoutePreview())
   },
 
-  onToChange(e) {
-    const toIndex = Number(e.detail.value)
-    const point = this.data.points[toIndex]
+  selectToPoint(point) {
+    if (!point) return
+    this._poiPickerTapLock = true
+    const toIndex = this.data.points.findIndex((item) => item.pointId === point.pointId)
     this.setData({
       toIndex,
+      toQuery: point.name,
+      toSuggestions: filterPoints(this.data.points, ''),
+      toDropdownOpen: false,
+      fromDropdownOpen: false,
       hasSelectedTo: true,
-      'form.toPointId': point ? point.pointId : ''
+      'form.toPointId': point.pointId
     }, () => this.refreshRoutePreview())
+  },
+
+  onFromFocus() {
+    this._fromRevertPointId = this.data.hasSelectedFrom ? this.data.form.fromPointId : ''
+    this.setData({
+      fromDropdownOpen: true,
+      toDropdownOpen: false,
+      fromSuggestions: filterPoints(this.data.points, this.data.fromQuery)
+    })
+  },
+
+  onToFocus() {
+    this._toRevertPointId = this.data.hasSelectedTo ? this.data.form.toPointId : ''
+    this.setData({
+      toDropdownOpen: true,
+      fromDropdownOpen: false,
+      toSuggestions: filterPoints(this.data.points, this.data.toQuery)
+    })
+  },
+
+  onFromBlur() {
+    setTimeout(() => {
+      if (this._poiPickerTapLock) {
+        this._poiPickerTapLock = false
+        return
+      }
+      const { hasSelectedFrom, form, points } = this.data
+      if (hasSelectedFrom && form.fromPointId) {
+        this.setData({
+          fromQuery: getPointDisplayName(points, form.fromPointId),
+          fromDropdownOpen: false
+        })
+        return
+      }
+      const revertId = this._fromRevertPointId
+      this._fromRevertPointId = ''
+      if (revertId) {
+        const point = points.find((item) => item.pointId === revertId)
+        if (point) {
+          const fromIndex = points.findIndex((item) => item.pointId === point.pointId)
+          this.setData({
+            fromIndex,
+            fromQuery: point.name,
+            fromDropdownOpen: false,
+            hasSelectedFrom: true,
+            'form.fromPointId': point.pointId
+          }, () => this.refreshRoutePreview())
+          return
+        }
+      }
+      this.setData({
+        fromQuery: '',
+        fromDropdownOpen: false,
+        hasSelectedFrom: false,
+        fromIndex: -1,
+        'form.fromPointId': ''
+      }, () => this.refreshRoutePreview())
+    }, 200)
+  },
+
+  onToBlur() {
+    setTimeout(() => {
+      if (this._poiPickerTapLock) {
+        this._poiPickerTapLock = false
+        return
+      }
+      const { hasSelectedTo, form, points } = this.data
+      if (hasSelectedTo && form.toPointId) {
+        this.setData({
+          toQuery: getPointDisplayName(points, form.toPointId),
+          toDropdownOpen: false
+        })
+        return
+      }
+      const revertId = this._toRevertPointId
+      this._toRevertPointId = ''
+      if (revertId) {
+        const point = points.find((item) => item.pointId === revertId)
+        if (point) {
+          const toIndex = points.findIndex((item) => item.pointId === point.pointId)
+          this.setData({
+            toIndex,
+            toQuery: point.name,
+            toDropdownOpen: false,
+            hasSelectedTo: true,
+            'form.toPointId': point.pointId
+          }, () => this.refreshRoutePreview())
+          return
+        }
+      }
+      this.setData({
+        toQuery: '',
+        toDropdownOpen: false,
+        hasSelectedTo: false,
+        toIndex: -1,
+        'form.toPointId': ''
+      }, () => this.refreshRoutePreview())
+    }, 200)
+  },
+
+  noop() {},
+
+  onFromQueryInput(e) {
+    const query = e.detail.value
+    const suggestions = filterPoints(this.data.points, query)
+    this.setData({
+      fromQuery: query,
+      fromSuggestions: suggestions,
+      fromDropdownOpen: true,
+      toDropdownOpen: false,
+      hasSelectedFrom: false,
+      fromIndex: -1,
+      'form.fromPointId': ''
+    }, () => this.refreshRoutePreview())
+  },
+
+  onToQueryInput(e) {
+    const query = e.detail.value
+    const suggestions = filterPoints(this.data.points, query)
+    this.setData({
+      toQuery: query,
+      toSuggestions: suggestions,
+      toDropdownOpen: true,
+      fromDropdownOpen: false,
+      hasSelectedTo: false,
+      toIndex: -1,
+      'form.toPointId': ''
+    }, () => this.refreshRoutePreview())
+  },
+
+  onSelectFrom(e) {
+    const pointId = e.currentTarget.dataset.id
+    const point = this.data.points.find((item) => item.pointId === pointId)
+    this.selectFromPoint(point)
+  },
+
+  onSelectTo(e) {
+    const pointId = e.currentTarget.dataset.id
+    const point = this.data.points.find((item) => item.pointId === pointId)
+    this.selectToPoint(point)
   },
 
   onDateChange(e) {
@@ -244,6 +424,7 @@ Page({
   },
 
   goPreference() {
+    this._returningFromPreference = true
     wx.navigateTo({ url: '/pages/preference/preference' })
   },
 

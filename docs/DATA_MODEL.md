@@ -112,6 +112,7 @@ P0 仅支持 **乘客发布搭车单**；司机通过 **接单** 参与，不单
 | `passengerName` | string | 否 | 乘客展示名（冗余，列表用） |
 | `driverOpenId` | string | 否 | 接单司机 openId |
 | `driverName` | string | 否 | 司机展示名 |
+| `driverVehicle` | object | 否 | 接单时**服务端**快照的车辆信息（不信任客户端）；见下表 |
 | `matchedAt` | Date | 否 | 接单时间 |
 | `startedAt` | Date | 否 | 进入行程中时间 |
 | `completedAt` | Date | 否 | 完成时间 |
@@ -119,6 +120,18 @@ P0 仅支持 **乘客发布搭车单**；司机通过 **接单** 参与，不单
 | `matchScore` | number | 否 | **列表展示用**；广场排序时可由 M3 按查看者上下文计算，可不落库 |
 | `createdAt` | Date | 是 | 创建时间 |
 | `updatedAt` | Date | 是 | 更新时间 |
+
+### `orders.driverVehicle`（接单快照）
+
+由 `order` 云函数 `acceptOrder` 从司机 `users.vehicle` 写入，客户端不可直接 patch。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `brand` | string | 品牌型号 |
+| `plate` | string | 车牌（完整或拼接后） |
+| `color` | string | 颜色 |
+
+乘客详情页展示车主卡片时优先读此快照；`pending_departure` / `in_progress` / `completed` 且已接单时可见。司机取消接单（`release`）时服务端清除 `driverVehicle`。
 
 **索引建议**
 

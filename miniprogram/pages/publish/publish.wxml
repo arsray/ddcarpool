@@ -58,25 +58,72 @@
       <view class="v1-route-block">
         <view class="v1-field">
           <text class="v1-label v1-label--emph">出发地点</text>
-          <picker mode="selector" range="{{pointNames}}" value="{{fromIndex >= 0 ? fromIndex : 0}}" bindchange="onFromChange">
-            <view class="v1-picker v1-picker--route">
+          <view class="v1-poi-search">
+            <view class="v1-picker v1-picker--route v1-picker--input">
               <view class="v1-route-dot v1-route-dot--start"></view>
-              <text class="v1-picker-val {{hasSelectedFrom ? '' : 'v1-picker-placeholder'}}">{{hasSelectedFrom ? pointNames[fromIndex] : '请选择出发地点'}}</text>
-              <text class="v1-picker-arrow">›</text>
+              <input
+                class="v1-poi-input"
+                value="{{fromQuery}}"
+                placeholder="请输入或选择地点"
+                confirm-type="search"
+                bindinput="onFromQueryInput"
+                bindfocus="onFromFocus"
+                bindblur="onFromBlur"
+              />
             </view>
-          </picker>
+            <scroll-view
+              scroll-y
+              class="v1-poi-suggestions"
+              wx:if="{{fromDropdownOpen}}"
+              catchtouchmove="noop"
+            >
+              <view
+                class="v1-poi-suggestion"
+                wx:for="{{fromSuggestions}}"
+                wx:key="pointId"
+                data-id="{{item.pointId}}"
+                catchtap="onSelectFrom"
+              >
+                <text class="v1-poi-suggestion__name">{{item.name}}</text>
+              </view>
+            </scroll-view>
+          </view>
         </view>
 
         <view class="v1-field v1-field--last-route">
           <text class="v1-label v1-label--emph">目的地</text>
-          <picker mode="selector" range="{{pointNames}}" value="{{toIndex >= 0 ? toIndex : 0}}" bindchange="onToChange">
-            <view class="v1-picker v1-picker--route">
+          <view class="v1-poi-search">
+            <view class="v1-picker v1-picker--route v1-picker--input">
               <view class="v1-route-dot v1-route-dot--end"></view>
-              <text class="v1-picker-val {{hasSelectedTo ? '' : 'v1-picker-placeholder'}}">{{hasSelectedTo ? pointNames[toIndex] : '请选择目的地'}}</text>
-              <text class="v1-picker-arrow">›</text>
+              <input
+                class="v1-poi-input"
+                value="{{toQuery}}"
+                placeholder="请输入或选择地点"
+                confirm-type="search"
+                bindinput="onToQueryInput"
+                bindfocus="onToFocus"
+                bindblur="onToBlur"
+              />
             </view>
-          </picker>
+            <scroll-view
+              scroll-y
+              class="v1-poi-suggestions"
+              wx:if="{{toDropdownOpen}}"
+              catchtouchmove="noop"
+            >
+              <view
+                class="v1-poi-suggestion"
+                wx:for="{{toSuggestions}}"
+                wx:key="pointId"
+                data-id="{{item.pointId}}"
+                catchtap="onSelectTo"
+              >
+                <text class="v1-poi-suggestion__name">{{item.name}}</text>
+              </view>
+            </scroll-view>
+          </view>
         </view>
+        <text class="v1-caption">支持点位名称、别名或拼音首字母，如 603 / PAB / mq</text>
       </view>
 
       <view class="v1-route-preview" wx:if="{{routePreview}}">{{routePreview}}</view>

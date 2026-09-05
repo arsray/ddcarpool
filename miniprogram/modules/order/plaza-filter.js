@@ -71,7 +71,9 @@ function buildDefaultPlazaFilters(now) {
         date,
         timeWindow: available[0].label,
         fromPointId: ALL_VALUE,
-        toPointId: ALL_VALUE
+        toPointId: ALL_VALUE,
+        fromQuery: '',
+        toQuery: ''
       }
     }
   }
@@ -80,7 +82,9 @@ function buildDefaultPlazaFilters(now) {
     date: dateValues[0] || ALL_VALUE,
     timeWindow: ALL_VALUE,
     fromPointId: ALL_VALUE,
-    toPointId: ALL_VALUE
+    toPointId: ALL_VALUE,
+    fromQuery: '',
+    toQuery: ''
   }
 }
 
@@ -136,15 +140,15 @@ function indexForValue(values, value) {
   return index >= 0 ? index : 0
 }
 
-function matchesPlazaFilters(order, filters) {
+function matchesPlazaFilters(order, filters, points) {
   if (filters.date && getOrderDateStr(order) !== filters.date) return false
   if (filters.timeWindow && getOrderTimeLabel(order) !== filters.timeWindow) return false
   if (!matchesPlazaRouteFilter(order, filters)) return false
   return true
 }
 
-function applyPlazaFilters(orders, filters) {
-  return (orders || []).filter((order) => matchesPlazaFilters(order, filters))
+function applyPlazaFilters(orders, filters, points) {
+  return (orders || []).filter((order) => matchesPlazaFilters(order, filters, points))
 }
 
 function normalizeFilters(filters, allOrders, now) {
@@ -152,7 +156,9 @@ function normalizeFilters(filters, allOrders, now) {
     date: filters.date || ALL_VALUE,
     timeWindow: filters.timeWindow || ALL_VALUE,
     fromPointId: filters.fromPointId || ALL_VALUE,
-    toPointId: filters.toPointId || ALL_VALUE
+    toPointId: filters.toPointId || ALL_VALUE,
+    fromQuery: filters.fromQuery || '',
+    toQuery: filters.toQuery || ''
   }
 
   const dateOpts = buildDateOptions(allOrders, now)
@@ -170,10 +176,15 @@ function normalizeFilters(filters, allOrders, now) {
 }
 
 function hasActivePlazaFilters(filters) {
-  return !!(filters.date || filters.timeWindow || filters.fromPointId || filters.toPointId)
+  return !!(
+    filters.date ||
+    filters.timeWindow ||
+    filters.fromPointId ||
+    filters.toPointId
+  )
 }
 
-function partitionPlazaOrders(allOrders, filters) {
+function partitionPlazaOrders(allOrders, filters, points) {
   if (!hasActivePlazaFilters(filters)) {
     return {
       matchedOrders: allOrders || [],
@@ -184,7 +195,7 @@ function partitionPlazaOrders(allOrders, filters) {
   const matchedOrders = []
   const otherOrders = []
   ;(allOrders || []).forEach((order) => {
-    if (matchesPlazaFilters(order, filters)) {
+    if (matchesPlazaFilters(order, filters, points)) {
       matchedOrders.push(order)
     } else {
       otherOrders.push(order)
@@ -201,7 +212,7 @@ function buildPlazaFilterView(allOrders, points, filters, now) {
   const timeOpts = buildTimeOptions(allOrders, normalized.date, baseNow)
   const fromOpts = buildPointOptions(points)
   const toOpts = buildPointOptions(points)
-  const { matchedOrders, otherOrders } = partitionPlazaOrders(allOrders, normalized)
+  const { matchedOrders, otherOrders } = partitionPlazaOrders(allOrders, normalized, points)
 
   return {
     filters: normalized,

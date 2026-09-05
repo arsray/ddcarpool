@@ -28,36 +28,34 @@ function toUserProfile(userInfo) {
   }
 }
 
-/** 每次启动写入固定测试订单，避免本地空缓存覆盖 Mock */
-function mergePassengerOrders(seedPassenger, userInfo) {
+/** 订单列表仅来自 M3 本地订单，不再合并 M1 假数据 */
+function mergePassengerOrders(_seedPassenger, userInfo) {
   try {
     const openId = mockOpenId(userInfo && userInfo.email)
-    if (!openId) return seedPassenger
+    if (!openId) return []
     const { getPassengerHistoryItems } = require('../order/service')
-    const { mergeHistoryItems } = require('../order/history-bridge')
-    return mergeHistoryItems(getPassengerHistoryItems(openId), seedPassenger)
+    return getPassengerHistoryItems(openId)
   } catch (e) {
-    return seedPassenger
+    return []
   }
 }
 
-function mergeOwnerOrders(seedOwner, userInfo) {
+function mergeOwnerOrders(_seedOwner, userInfo) {
   try {
     const openId = mockOpenId(userInfo && userInfo.email)
-    if (!openId) return seedOwner
+    if (!openId) return []
     const { getDriverHistoryItems } = require('../order/service')
-    const { mergeHistoryItems } = require('../order/history-bridge')
-    return mergeHistoryItems(getDriverHistoryItems(openId), seedOwner)
+    return getDriverHistoryItems(openId)
   } catch (e) {
-    return seedOwner
+    return []
   }
 }
 
 function applyPreviewSeedOrders() {
   const seed = cloneSeedOrders()
   wx.setStorageSync('mockSeedVersion', MOCK_SEED_VERSION)
-  wx.setStorageSync('historyOwner', seed.historyOwner)
-  wx.setStorageSync('historyPassenger', seed.historyPassenger)
+  wx.setStorageSync('historyOwner', [])
+  wx.setStorageSync('historyPassenger', [])
   wx.setStorageSync('notifications', seed.notifications)
   return seed
 }

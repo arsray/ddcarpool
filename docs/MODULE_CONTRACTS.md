@@ -201,6 +201,11 @@ Cloud 模式不提供 Bob/Alice 账号切换；开发期 Mock 邮箱验证只写
  * @param {Order} order
  * @param {string} currentOpenId
  * @returns {boolean}
+ *
+ * 规则（与 DATA_MODEL § orders · 聊天准入 一致）：
+ * - `status` 必须为 `pending_departure` | `in_progress`
+ * - `matching` 阶段不可聊天（详情页不展示接单前「联系乘客」）
+ * - `currentOpenId` 必须为 `passengerOpenId` 或 `driverOpenId`（或 `viewerRole` 为 passenger/driver）
  */
 canEnterChat(order, currentOpenId)
 
@@ -224,7 +229,7 @@ sendMessage(orderId, content)
 ### 依赖
 
 - M1：`ensureLogin()`、`getProfile()`
-- M3：`getOrderById()` 校验订单状态与参与者（P1：`pending_departure` | `in_progress` 可聊天）
+- M3：`getOrderById()` 校验订单状态与参与者；**仅** `pending_departure` | `in_progress` 可展示聊天入口（`matching` 不可）
 
 ---
 
