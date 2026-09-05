@@ -50,7 +50,6 @@ const DETAIL_COPY = {
       statusHint: '确认顺路后可接单',
       ctas: [
         { key: 'accept' },
-        { key: 'chat', label: '联系乘客' },
         { key: 'plaza' }
       ]
     }

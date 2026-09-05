@@ -3,16 +3,8 @@ const { callFunction } = require('../../utils/cloud')
 
 function canEnterChat(order, currentOpenId) {
   if (!order || !currentOpenId) return false
-
-  if (order.status === 'matching') {
-    const isPassenger = order.viewerRole
-      ? order.viewerRole === 'passenger'
-      : order.passengerOpenId === currentOpenId
-    if (isPassenger || order.driverOpenId) return false
-    return true
-  }
-
   if (!['pending_departure', 'in_progress'].includes(order.status)) return false
+
   if (order.viewerRole) return ['passenger', 'driver'].includes(order.viewerRole)
   return (
     order.passengerOpenId === currentOpenId ||

@@ -2,6 +2,7 @@
  * 接单时快照车主车辆信息，供乘客详情页展示
  */
 
+const config = require('../../config/index')
 const { ORDER_STATUS } = require('./constants/status')
 
 const DRIVER_CARD_STATUSES = [
@@ -28,6 +29,8 @@ function snapshotDriverVehicle(vehicle) {
 function resolveDriverVehicle(order) {
   if (!order) return null
   if (order.driverVehicle) return order.driverVehicle
+
+  if (config.useCloud) return null
 
   try {
     const { getMockTestUsers } = require('../auth/mock-users')
