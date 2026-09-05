@@ -1,6 +1,7 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
+const notification = require('../../modules/notification/index')
 const { PREFERENCE_NOTE_TAGS } = require('../../modules/auth/vehicle-data')
 const { MAX_NOTE_LENGTH, buildDatePickerOptions } = require('../../modules/order/validate')
 const {
@@ -112,6 +113,7 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 })
     }
+    notification.syncTabBarBadgeFromApp()
     if (!auth.requireLogin()) return
     if (this._returningFromPreference) {
       this._returningFromPreference = false
@@ -236,7 +238,7 @@ Page({
     this.setData({
       fromDropdownOpen: true,
       toDropdownOpen: false,
-      fromSuggestions: filterPoints(this.data.points, this.data.fromQuery)
+      fromSuggestions: filterPoints(this.data.points, '')
     })
   },
 
@@ -245,7 +247,7 @@ Page({
     this.setData({
       toDropdownOpen: true,
       fromDropdownOpen: false,
-      toSuggestions: filterPoints(this.data.points, this.data.toQuery)
+      toSuggestions: filterPoints(this.data.points, '')
     })
   },
 

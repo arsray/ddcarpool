@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "迪迪蹭车"
+  "navigationBarTitleText": "迪迪蹭车",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

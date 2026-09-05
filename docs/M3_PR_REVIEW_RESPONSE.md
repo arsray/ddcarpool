@@ -65,3 +65,98 @@
 ## 给 Reviewer 的一句话
 
 已按 main 聊天契约收口：matching 不可聊；`driverVehicle` 文档与 Cloud 展示逻辑已对齐服务端快照行为。
+
+---
+
+## Ray 联调指引
+
+> **PR #7 代码在分支 `feat/m3-flow-optimization`，基于已合并的 PR #6，含 Cloud 自测修复。**  
+> 仅 `git pull origin main` **拿不到**本 PR 在 PR #6 之上的额外改动。
+
+### 团队开发约定（Ray · 2026-09）
+
+项目已接入微信云开发。**新功能以 Cloud 为验收标准**：
+
+1. 每人本地维护 `miniprogram/config/env.js`（不提交 Git），`useCloud: true` + 团队 `cloudEnvId`
+2. 可用 Mock（`useCloud: false`）快速改 UI，但 **PR 合并前必须在 Cloud 验通主路径**
+3. 修改 `cloudfunctions/**` 后，须在微信开发者工具 **上传并部署**，`git push` 不会更新云端
+
+### 1. 拉取正确分支
+
+```bash
+git fetch origin
+git checkout feat/m3-flow-optimization
+git pull origin feat/m3-flow-optimization
+```
+
+### 2. 配置本地环境（`env.js` 不在 Git 中）
+
+复制 `miniprogram/config/env.example.js` → `miniprogram/config/env.js`。
+
+**团队默认（推荐，与 Ray 本地一致）：**
+
+```js
+module.exports = {
+  cloudEnvId: 'cloudbase-xxxxxxxx',  // 向 Ray / M1 索取，勿提交仓库
+  useCloud: true,
+  environment: 'development',
+  allowMockEmailVerification: true
+}
+```
+
+**仅离线改 UI（不可作为 PR 唯一验收）：**
+
+```js
+module.exports = {
+  cloudEnvId: '',
+  useCloud: false,
+  environment: 'development',
+  allowMockEmailVerification: true
+}
+```
+
+### 3. 微信开发者工具
+
+1. 导入项目根目录 `ddcarpool`（含 `project.config.json`）
+2. 确认 AppID 为占位符 `YOUR_APPID_HERE` 或使用团队测试号
+3. 编译运行
+
+### 4. 云函数部署（仅 Cloud 模式需要）
+
+`git pull` **不会**自动更新云端云函数，必须在开发者工具中手动上传。
+
+本 PR **仅修改** `cloudfunctions/order`（接单写入 `driverVehicle`、取消接单清除）。Cloud 联调时请：
+
+1. 在云开发面板选中**团队共用环境**（与 `env.js` 的 `cloudEnvId` 一致）
+2. 右键 `cloudfunctions/order` → **上传并部署：云端安装依赖**
+
+其余云函数若团队基线已部署过，本 PR **无需**重复上传。
+
+详细清单见 [`docs/CLOUD_DEPLOYMENT.md`](./CLOUD_DEPLOYMENT.md)。
+
+### 5. 功能与依赖对照
+
+| 功能 | 需要本 PR 分支 | Cloud 验收 | Mock 仅作 UI 草稿 |
+|------|:--------------:|:----------:|:-----------------:|
+| POI 搜索 / 广场筛选 | ✅ | ✅ 推荐 | 可临时 |
+| 途经 / 同向路线匹配 | ✅ | ✅ 推荐 | 可临时 |
+| 详情页 CTA / 状态水印 | ✅ | ✅ 推荐 | 可临时 |
+| 接单后车主车辆卡片 | ✅ | ✅ **必须**（依赖 `order` 云函数） | 有 Mock 回退 |
+| 通知 → 统一详情页 | ✅ | ✅ 推荐 | 可临时 |
+| 聊天 | ✅ | ✅ **必须**（`message` 云函数） | 不可用 |
+
+### 6. 常见问题
+
+| 现象 | 可能原因 |
+|------|----------|
+| 拉 main 后界面没变化 | 应 checkout `feat/m3-flow-optimization` |
+| Cloud 发单/接单失败 | `env.js` 未配置或 `cloudEnvId` 错误 |
+| 接单后车主卡片无车辆信息 | 云端 `order` 云函数未部署本 PR 版本；或司机 Profile 未填车辆 |
+| 大部分 UI 正常但 Cloud 接口报错 | 检查云函数是否部署到与 `env.js` 相同的环境 |
+
+### 7. 建议验证路径
+
+**Cloud（PR 合并前必做）：** 配置 `env.js`（`useCloud: true`）→ 部署本 PR 变更的 `order` 云函数 → 发单 → 筛选接单 → 乘客详情 `driverVehicle` → 通知进详情 → `pending_departure` 可聊、`matching` 不可聊。
+
+**Mock（可选，仅 UI 草稿）：** 乘客发布 → 广场筛选 → 详情水印 / CTA；**不能替代 Cloud 验收。**
+

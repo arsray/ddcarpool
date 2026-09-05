@@ -173,10 +173,9 @@ module.exports.splitNote = splitNote
           wx:for="{{actionGroups.danger}}"
           wx:key="key"
           class="v1-btn v1-btn--danger"
-          loading="{{item.submitting && submitting}}"
-          disabled="{{item.submitting && submitting}}"
-          bindtap="onAction"
-          data-action="{{item.key}}"
+          hover-class="none"
+          disabled="{{submitting}}"
+          bindtap="onCancel"
         >{{item.label}}</button>
       </view>
     </view>

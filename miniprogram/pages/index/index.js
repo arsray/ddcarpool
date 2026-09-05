@@ -1,6 +1,7 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
+const notification = require('../../modules/notification/index')
 const { buildPlazaFilterView, buildDefaultPlazaFilters } = require('../../modules/order/plaza-filter')
 const { filterPoints, getPointDisplayName } = require('../../modules/order/point-search')
 const { formatDateLabel } = require('../../modules/order/history-bridge')
@@ -245,6 +246,7 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
     }
+    notification.syncTabBarBadgeFromApp()
   
     // M2 Homepage UI Prototype：仅用于本地 UI 预览
     if (this.data.uiPrototypeMode) {
@@ -260,6 +262,23 @@ Page({
     })
     
     this.loadOrders()
+  },
+
+  async onPullDownRefresh() {
+    if (this.data.uiPrototypeMode) {
+      wx.stopPullDownRefresh()
+      return
+    }
+    if (!auth.requireLogin()) {
+      wx.stopPullDownRefresh()
+      return
+    }
+    app._syncAuth()
+    try {
+      await this.loadOrders()
+    } finally {
+      wx.stopPullDownRefresh()
+    }
   },
 
   getPlazaFilters() {
@@ -375,7 +394,7 @@ Page({
     this.setData({
       filterFromDropdownOpen: true,
       filterToDropdownOpen: false,
-      filterFromSuggestions: filterPoints(this.data.points, this.data.filterFromQuery)
+      filterFromSuggestions: filterPoints(this.data.points, '')
     })
   },
 
@@ -384,7 +403,7 @@ Page({
     this.setData({
       filterToDropdownOpen: true,
       filterFromDropdownOpen: false,
-      filterToSuggestions: filterPoints(this.data.points, this.data.filterToQuery)
+      filterToSuggestions: filterPoints(this.data.points, '')
     })
   },
 

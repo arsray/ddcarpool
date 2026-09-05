@@ -1,6 +1,7 @@
 Component({
   data: {
     selected: 0,
+    unreadCount: 0,
     list: [
       { pagePath: '/pages/index/index', text: '车主', icon: 'owner' },
       { pagePath: '/pages/publish/publish', text: '乘客', icon: 'passenger' },
@@ -10,6 +11,13 @@ Component({
   },
 
   methods: {
+    setUnreadCount(count) {
+      const unreadCount = Math.max(0, Number(count) || 0)
+      if (unreadCount !== this.data.unreadCount) {
+        this.setData({ unreadCount })
+      }
+    },
+
     switchTab(e) {
       const index = Number(e.currentTarget.dataset.index)
       const item = this.data.list[index]

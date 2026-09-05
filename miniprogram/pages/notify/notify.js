@@ -16,13 +16,14 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
+    notification.syncTabBarBadgeFromApp()
     if (!auth.requireLogin()) return;
     this.setData({ loading: true });
     try {
-      const list = await notification.listNotifications();
-      app.globalData.notifications = list;
+      const list = await notification.refreshNotifications();
       this.setData({ list: list.map(formatItem) });
     } catch (error) {
+      notification.syncTabBarBadgeFromApp();
       wx.showToast({ title: '消息加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });

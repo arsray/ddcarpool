@@ -17,16 +17,16 @@ const CANCEL_ERROR_MESSAGES = {
   TRIP_IN_PROGRESS_NO_CANCEL: '行程中不可取消'
 }
 
-function resolveCancelAction(order, actorOpenId) {
+function resolveCancelAction(order, actorOpenId, hints = {}) {
   if (!order || !actorOpenId) return null
   if (order.status === ORDER_STATUS.IN_PROGRESS) return null
 
-  const isPassenger = order.viewerRole
-    ? order.viewerRole === 'passenger'
-    : order.passengerOpenId === actorOpenId
-  const isDriver = order.viewerRole
-    ? order.viewerRole === 'driver'
-    : order.driverOpenId === actorOpenId
+  const isPassenger = typeof hints.isPassenger === 'boolean'
+    ? hints.isPassenger
+    : order.viewerRole === 'passenger' || order.passengerOpenId === actorOpenId
+  const isDriver = typeof hints.isAssignedDriver === 'boolean'
+    ? hints.isAssignedDriver
+    : order.viewerRole === 'driver' || order.driverOpenId === actorOpenId
 
   if (
     isPassenger &&
@@ -43,22 +43,20 @@ function resolveCancelAction(order, actorOpenId) {
 }
 
 function getCancelModalConfig(kind) {
-  if (kind === CANCEL_KIND.PASSENGER_CANCEL) {
+  if (kind === CANCEL_KIND.PASSENGER_CANCEL || kind === 'passenger_cancel') {
     return {
       title: '取消搭车单',
       content: '取消后将不再参与匹配。',
-      confirmText: '取消搭车单',
-      cancelText: '返回',
-      confirmColor: '#dc2626'
+      confirmText: '确认取消',
+      cancelText: '返回'
     }
   }
-  if (kind === CANCEL_KIND.DRIVER_RELEASE) {
+  if (kind === CANCEL_KIND.DRIVER_RELEASE || kind === 'driver_release') {
     return {
       title: '取消匹配',
       content: '将取消与对方的同行匹配。',
       confirmText: '取消匹配',
-      cancelText: '返回',
-      confirmColor: '#dc2626'
+      cancelText: '返回'
     }
   }
   return null

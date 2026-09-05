@@ -20,6 +20,9 @@
         <block wx:elif="{{item.icon === 'message'}}">
           <view class="icon-bubble"></view>
           <view class="icon-bubble-tail"></view>
+          <view wx:if="{{unreadCount > 0}}" class="tab-badge">
+            <text class="tab-badge-text">{{unreadCount > 99 ? '99+' : unreadCount}}</text>
+          </view>
         </block>
         <block wx:else>
           <view class="icon-profile-head"></view>

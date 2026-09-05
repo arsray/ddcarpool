@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>订单详情页 · 文案 & CTA 填写表</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #fff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #eaecf0;
+      --blue: #003087;
+      --blue-bg: #eaf1fb;
+      --green: #1b7f52;
+      --green-bg: #eaf8f2;
+      --gray: #667085;
+      --gray-bg: #eef1f5;
+      --accent: #7c3aed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    .lead { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .flow {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      padding: 16px 18px; margin-bottom: 28px; font-size: 13px;
+    }
+    .flow .pill {
+      padding: 6px 12px; border-radius: 999px; font-weight: 600; white-space: nowrap;
+    }
+    .flow .arrow { color: var(--muted); }
+    .pill-matching { background: var(--blue-bg); color: var(--blue); }
+    .pill-active { background: var(--green-bg); color: var(--green); }
+    .pill-done { background: #e8f5ee; color: var(--green); }
+    .pill-closed { background: var(--gray-bg); color: var(--gray); }
+
+    .legend {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px; margin-bottom: 28px;
+    }
+    .legend-item {
+      background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px 12px; font-size: 12px;
+    }
+    .legend-item strong { display: block; font-size: 13px; margin-bottom: 4px; }
+
+    .status-block { margin-bottom: 28px; }
+    .status-head {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+    }
+    .status-badge {
+      font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 8px;
+    }
+    .status-badge.matching { background: var(--blue-bg); color: var(--blue); }
+    .status-badge.pending_departure,
+    .status-badge.in_progress,
+    .status-badge.completed { background: var(--green-bg); color: var(--green); }
+    .status-badge.closed { background: var(--gray-bg); color: var(--gray); }
+    .status-cn { font-size: 18px; font-weight: 700; }
+    .status-en { font-size: 12px; color: var(--muted); }
+
+    .grid-2 {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    }
+    @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .role-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      overflow: hidden;
+    }
+    .role-card__head {
+      padding: 12px 16px; font-weight: 700; font-size: 15px;
+      border-bottom: 1px solid var(--line);
+    }
+    .role-card__head.passenger { background: #f9fafb; }
+    .role-card__head.driver { background: #faf8ff; color: #5b21b6; }
+    .role-card__body { padding: 14px 16px 16px; }
+
+    .mock-header {
+      border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; position: relative;
+    }
+    .mock-header.matching { background: linear-gradient(160deg, #eaf1fb, #f5f8fc); color: var(--blue); }
+    .mock-header.active { background: linear-gradient(160deg, #eaf8f2, #f5fbf8); color: var(--green); }
+    .mock-header.closed { background: linear-gradient(160deg, #eef1f5, #f5f7fa); color: var(--gray); }
+    .mock-role { font-size: 12px; font-weight: 600; opacity: .9; min-height: 18px; }
+    .mock-title { font-size: 26px; font-weight: 800; line-height: 1.15; min-height: 30px; }
+    .mock-hint { font-size: 12px; opacity: .88; margin-top: 4px; min-height: 18px; }
+
+    label {
+      display: block; font-size: 11px; font-weight: 600; color: var(--muted);
+      margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .3px;
+    }
+    input[type=text], textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 8px;
+      padding: 8px 10px; font-size: 14px; font-family: inherit;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid #c7d7fe; border-color: #84adff;
+    }
+    .cta-row {
+      display: grid; grid-template-columns: 28px 1fr 1fr; gap: 8px; align-items: center;
+      margin-bottom: 8px;
+    }
+    .cta-row .num { font-size: 12px; color: var(--muted); text-align: center; }
+    select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px; }
+    .cta-hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+    .toolbar {
+      position: sticky; bottom: 0; background: rgba(255,255,255,.95);
+      border-top: 1px solid var(--line); padding: 12px 20px;
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+      backdrop-filter: blur(8px);
+    }
+    button {
+      border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px;
+      font-weight: 600; cursor: pointer;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-secondary { background: #fff; color: var(--text); border: 1px solid var(--line); }
+    #exportBox {
+      display: none; margin-top: 20px; background: #101828; color: #e4e7ec;
+      border-radius: 12px; padding: 16px; font-size: 12px; white-space: pre-wrap;
+      font-family: ui-monospace, monospace;
+    }
+    .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .skip { opacity: .55; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>订单详情页 · 文案 & CTA 填写表</h1>
+    <p class="lead">按状态填写左右两栏（乘客 / 车主）。上方彩色预览会跟着你输入实时变化。填好后点底部「复制结果」发给我即可。</p>
+
+    <div class="flow">
+      <span class="pill pill-matching">匹配中</span>
+      <span class="arrow">→</span>
+      <span class="pill pill-active">待出发</span>
+      <span class="arrow">→</span>
+      <span class="pill pill-active">行程中</span>
+      <span class="arrow">→</span>
+      <span class="pill pill-done">已完成</span>
+      <div style="width:100%;height:0"></div>
+      <span class="pill pill-matching">匹配中</span>
+      <span class="arrow">↘ 取消/过期</span>
+      <span class="pill pill-closed">已关闭</span>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><strong>角色标签</strong>状态栏第一行小字</div>
+      <div class="legend-item"><strong>状态标题</strong>状态栏第二行大字</div>
+      <div class="legend-item"><strong>副标题</strong>状态栏第三行说明</div>
+      <div class="legend-item"><strong>CTA</strong>底部按钮，从上到下 = 优先级</div>
+    </div>
+
+    <div id="sheets"></div>
+    <pre id="exportBox"></pre>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn-primary" type="button" onclick="copyResult()">复制结果发给我</button>
+    <button class="btn-secondary" type="button" onclick="fillDefaults()">填入当前代码默认值</button>
+    <button class="btn-secondary" type="button" onclick="clearAll()">清空</button>
+  </div>
+
+  <script>
+    const CTA_OPTIONS = [
+      { v: '', l: '— 不显示 —' },
+      { v: 'accept', l: '确认接单' },
+      { v: 'start', l: '开始行程' },
+      { v: 'complete', l: '完成' },
+      { v: 'cancel_passenger', l: '取消搭车单' },
+      { v: 'cancel_driver', l: '取消匹配' },
+      { v: 'chat', l: '联系同行人' },
+      { v: 'history', l: '查看我的订单' },
+      { v: 'plaza', l: '返回广场' },
+    ];
+
+    const STATES = [
+      { key: 'matching', cn: '匹配中', theme: 'matching' },
+      { key: 'pending_departure', cn: '待出发', theme: 'active' },
+      { key: 'in_progress', cn: '行程中', theme: 'active' },
+      { key: 'completed', cn: '已完成', theme: 'active' },
+      { key: 'closed', cn: '已关闭', theme: 'closed' },
+    ];
+
+    const DEFAULTS = {
+      matching: {
+        passenger: {
+          role: '我发布的', title: '匹配中', hint: '等待司机在广场接单',
+          ctas: ['cancel_passenger', 'history', '', '']
+        },
+        driver: {
+          role: '顺路订单', title: '匹配中', hint: '确认顺路后可接单',
+          ctas: ['accept', 'plaza', '', '']
+        }
+      },
+      pending_departure: {
+        passenger: {
+          role: '我发布的', title: '待出发', hint: '司机已接单，请留意出发时间',
+          ctas: ['cancel_passenger', 'chat', 'history', '']
+        },
+        driver: {
+          role: '我已接单', title: '待出发', hint: '请按出发时间窗接上乘客',
+          ctas: ['start', 'complete', 'cancel_driver', 'chat', 'plaza']
+        }
+      },
+      in_progress: {
+        passenger: {
+          role: '我发布的', title: '行程中', hint: '行程进行中',
+          ctas: ['chat', 'history', '', '']
+        },
+        driver: {
+          role: '我已接单', title: '行程中', hint: '行程进行中',
+          ctas: ['complete', 'chat', 'plaza', '']
+        }
+      },
+      completed: {
+        passenger: {
+          role: '我发布的', title: '已完成', hint: '本单已顺利完成',
+          ctas: ['history', '', '', '']
+        },
+        driver: {
+          role: '我已接单', title: '已完成', hint: '本单已顺利完成',
+          ctas: ['history', 'plaza', '', '']
+        }
+      },
+      closed: {
+        passenger: {
+          role: '我发布的', title: '已关闭', hint: '订单已关闭',
+          ctas: ['history', '', '', '']
+        },
+        driver: {
+          role: '我已接单', title: '已关闭', hint: '订单已关闭',
+          ctas: ['history', 'plaza', '', '']
+        }
+      }
+    };
+
+    function fieldId(state, role, part, idx) {
+      return `${state}_${role}_${part}${idx != null ? '_' + idx : ''}`;
+    }
+
+    function ctaRows(state, role, n) {
+      return Array.from({ length: n }, (_, i) => `
+        <div class="cta-row">
+          <span class="num">${i + 1}</span>
+          <select data-preview="cta" id="${fieldId(state, role, 'cta', i)}">
+            ${CTA_OPTIONS.map(o => `<option value="${o.v}">${o.l}</option>`).join('')}
+          </select>
+          <input type="text" placeholder="自定义按钮文案（可留空）" id="${fieldId(state, role, 'ctalabel', i)}" />
+        </div>
+      `).join('');
+    }
+
+    function roleCard(state, role, label, theme, ctaCount, skip) {
+      if (skip) {
+        return `<div class="role-card"><div class="role-card__head ${role}">${label}</div>
+          <div class="role-card__body skip">此状态下不存在该视角</div></div>`;
+      }
+      return `
+        <div class="role-card" data-card="${state}_${role}">
+          <div class="role-card__head ${role}">${label}</div>
+          <div class="role-card__body">
+            <div class="mock-header ${theme}" data-mock="${state}_${role}">
+              <div class="mock-role" data-mock-role></div>
+              <div class="mock-title" data-mock-title></div>
+              <div class="mock-hint" data-mock-hint></div>
+            </div>
+            <label>角色标签</label>
+            <input type="text" data-preview="role" id="${fieldId(state, role, 'role')}" />
+            <label>状态标题</label>
+            <input type="text" data-preview="title" id="${fieldId(state, role, 'title')}" />
+            <label>副标题</label>
+            <input type="text" data-preview="hint" id="${fieldId(state, role, 'hint')}" />
+            <label>底部按钮（从上到下）</label>
+            ${ctaRows(state, role, ctaCount)}
+            <p class="cta-hint">CTA 第二列可改文案；第一列选按钮类型</p>
+          </div>
+        </div>`;
+    }
+
+    function render() {
+      const root = document.getElementById('sheets');
+      root.innerHTML = STATES.map(s => `
+        <section class="status-block" data-state="${s.key}">
+          <div class="status-head">
+            <span class="status-badge ${s.key}">${s.cn}</span>
+            <div>
+              <div class="status-cn">${s.cn}</div>
+              <div class="status-en">${s.key}</div>
+            </div>
+          </div>
+          <div class="grid-2">
+            ${roleCard(s.key, 'passenger', '👤 乘客', s.theme, 4, false)}
+            ${roleCard(s.key, 'driver', '🚗 车主', s.theme, 5, false)}
+          </div>
+        </section>
+      `).join('');
+
+      document.querySelectorAll('input[data-preview], select[data-preview]').forEach(el => {
+        el.addEventListener('input', updatePreviews);
+        el.addEventListener('change', updatePreviews);
+      });
+      updatePreviews();
+    }
+
+    function updatePreviews() {
+      STATES.forEach(s => {
+        ['passenger', 'driver'].forEach(role => {
+          const mock = document.querySelector(`[data-mock="${s.key}_${role}"]`);
+          if (!mock) return;
+          const roleEl = mock.querySelector('[data-mock-role]');
+          const titleEl = mock.querySelector('[data-mock-title]');
+          const hintEl = mock.querySelector('[data-mock-hint]');
+          const roleVal = document.getElementById(fieldId(s.key, role, 'role'))?.value || '…';
+          const titleVal = document.getElementById(fieldId(s.key, role, 'title'))?.value || s.cn;
+          const hintVal = document.getElementById(fieldId(s.key, role, 'hint'))?.value || '…';
+          roleEl.textContent = roleVal || ' ';
+          titleEl.textContent = titleVal;
+          hintEl.textContent = hintVal || ' ';
+        });
+      });
+    }
+
+    function setVal(id, v) {
+      const el = document.getElementById(id);
+      if (el) el.value = v ?? '';
+    }
+
+    function fillDefaults() {
+      STATES.forEach(s => {
+        ['passenger', 'driver'].forEach(role => {
+          const d = DEFAULTS[s.key][role];
+          if (!d) return;
+          setVal(fieldId(s.key, role, 'role'), d.role);
+          setVal(fieldId(s.key, role, 'title'), d.title);
+          setVal(fieldId(s.key, role, 'hint'), d.hint);
+          d.ctas.forEach((c, i) => {
+            setVal(fieldId(s.key, role, 'cta', i), c);
+            setVal(fieldId(s.key, role, 'ctalabel', i), '');
+          });
+        });
+      });
+      updatePreviews();
+    }
+
+    function clearAll() {
+      document.querySelectorAll('input, select').forEach(el => {
+        if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+      });
+      updatePreviews();
+    }
+
+    function buildExport() {
+      const lines = ['# 订单详情页配置（用户填写）', ''];
+      STATES.forEach(s => {
+        lines.push(`## ${s.cn} (${s.key})`, '');
+        ['passenger', 'driver'].forEach(role => {
+          const roleName = role === 'passenger' ? '乘客' : '车主';
+          lines.push(`### ${roleName}`);
+          lines.push(`- 角色标签: ${document.getElementById(fieldId(s.key, role, 'role'))?.value || '-'}`);
+          lines.push(`- 状态标题: ${document.getElementById(fieldId(s.key, role, 'title'))?.value || '-'}`);
+          lines.push(`- 副标题: ${document.getElementById(fieldId(s.key, role, 'hint'))?.value || '-'}`);
+          lines.push('- CTA:');
+          const max = role === 'driver' ? 5 : 4;
+          for (let i = 0; i < max; i++) {
+            const key = document.getElementById(fieldId(s.key, role, 'cta', i))?.value;
+            if (!key) continue;
+            const label = document.getElementById(fieldId(s.key, role, 'ctalabel', i))?.value;
+            lines.push(`  ${i + 1}. ${key}${label ? ' | ' + label : ''}`);
+          }
+          lines.push('');
+        });
+      });
+      return lines.join('\n');
+    }
+
+    function copyResult() {
+      const text = buildExport();
+      const box = document.getElementById('exportBox');
+      box.style.display = 'block';
+      box.textContent = text;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('已复制到剪贴板！粘贴到对话里发给我即可。');
+      }).catch(() => {
+        alert('请手动复制下方文本框内容。');
+      });
+    }
+
+    render();
+    fillDefaults();
+  </script>
+</body>
+</html>

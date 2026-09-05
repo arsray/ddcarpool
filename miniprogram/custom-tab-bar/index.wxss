@@ -135,6 +135,28 @@
   background: rgba(255, 255, 255, 0.96);
 }
 
+.tab-badge {
+  position: absolute;
+  top: -2rpx;
+  right: -10rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 6rpx;
+  border-radius: 14rpx;
+  background: #E53935;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.tab-badge-text {
+  color: #fff;
+  font-size: 18rpx;
+  line-height: 1;
+  font-weight: 600;
+}
+
 /* Mine — profile */
 .icon-profile-head {
   position: absolute;

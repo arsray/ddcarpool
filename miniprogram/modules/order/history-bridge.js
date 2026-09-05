@@ -53,6 +53,11 @@ function toHistoryItem(order) {
     item.partnerName = order.driverName
   }
 
+  if (order.driverVehicle && typeof order.driverVehicle === 'object') {
+    const { brand, plate, color } = order.driverVehicle
+    item.vehicleLine = [brand, plate, color].filter(Boolean).join(' · ')
+  }
+
   return item
 }
 

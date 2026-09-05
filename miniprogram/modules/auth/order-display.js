@@ -69,10 +69,12 @@ function formatListHint(order, role) {
 
   if (role === 'passenger') {
     if (order.status === STATUS.WAITING && order.partnerName) {
-      return `车主 ${order.partnerName} 已接单`
+      const vehicleSuffix = order.vehicleLine ? ` · ${order.vehicleLine}` : ''
+      return `车主 ${order.partnerName} 已接单${vehicleSuffix}`
     }
     if (order.status === STATUS.TRIP && order.partnerName) {
-      return `车主 ${order.partnerName} · 同行`
+      const vehicleSuffix = order.vehicleLine ? ` · ${order.vehicleLine}` : ''
+      return `车主 ${order.partnerName} · 同行${vehicleSuffix}`
     }
     return ''
   }
