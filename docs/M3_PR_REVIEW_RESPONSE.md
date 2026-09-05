@@ -70,8 +70,8 @@
 
 ## Ray 联调指引
 
-> **PR #6 代码在分支 `feat/m3-flow-optimization`，尚未 merge 到 `main`。**  
-> 仅 `git pull origin main` **拿不到**本 PR 的任何改动。
+> **PR #7 代码在分支 `feat/m3-flow-optimization`，基于已合并的 PR #6，含 Cloud 自测修复。**  
+> 仅 `git pull origin main` **拿不到**本 PR 在 PR #6 之上的额外改动。
 
 ### 团队开发约定（Ray · 2026-09）
 
