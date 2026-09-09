@@ -8,6 +8,7 @@
     "pages/onboarding/identity/identity",
     "pages/identity-manage/identity-manage",
     "pages/account/account",
+    "pages/agreement/agreement",
     "pages/vehicle/vehicle",
     "pages/preference/preference",
     "pages/habit-tags/habit-tags",
@@ -31,11 +32,11 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "车主"
+        "text": "广场"
       },
       {
         "pagePath": "pages/publish/publish",
-        "text": "乘客"
+        "text": "广场"
       },
       {
         "pagePath": "pages/notify/notify",

@@ -28,7 +28,8 @@
 | `store.js` | 预览态会话与 Profile 扩展字段 |
 | `mock.js` | Mock 历史订单与通知（`MOCK_SEED_VERSION`，登录/启动自动注入） |
 | `mapper.js` | UI 状态 ↔ DATA_MODEL Order 映射 |
-| `email.js` / `verify.js` | 邮箱验证码 Mock（P0 接真实发信） |
+| `email.js` / `verify.js` | 邮箱验证码；`useCloudVerify` 时走云函数 `authEmail` |
+| `session.js` | 登录态 30 天（`authSession.expiresAt`） |
 | `vehicle-data.js` | 车辆/偏好静态数据 |
 | `order-actions.js` | 订单详情操作按钮规则 |
 

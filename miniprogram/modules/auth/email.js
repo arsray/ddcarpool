@@ -60,11 +60,31 @@ function validateEmail(raw) {
   return { ok: true, email }
 }
 
+/** 邮箱本地段 → 姓名缩写：crystal.x.wu → CW（名首字母 + 姓首字母） */
+function initialsFromEmailLocalPart(emailOrLocal) {
+  const local = normalizeLocalPart(emailOrLocal)
+  if (!local) return 'U'
+
+  const parts = local.split(/[._-]+/).filter(Boolean)
+  if (parts.length >= 2) {
+    const given = parts[0].charAt(0)
+    const family = parts[parts.length - 1].charAt(0)
+    return `${given}${family}`.toUpperCase()
+  }
+
+  const single = parts[0] || local
+  if (single.length >= 2) {
+    return `${single.charAt(0)}${single.charAt(single.length - 1)}`.toUpperCase()
+  }
+  return single.charAt(0).toUpperCase()
+}
+
 module.exports = {
   DISNEY_SUFFIX,
   normalizeEmail,
   normalizeLocalPart,
   buildDisneyEmail,
   validateEmailPrefix,
-  validateEmail
+  validateEmail,
+  initialsFromEmailLocalPart
 }

@@ -1,15 +1,36 @@
 <view class="container">
   <view class="section-title">我的身份</view>
 
-  <view class="identity-card" wx:for="{{identities}}" wx:key="*this">
-    <view class="identity-main">
-      <text class="mode-tag {{item === 'owner' ? 'owner' : 'passenger'}}">{{item === 'owner' ? '车主' : '乘车人'}}</text>
-      <text class="active-tag" wx:if="{{item === userMode}}">当前</text>
+  <view class="identity-switch" wx:if="{{hasBothIdentities}}">
+    <view
+      class="identity-chip identity-chip--owner {{userMode === 'owner' ? 'is-active' : 'is-tappable'}}"
+      data-role="owner"
+      bindtap="onSwitchIdentity"
+    >
+      <text class="identity-chip-label">车主</text>
+      <text class="identity-chip-hint" wx:if="{{userMode === 'owner'}}">当前</text>
+      <text class="identity-chip-action" wx:else>设为当前</text>
+    </view>
+    <view
+      class="identity-chip identity-chip--passenger {{userMode === 'passenger' ? 'is-active' : 'is-tappable'}}"
+      data-role="passenger"
+      bindtap="onSwitchIdentity"
+    >
+      <text class="identity-chip-label">乘车人</text>
+      <text class="identity-chip-hint" wx:if="{{userMode === 'passenger'}}">当前</text>
+      <text class="identity-chip-action" wx:else>设为当前</text>
     </view>
   </view>
 
-  <view class="tip" wx:if="{{missingRole}}">添加另一种身份后，可在「我的」顶部切换模式</view>
-  <view class="tip" wx:else>你已拥有车主和乘车人两种身份</view>
+  <view class="identity-single" wx:else>
+    <view class="identity-chip identity-chip--{{singleRole}} is-active">
+      <text class="identity-chip-label">{{singleRole === 'owner' ? '车主' : '乘车人'}}</text>
+      <text class="identity-chip-hint">当前</text>
+    </view>
+  </view>
+
+  <view class="tip" wx:if="{{missingRole}}">添加另一种身份后，可点击上方按钮切换</view>
+  <view class="tip" wx:else>点击身份按钮切换，选中即为当前身份</view>
 
   <button
     wx:if="{{missingRole}}"

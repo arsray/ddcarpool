@@ -1,5 +1,6 @@
-// SECURITY-REVIEW: 聊天读写仅限订单参与者，身份由微信 OPENID 决定。
+// SECURITY-REVIEW: 聊天以邮箱账号 ID 授权；微信 OpenID 仅用于解析当前用户。
 const cloud = require('wx-server-sdk')
+const { resolveAccountId } = require('./common/account-id')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -41,9 +42,10 @@ exports.main = async (event) => {
   try {
     const { OPENID } = cloud.getWXContext()
     if (!OPENID) return fail('NOT_AUTHENTICATED', '请先登录')
+    const accountId = await resolveAccountId(users, OPENID)
     const orderId = String(event.orderId || '').trim()
     if (!orderId) return fail('INVALID_INPUT', '订单 ID 无效')
-    await getAuthorizedOrder(orderId, OPENID)
+    await getAuthorizedOrder(orderId, accountId)
 
     if (event.action === 'list') {
       const where = { orderId }
@@ -58,7 +60,7 @@ exports.main = async (event) => {
         .get()
       const list = response.data.reverse().map(({ _openid, senderOpenId, ...item }) => ({
         ...item,
-        isMine: senderOpenId === OPENID
+        isMine: senderOpenId === accountId
       }))
       return ok({ messages: list, hasMore: response.data.length === PAGE_SIZE })
     }
@@ -71,8 +73,8 @@ exports.main = async (event) => {
       const response = await messages.add({
         data: {
           orderId,
-          senderOpenId: OPENID,
-          senderName: await senderName(OPENID),
+          senderOpenId: accountId,
+          senderName: await senderName(accountId),
           content,
           createdAt: db.serverDate()
         }
@@ -80,7 +82,7 @@ exports.main = async (event) => {
       return ok({
         _id: response._id,
         orderId,
-        senderName: await senderName(OPENID),
+        senderName: await senderName(accountId),
         content,
         isMine: true,
         createdAt: new Date()

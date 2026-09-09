@@ -7,6 +7,8 @@ const { filterPoints, getPointDisplayName } = require('../../modules/order/point
 const { formatDateLabel } = require('../../modules/order/history-bridge')
 const { formatHistoryTimeLabel, parseDepartTime } = require('../../modules/order/time-slots')
 
+const { ensureCorrectPlazaPage } = require('../../modules/auth/plaza-tab')
+
 const ACCEPT_ERROR_MESSAGES = {
   ORDER_NOT_FOUND: '订单不存在',
   INVALID_STATUS: '订单当前不可接单',
@@ -245,22 +247,31 @@ Page({
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
+      if (typeof this.getTabBar().refreshPlaza === 'function') {
+        this.getTabBar().refreshPlaza()
+      }
     }
     notification.syncTabBarBadgeFromApp()
-  
-    // M2 Homepage UI Prototype：仅用于本地 UI 预览
+
     if (this.data.uiPrototypeMode) {
       this.setData({ loading: false })
       return
     }
-  
+
     if (!auth.requireLogin()) return
     app._syncAuth()
-    
+    ensureCorrectPlazaPage()
+
     this.setData({
       userMode: app.globalData.userMode || 'owner'
     })
-    
+
+    const identities = app.globalData.identities || []
+    const hasOwner = identities.includes('owner')
+    if (!hasOwner || app.globalData.userMode === 'passenger') {
+      return
+    }
+
     this.loadOrders()
   },
 
@@ -622,7 +633,7 @@ Page({
     const orderId = e.currentTarget.dataset.id
     if (!orderId) return
     wx.navigateTo({
-      url: `/pages/detail/detail?orderId=${orderId}&from=plaza`
+      url: `/pages/detail/detail?orderId=${orderId}&role=owner&from=plaza`
     })
   },
   async switchUserMode(e) {
@@ -791,6 +802,19 @@ Page({
     })
   },
   goAddOwnerIdentity() {
-    wx.navigateTo({ url: '/pages/onboarding/identity/identity?mode=add' })
+    wx.showModal({
+      title: '添加车主身份',
+      content: '添加后可在「我的」中切换车主模式，是否继续？',
+      confirmText: '添加',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await app.addIdentity('owner')
+          wx.navigateTo({ url: '/pages/vehicle/vehicle?setup=1' })
+        } catch (error) {
+          wx.showToast({ title: '添加身份失败，请重试', icon: 'none' })
+        }
+      }
+    })
   }
 })

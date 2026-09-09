@@ -1,5 +1,6 @@
 const { callFunction } = require('../../utils/cloud')
 const { normalizeEmail } = require('./email')
+const { clearAllUserStorage } = require('./clear-storage')
 const { safeReLaunch, safeSwitchTab } = require('./nav')
 const config = require('../../config/index')
 
@@ -133,7 +134,7 @@ async function loginWithEmail(email, verificationMode) {
     email: normalized,
     displayName: normalized.split('@')[0]
   })
-  applyUser(session.openId, user)
+  applyUser(user.openId, user)
   return state
 }
 
@@ -158,8 +159,7 @@ function routeAfterLogin() {
 }
 
 function logout() {
-  wx.removeStorageSync(CACHE_KEY)
-  wx.removeStorageSync('loggedIn')
+  clearAllUserStorage()
   Object.assign(state, {
     openId: null,
     emailVerified: false,

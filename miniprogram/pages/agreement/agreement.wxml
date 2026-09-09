@@ -1,0 +1,20 @@
+<view class="agreement-page">
+  <view class="agreement-head">
+    <view class="agreement-title">{{title}}</view>
+    <view class="agreement-meta">更新日期：{{updatedAt}}</view>
+  </view>
+
+  <view class="agreement-intro">{{intro}}</view>
+
+  <view class="agreement-section" wx:for="{{sections}}" wx:key="heading">
+    <view class="agreement-section-title">{{item.heading}}</view>
+    <view
+      class="agreement-paragraph"
+      wx:for="{{item.paragraphs}}"
+      wx:for-item="para"
+      wx:key="*this"
+    >{{para}}</view>
+  </view>
+
+  <view class="agreement-foot">— 全文完 —</view>
+</view>

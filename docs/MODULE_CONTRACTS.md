@@ -267,7 +267,7 @@ sendMessage(orderId, content)
 |------|-------|------|
 | `/pages/index/index` | M2 | 广场 |
 | `/pages/publish/publish` | M3 | 发布订单 |
-| `/pages/detail/detail?orderId=` | M3 | 订单详情 |
+| `/pages/detail/detail?orderId=&role=` | M1 order | 统一订单详情（展示 + 操作入口；变更走 M3 API） |
 | `/pages/mine/mine` | M1 | 我的 |
 | `/pages/login/login` | M1 | 邮箱登录（Mock 预览） |
 | `/pages/onboarding/identity/identity` | M1 | 首次选择身份 |
@@ -277,7 +277,7 @@ sendMessage(orderId, content)
 | `/pages/preference/preference` | M1 | 乘车偏好 |
 | `/pages/habit-tags/habit-tags` | M1 | 习惯标签 |
 | `/pages/history/history` | M1 | 订单历史列表 |
-| `/pages/history-detail/history-detail` | M1 | 订单历史详情 |
+| `/pages/history-detail/history-detail` | M1 | **已废弃**，重定向至 `detail` |
 | `/pages/notify/notify` | M1 | 通知中心 |
 | `/pages/chat/chat?orderId=` | M4 | 订单聊天 |
 

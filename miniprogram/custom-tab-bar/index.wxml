@@ -8,7 +8,12 @@
       bindtap="switchTab"
     >
       <view class="tab-icon tab-icon-{{item.icon}}">
-        <block wx:if="{{item.icon === 'owner'}}">
+        <block wx:if="{{item.icon === 'plaza'}}">
+          <view class="icon-car-body"></view>
+          <view class="icon-car-wheel icon-car-wheel-l"></view>
+          <view class="icon-car-wheel icon-car-wheel-r"></view>
+        </block>
+        <block wx:elif="{{item.icon === 'owner'}}">
           <view class="icon-car-body"></view>
           <view class="icon-car-wheel icon-car-wheel-l"></view>
           <view class="icon-car-wheel icon-car-wheel-r"></view>

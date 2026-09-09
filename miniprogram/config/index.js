@@ -4,8 +4,13 @@
  */
 let local = {}
 
+const isNodeTest =
+  typeof process !== 'undefined' &&
+  process.env &&
+  process.env.DD_CARPOOL_TEST === '1'
+
 try {
-  local = require('./env.js')
+  local = isNodeTest ? { useCloud: false, cloudEnvId: '' } : require('./env.js')
 } catch (error) {
   local = {}
 }

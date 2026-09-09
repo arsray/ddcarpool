@@ -17,9 +17,8 @@ function truncateNote(note, maxLen) {
   return `${val.slice(0, maxLen)}…`
 }
 
-function getOwnerSourceTag(order, role) {
-  if (role !== 'owner' || !order.createdFrom) return ''
-  return order.createdFrom === 'publish' ? '发布' : '接单'
+function getOwnerSourceTag() {
+  return ''
 }
 
 /** 详情页状态行二级文案（与一级状态同排展示） */

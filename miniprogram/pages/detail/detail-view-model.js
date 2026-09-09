@@ -12,7 +12,6 @@ const DEFAULT_CTA_LABELS = {
   cancel_passenger: '取消搭车单',
   cancel_driver: '取消匹配',
   chat: '联系同行人',
-  history: '查看我的订单',
   plaza: '返回广场'
 }
 
@@ -23,7 +22,6 @@ const CTA_VARIANT = {
   cancel_passenger: 'danger',
   cancel_driver: 'danger',
   chat: 'secondary',
-  history: 'secondary',
   plaza: 'secondary'
 }
 
@@ -42,7 +40,7 @@ const DETAIL_COPY = {
       roleLabel: '我发布的',
       statusTitle: '匹配中',
       statusHint: '等待司机在广场接单',
-      ctas: [{ key: 'cancel_passenger' }, { key: 'history' }]
+      ctas: [{ key: 'cancel_passenger' }]
     },
     driver: {
       roleLabel: '顺路订单',
@@ -61,24 +59,21 @@ const DETAIL_COPY = {
       statusHint: '司机已接单，请留意出发时间',
       ctas: [
         { key: 'chat', label: '联系车主' },
-        { key: 'history' },
         { key: 'cancel_passenger' }
       ]
     },
     driver: {
       roleLabel: '我已接单',
       statusTitle: '待出发',
-      statusHint: '请按出发时间窗接上乘客',
+      statusHint: '系统将在出发前 15 分钟自动开始行程',
       ctas: [
         { key: 'chat', label: '联系乘客' },
-        { key: 'complete', label: '订单完成' },
         { key: 'plaza' },
-        { key: 'history' },
         { key: 'cancel_driver', label: '取消接单' }
       ],
       actionRows: [
-        ['chat', 'complete'],
-        ['history', 'plaza']
+        ['chat'],
+        ['plaza']
       ]
     }
   },
@@ -87,17 +82,15 @@ const DETAIL_COPY = {
       roleLabel: '我发布的',
       statusTitle: '行程中',
       statusHint: '行程进行中',
-      ctas: [{ key: 'chat', label: '联系车主' }, { key: 'history' }]
+      ctas: [{ key: 'chat', label: '联系车主' }]
     },
     driver: {
       roleLabel: '我已接单',
       statusTitle: '行程中',
-      statusHint: '行程进行中',
+      statusHint: '行程进行中，系统将在开始后 30 分钟自动完成',
       ctas: [
-        { key: 'complete' },
         { key: 'chat', label: '联系乘客' },
-        { key: 'plaza' },
-        { key: 'history' }
+        { key: 'plaza' }
       ]
     }
   },
@@ -106,13 +99,13 @@ const DETAIL_COPY = {
       roleLabel: '我发布的',
       statusTitle: '已完成',
       statusHint: '本单已顺利完成',
-      ctas: [{ key: 'history' }]
+      ctas: []
     },
     driver: {
       roleLabel: '我已接单',
       statusTitle: '已完成',
       statusHint: '本单已顺利完成',
-      ctas: [{ key: 'history' }, { key: 'plaza' }]
+      ctas: [{ key: 'plaza' }]
     }
   },
   closed: {
@@ -120,13 +113,13 @@ const DETAIL_COPY = {
       roleLabel: '我发布的',
       statusTitle: '已关闭',
       statusHint: '订单已关闭',
-      ctas: [{ key: 'history' }]
+      ctas: []
     },
     driver: {
       roleLabel: '我已接单',
       statusTitle: '已关闭',
       statusHint: '订单已关闭',
-      ctas: [{ key: 'history' }, { key: 'plaza' }]
+      ctas: [{ key: 'plaza' }]
     }
   }
 }
@@ -156,8 +149,6 @@ function isCtaAvailable(key, ctx) {
       return Boolean(ctx.isAssignedDriver && ctx.status === ORDER_STATUS.PENDING_DEPARTURE)
     case 'chat':
       return ctx.canChat
-    case 'history':
-      return ctx.isPassenger || ctx.isAssignedDriver
     case 'plaza':
       return ctx.fromPlaza && ctx.status !== ORDER_STATUS.MATCHING
     default:

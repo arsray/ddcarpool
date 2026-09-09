@@ -23,6 +23,21 @@ module.exports.summary = summary
     <view class="v1-page-title">消息</view>
   </view>
 
+  <view class="v1-role-seg" wx:if="{{showRoleTabs}}">
+    <view
+      class="v1-role-seg-item {{role==='owner'?'on owner':''}}"
+      data-role="owner"
+      bindtap="switchRole"
+    >车主消息</view>
+    <view
+      class="v1-role-seg-item {{role==='passenger'?'on passenger':''}}"
+      data-role="passenger"
+      bindtap="switchRole"
+    >乘车人消息</view>
+  </view>
+  <view wx:elif="{{role === 'owner'}}" class="v1-role-chip v1-role-chip--owner">车主消息</view>
+  <view wx:else class="v1-role-chip v1-role-chip--passenger">乘车人消息</view>
+
   <block wx:if="{{list.length}}">
     <view class="v1-notify-list">
       <view

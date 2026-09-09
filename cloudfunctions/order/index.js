@@ -1,5 +1,6 @@
-// SECURITY-REVIEW: 所有订单操作都以微信上下文 OPENID 授权，绝不信任客户端提交的身份字段。
+// SECURITY-REVIEW: 订单操作以邮箱账号 ID 授权；微信 OpenID 仅用于解析当前登录用户。
 const cloud = require('wx-server-sdk')
+const { resolveAccountId } = require('./common/account-id')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -12,6 +13,8 @@ const ACTIVE_STATUSES = ['matching', 'pending_departure', 'in_progress']
 const CHAT_STATUSES = ['pending_departure', 'in_progress']
 const VALID_ROLES = new Set(['passenger', 'driver'])
 const PAGE_SIZE = 50
+const AUTO_START_LEAD_MS = 15 * 60 * 1000
+const AUTO_COMPLETE_AFTER_MS = 30 * 60 * 1000
 
 function ok(data) {
   return { ok: true, data }
@@ -195,7 +198,7 @@ async function createOrder(event, openId) {
 }
 
 async function listOpen(openId) {
-  await expireStale()
+  await runScheduledTasks()
   const response = await orders.where({ status: 'matching' })
     .orderBy('departTimeAt', 'asc')
     .limit(100)
@@ -389,6 +392,81 @@ async function expireStale() {
   return { updated: response.stats ? response.stats.updated : 0 }
 }
 
+async function autoStartTrips() {
+  const threshold = new Date(Date.now() + AUTO_START_LEAD_MS)
+  const response = await orders.where({
+    status: 'pending_departure',
+    driverOpenId: _.neq(''),
+    departTimeAt: _.lte(threshold)
+  }).limit(100).get()
+
+  let updated = 0
+  for (const orderDoc of response.data) {
+    const departAt = new Date(orderDoc.departTimeAt).getTime()
+    if (Number.isNaN(departAt) || Date.now() < departAt - AUTO_START_LEAD_MS) continue
+
+    await db.runTransaction(async (transaction) => {
+      const current = await transaction.collection('orders').doc(orderDoc._id).get()
+      const order = current.data
+      if (!order || order.status !== 'pending_departure' || !order.driverOpenId) return
+
+      const now = db.serverDate()
+      await transaction.collection('orders').doc(orderDoc._id).update({
+        data: { status: 'in_progress', startedAt: now, updatedAt: now }
+      })
+      await transaction.collection('notifications').add({
+        data: notificationData(order.passengerOpenId, '行程已开始', orderDoc._id, 'passenger')
+      })
+      await transaction.collection('notifications').add({
+        data: notificationData(order.driverOpenId, '行程已开始', orderDoc._id, 'owner')
+      })
+    })
+    updated += 1
+  }
+  return { updated }
+}
+
+async function autoCompleteTrips() {
+  const threshold = new Date(Date.now() - AUTO_COMPLETE_AFTER_MS)
+  const response = await orders.where({
+    status: 'in_progress',
+    startedAt: _.lte(threshold)
+  }).limit(100).get()
+
+  let updated = 0
+  for (const orderDoc of response.data) {
+    await db.runTransaction(async (transaction) => {
+      const current = await transaction.collection('orders').doc(orderDoc._id).get()
+      const order = current.data
+      if (!order || order.status !== 'in_progress' || !order.startedAt) return
+      const startedAt = new Date(order.startedAt).getTime()
+      if (Number.isNaN(startedAt) || Date.now() < startedAt + AUTO_COMPLETE_AFTER_MS) return
+
+      const now = db.serverDate()
+      await transaction.collection('orders').doc(orderDoc._id).update({
+        data: { status: 'completed', completedAt: now, updatedAt: now }
+      })
+      await transaction.collection('notifications').add({
+        data: notificationData(order.passengerOpenId, '订单已完成', orderDoc._id, 'passenger')
+      })
+      if (order.driverOpenId) {
+        await transaction.collection('notifications').add({
+          data: notificationData(order.driverOpenId, '订单已完成', orderDoc._id, 'owner')
+        })
+      }
+    })
+    updated += 1
+  }
+  return { updated }
+}
+
+async function runScheduledTasks() {
+  const expired = await expireStale()
+  const started = await autoStartTrips()
+  const completed = await autoCompleteTrips()
+  return { ...expired, ...started, ...completed }
+}
+
 async function listPoints() {
   const response = await points.where({ enabled: _.neq(false) }).orderBy('sortOrder', 'asc').limit(100).get()
   return response.data.map(({ _openid, ...item }) => item)
@@ -401,21 +479,22 @@ async function listRoutes() {
 
 exports.main = async (event) => {
   try {
-    if (event && event.Type === 'Timer') return ok(await expireStale())
+    if (event && event.Type === 'Timer') return ok(await runScheduledTasks())
     const { OPENID } = cloud.getWXContext()
     if (!OPENID) return fail('NOT_AUTHENTICATED', '请先登录')
+    const accountId = await resolveAccountId(db.collection('users'), OPENID)
     const action = event && event.action
 
-    if (action === 'create') return ok(await createOrder(event, OPENID))
-    if (action === 'listOpen') return ok(await listOpen(OPENID))
-    if (action === 'listDriverActive') return ok(await listDriverActive(OPENID))
-    if (action === 'listForUser') return ok(await listForUser(OPENID, event.role))
-    if (action === 'getById') return ok(await getById(event.orderId, OPENID))
-    if (action === 'accept') return ok(await acceptOrder(event, OPENID))
-    if (action === 'cancel') return ok(await cancelOrder(event, OPENID))
-    if (action === 'start') return ok(await transition(event, OPENID, 'in_progress'))
-    if (action === 'complete') return ok(await transition(event, OPENID, 'completed'))
-    if (action === 'expireStale') return ok(await expireStale())
+    if (action === 'create') return ok(await createOrder(event, accountId))
+    if (action === 'listOpen') return ok(await listOpen(accountId))
+    if (action === 'listDriverActive') return ok(await listDriverActive(accountId))
+    if (action === 'listForUser') return ok(await listForUser(accountId, event.role))
+    if (action === 'getById') return ok(await getById(event.orderId, accountId))
+    if (action === 'accept') return ok(await acceptOrder(event, accountId))
+    if (action === 'cancel') return ok(await cancelOrder(event, accountId))
+    if (action === 'start') return ok(await transition(event, accountId, 'in_progress'))
+    if (action === 'complete') return ok(await transition(event, accountId, 'completed'))
+    if (action === 'expireStale') return ok(await runScheduledTasks())
     if (action === 'listPoints') return ok(await listPoints())
     if (action === 'listRoutes') return ok(await listRoutes())
     return fail('INVALID_ACTION', '不支持的订单操作')
@@ -431,7 +510,7 @@ exports.main = async (event) => {
 
 exports.expireStale = async () => {
   try {
-    return ok(await expireStale())
+    return ok(await runScheduledTasks())
   } catch (error) {
     console.error('[order.expireStale] failed', { name: error && error.name })
     return fail('ORDER_SERVICE_FAILED', '订单过期任务执行失败')

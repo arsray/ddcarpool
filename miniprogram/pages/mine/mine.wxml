@@ -1,11 +1,12 @@
 <view class="v1-mine-page container tab-page" wx:if="{{userInfo}}">
   <view class="v1-profile">
-    <view class="v1-profile-avatar">{{avatarLetter}}</view>
+    <view class="v1-profile-avatar {{isOwner ? 'v1-profile-avatar--owner' : 'v1-profile-avatar--passenger'}}">{{avatarInitials}}</view>
     <view class="v1-profile-main">
       <view class="v1-profile-name">{{userInfo.displayName}}</view>
+      <view class="v1-profile-mode {{isOwner ? 'v1-profile-mode--owner' : 'v1-profile-mode--passenger'}}">{{modeLabel}}</view>
       <view class="v1-profile-ids">
         <text wx:if="{{hasBothIdentities}}">车主 · 乘客</text>
-        <text wx:else>{{isOwner ? '车主' : '乘客'}}</text>
+        <text wx:else class="v1-role-chip {{isOwner ? 'v1-role-chip--owner' : 'v1-role-chip--passenger'}}">{{isOwner ? '车主' : '乘客'}}</text>
       </view>
     </view>
     <view wx:if="{{hasBothIdentities}}" class="v1-profile-action" bindtap="onSwitchMode">
@@ -14,7 +15,7 @@
     </view>
   </view>
 
-  <view class="v1-section">
+  <view class="v1-section" wx:if="{{isOwner}}">
     <view class="v1-section-title">我的车辆</view>
     <view class="v1-row-card" bindtap="goVehicle">
       <view class="v1-row-main">
@@ -24,7 +25,7 @@
         </block>
         <block wx:else>
           <view class="v1-row-primary is-muted">未绑定车辆 · 点击填写</view>
-          <view class="v1-row-secondary">绑定车辆后可发布发车单</view>
+          <view class="v1-row-secondary">绑定车辆后可在广场接单</view>
         </block>
       </view>
       <text class="v1-chevron">›</text>
@@ -32,7 +33,7 @@
   </view>
 
   <view class="v1-section">
-    <view class="v1-section-title">乘车偏好</view>
+    <view class="v1-section-title">{{isOwner ? '乘车习惯' : '乘车偏好'}}</view>
     <view class="v1-row-card" wx:if="{{isOwner}}" bindtap="goHabitTags">
       <view class="v1-row-main">
         <view class="v1-row-primary {{habitSummary == '未设置' ? 'is-muted' : ''}}">{{habitSummary}}</view>
@@ -57,7 +58,7 @@
     <view class="v1-section-title">我的订单</view>
     <view class="v1-row-card v1-row-card--inline" bindtap="goHistory">
       <view class="v1-row-primary {{unfinishedCount > 0 ? '' : 'is-muted'}}">
-        <text wx:if="{{unfinishedCount > 0}}">{{unfinishedCount}} 单未完成</text>
+        <text wx:if="{{unfinishedCount > 0}}">{{unfinishedLabel}} · {{unfinishedCount}} 单</text>
         <text wx:else>暂无未完成订单</text>
       </view>
       <text class="v1-chevron">›</text>

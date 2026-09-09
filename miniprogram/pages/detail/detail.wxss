@@ -442,6 +442,102 @@
   word-break: break-all;
 }
 
+/* Order progress card */
+.v1-progress-card {
+  margin: 20rpx 28rpx 0;
+  padding: 24rpx;
+  background: #FFFFFF;
+  border: 1rpx solid #EDF0F4;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+}
+
+.v1-progress-card__title {
+  display: block;
+  margin-bottom: 20rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1F2937;
+  line-height: 1.35;
+}
+
+.v1-progress-item {
+  display: flex;
+  gap: 16rpx;
+}
+
+.v1-progress-item__track {
+  flex-shrink: 0;
+  width: 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.v1-progress-item__dot {
+  flex-shrink: 0;
+  width: 16rpx;
+  height: 16rpx;
+  margin-top: 8rpx;
+  border-radius: 50%;
+  background: #1B7F52;
+}
+
+.v1-progress-item.is-current .v1-progress-item__dot {
+  box-shadow: 0 0 0 6rpx rgba(27, 127, 82, 0.18);
+}
+
+.v1-progress-item.is-muted .v1-progress-item__dot {
+  background: #667085;
+  box-shadow: none;
+}
+
+.v1-progress-item__line {
+  flex: 1;
+  width: 2rpx;
+  min-height: 28rpx;
+  margin: 6rpx 0;
+  background: #E4E7EC;
+}
+
+.v1-progress-item__content {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding-bottom: 24rpx;
+  min-width: 0;
+}
+
+.v1-progress-item:last-child .v1-progress-item__content {
+  padding-bottom: 0;
+}
+
+.v1-progress-item__label {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #1F2937;
+  line-height: 1.4;
+}
+
+.v1-progress-item.is-current .v1-progress-item__label {
+  font-weight: 600;
+  color: #1B7F52;
+}
+
+.v1-progress-item.is-muted.is-current .v1-progress-item__label {
+  color: #667085;
+}
+
+.v1-progress-item__time {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #667085;
+  line-height: 1.4;
+}
+
 /* Actions — 自定义行 / 三层 fallback */
 .v1-actions {
   margin: 32rpx 28rpx 0;

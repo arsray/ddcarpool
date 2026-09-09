@@ -1,0 +1,13 @@
+{
+  "name": "ddcarpool",
+  "private": true,
+  "description": "DD 蹭车小程序 — 本地集成测试",
+  "scripts": {
+    "test": "DD_CARPOOL_TEST=1 node --test tests/integration/*.test.js",
+    "test:all": "npm run test",
+    "test:p0": "DD_CARPOOL_TEST=1 node --test tests/integration/p0-flow.test.js",
+    "test:m1": "DD_CARPOOL_TEST=1 node --test tests/integration/m1-*.test.js",
+    "test:m3": "DD_CARPOOL_TEST=1 node --test tests/integration/m3-*.test.js tests/integration/p0-flow.test.js",
+    "test:e2e": "node tests/e2e/run-automator.js"
+  }
+}

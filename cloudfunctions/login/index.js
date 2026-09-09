@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk')
+const { findUserByWechatOpenId } = require('./common/account-id')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -11,13 +12,12 @@ exports.main = async () => {
       return { ok: false, code: 'NOT_AUTHENTICATED', message: '无法识别当前用户' }
     }
 
-    const result = await users.where({ openId: OPENID }).limit(1).get()
-    const user = result.data[0] || null
+    const user = await findUserByWechatOpenId(users, OPENID)
 
     return {
       ok: true,
       data: {
-        openId: OPENID,
+        openId: user ? user.openId : null,
         user: user ? sanitizeUser(user) : null
       }
     }

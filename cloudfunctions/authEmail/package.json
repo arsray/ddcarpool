@@ -1,0 +1,10 @@
+{
+  "name": "authEmail",
+  "version": "1.0.0",
+  "description": "M1 email verification send/verify (SMTP / Resend)",
+  "main": "index.js",
+  "dependencies": {
+    "nodemailer": "^6.9.16",
+    "wx-server-sdk": "~2.6.3"
+  }
+}
