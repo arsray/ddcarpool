@@ -1,15 +1,12 @@
-/** 预览 Mock 种子版本：改测试订单时递增，自动刷新本地缓存 */
-const MOCK_SEED_VERSION = 6
-
+/**
+ * M1 历史列表 UI 工具（Mock 离线模式）
+ * 订单数据来自真实 M3 本地存储或云端 API，不再注入写死种子单。
+ */
 const { STATUS } = require('./order-status')
 const { enrichOrderForList } = require('./order-display')
 
-const MOCK_PASSENGER_ORDERS = []
-
-const MOCK_OWNER_ORDERS = []
-
+/** 默认预览用户资料（仅 storage 缺失时的 fallback） */
 const MOCK = {
-  seedVersion: MOCK_SEED_VERSION,
   userInfo: {
     email: 'ray.gong@disney.com',
     displayName: 'Ray Gong',
@@ -28,18 +25,7 @@ const MOCK = {
     noteTags: ['携带大件行李'],
     note: ''
   },
-  habitTags: ['常早班', '常走西门'],
-  historyOwner: MOCK_OWNER_ORDERS,
-  historyPassenger: MOCK_PASSENGER_ORDERS,
-  notifications: []
-}
-
-function cloneSeedOrders() {
-  return {
-    historyOwner: JSON.parse(JSON.stringify(MOCK_OWNER_ORDERS)),
-    historyPassenger: JSON.parse(JSON.stringify(MOCK_PASSENGER_ORDERS)),
-    notifications: JSON.parse(JSON.stringify(MOCK.notifications))
-  }
+  habitTags: ['常早班', '常走西门']
 }
 
 function sortOrdersByTimeDesc(list) {
@@ -103,8 +89,6 @@ function formatOrderSubtitle(order, role) {
 
 module.exports = {
   MOCK,
-  MOCK_SEED_VERSION,
-  cloneSeedOrders,
   STATUS,
   formatOrderSubtitle,
   enrichOrder,

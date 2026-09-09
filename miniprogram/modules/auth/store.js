@@ -3,7 +3,7 @@
  * 正式接入云开发后，openId / userProfile 以云函数 login 为准
  */
 const { normalizeEmail } = require('./email')
-const { MOCK, MOCK_SEED_VERSION, cloneSeedOrders } = require('./mock')
+const { MOCK } = require('./mock')
 const {
   SNAPSHOT_STORAGE_KEY,
   findMockTestUser,
@@ -11,6 +11,13 @@ const {
   getMockTestUsers
 } = require('./mock-users')
 const { safeReLaunch, safeSwitchTab } = require('./nav')
+const { clearAllUserStorage } = require('./clear-storage')
+const {
+  writeSession,
+  clearSession,
+  isSessionValid,
+  SESSION_TTL_MS
+} = require('./session')
 
 function mockOpenId(email) {
   const normalized = normalizeEmail(email || '')
@@ -28,8 +35,8 @@ function toUserProfile(userInfo) {
   }
 }
 
-/** 订单列表仅来自 M3 本地订单，不再合并 M1 假数据 */
-function mergePassengerOrders(_seedPassenger, userInfo) {
+/** 合并 M3 本地订单到历史列表（无写死种子单） */
+function mergePassengerOrders(userInfo) {
   try {
     const openId = mockOpenId(userInfo && userInfo.email)
     if (!openId) return []
@@ -40,7 +47,7 @@ function mergePassengerOrders(_seedPassenger, userInfo) {
   }
 }
 
-function mergeOwnerOrders(_seedOwner, userInfo) {
+function mergeOwnerOrders(userInfo) {
   try {
     const openId = mockOpenId(userInfo && userInfo.email)
     if (!openId) return []
@@ -51,49 +58,54 @@ function mergeOwnerOrders(_seedOwner, userInfo) {
   }
 }
 
-function applyPreviewSeedOrders() {
-  const seed = cloneSeedOrders()
-  wx.setStorageSync('mockSeedVersion', MOCK_SEED_VERSION)
-  wx.setStorageSync('historyOwner', [])
-  wx.setStorageSync('historyPassenger', [])
-  wx.setStorageSync('notifications', seed.notifications)
-  return seed
-}
-
 function initFromStorage() {
-  const loggedIn = wx.getStorageSync('loggedIn')
-  if (!loggedIn) return getState()
+  const s = getState()
 
-  const state = getState()
-  state.userInfo = wx.getStorageSync('userInfo') || MOCK.userInfo
-  state.identities = wx.getStorageSync('identities') || []
-  state.onboardingComplete = wx.getStorageSync('onboardingComplete') || false
-  state.userMode = wx.getStorageSync('userMode') || 'owner'
-  state.vehicle = wx.getStorageSync('vehicle') || null
-  state.preference = wx.getStorageSync('preference') || null
-  if (state.preference && !state.preference.noteTags) {
-    state.preference = {
-      defaultCount: state.preference.defaultCount || 1,
-      noteTags: state.preference.note ? [state.preference.note] : [],
+  if (!isSessionValid()) {
+    s.userInfo = null
+    s.identities = []
+    s.onboardingComplete = false
+    s.userMode = 'owner'
+    s.vehicle = null
+    s.preference = null
+    s.habitTags = []
+    s.historyOwner = []
+    s.historyPassenger = []
+    s.notifications = []
+    return s
+  }
+
+  const loggedIn = wx.getStorageSync('loggedIn')
+  if (!loggedIn) return s
+
+  s.userInfo = wx.getStorageSync('userInfo') || MOCK.userInfo
+  s.identities = wx.getStorageSync('identities') || []
+  s.onboardingComplete = wx.getStorageSync('onboardingComplete') || false
+  s.userMode = wx.getStorageSync('userMode') || 'owner'
+  s.vehicle = wx.getStorageSync('vehicle') || null
+  s.preference = wx.getStorageSync('preference') || null
+  if (s.preference && !s.preference.noteTags) {
+    s.preference = {
+      defaultCount: s.preference.defaultCount || 1,
+      noteTags: s.preference.note ? [s.preference.note] : [],
       note: ''
     }
-    wx.setStorageSync('preference', state.preference)
+    wx.setStorageSync('preference', s.preference)
   }
-  state.habitTags = wx.getStorageSync('habitTags') || []
+  s.habitTags = wx.getStorageSync('habitTags') || []
 
-  const seed = applyPreviewSeedOrders()
-  state.historyOwner = mergeOwnerOrders(seed.historyOwner, state.userInfo)
-  state.historyPassenger = mergePassengerOrders(seed.historyPassenger, state.userInfo)
-  state.notifications = wx.getStorageSync('notifications') || seed.notifications
+  s.historyOwner = mergeOwnerOrders(s.userInfo)
+  s.historyPassenger = mergePassengerOrders(s.userInfo)
+  s.notifications = wx.getStorageSync('notifications') || []
 
-  if (!state.identities.length && state.onboardingComplete === false && state.vehicle) {
-    state.identities = ['owner']
-    state.onboardingComplete = true
-    wx.setStorageSync('identities', state.identities)
+  if (!s.identities.length && s.onboardingComplete === false && s.vehicle) {
+    s.identities = ['owner']
+    s.onboardingComplete = true
+    wx.setStorageSync('identities', s.identities)
     wx.setStorageSync('onboardingComplete', true)
   }
 
-  return state
+  return s
 }
 
 const state = {
@@ -114,7 +126,8 @@ function getState() {
 }
 
 function isLoggedIn() {
-  return !!wx.getStorageSync('loggedIn') && !!state.userInfo
+  if (!isSessionValid()) return false
+  return !!state.userInfo
 }
 
 function getOpenId() {
@@ -143,14 +156,24 @@ function syncGlobalData(globalData) {
 
 function loginWithEmail(email) {
   const normalized = normalizeEmail(email)
+  const snapshots = readUserSnapshots()
   const stored = wx.getStorageSync('userInfo')
   const isReturning = stored && stored.email === normalized
 
-  if (isReturning) {
-    wx.setStorageSync('loggedIn', true)
+  if (snapshots[normalized]) {
+    applyUserSnapshot(snapshots[normalized])
+    writeSession(normalized)
     initFromStorage()
     return
   }
+
+  if (isReturning) {
+    writeSession(normalized)
+    initFromStorage()
+    return
+  }
+
+  clearAllUserStorage()
 
   const userInfo = {
     email: normalized,
@@ -159,8 +182,8 @@ function loginWithEmail(email) {
     department: ''
   }
 
-  wx.setStorageSync('loggedIn', true)
   wx.setStorageSync('userInfo', userInfo)
+  writeSession(normalized)
   wx.setStorageSync('identities', [])
   wx.setStorageSync('onboardingComplete', false)
   wx.setStorageSync('userMode', 'owner')
@@ -180,11 +203,22 @@ function routeAfterLogin() {
 }
 
 function logout() {
-  wx.removeStorageSync('loggedIn')
-  wx.removeStorageSync('userInfo')
-  state.userInfo = null
-  state.identities = []
-  state.onboardingComplete = false
+  saveCurrentUserSnapshot()
+  clearSession()
+  clearAllUserStorage()
+  Object.assign(state, {
+    openId: null,
+    userInfo: null,
+    identities: [],
+    onboardingComplete: false,
+    userMode: 'owner',
+    vehicle: null,
+    preference: null,
+    habitTags: [],
+    historyOwner: [],
+    historyPassenger: [],
+    notifications: []
+  })
 }
 
 function setUserMode(mode) {
@@ -271,8 +305,8 @@ function saveCurrentUserSnapshot() {
 }
 
 function applyUserSnapshot(snapshot) {
-  wx.setStorageSync('loggedIn', true)
   wx.setStorageSync('userInfo', snapshot.userInfo)
+  writeSession(snapshot.userInfo && snapshot.userInfo.email)
   wx.setStorageSync('identities', snapshot.identities || [])
   wx.setStorageSync('onboardingComplete', !!snapshot.onboardingComplete)
   wx.setStorageSync('userMode', snapshot.userMode || 'owner')
@@ -337,5 +371,5 @@ module.exports = {
   getMissingIdentity,
   getMockTestUsers,
   switchMockUser,
-  applyPreviewSeedOrders
+  SESSION_TTL_MS
 }

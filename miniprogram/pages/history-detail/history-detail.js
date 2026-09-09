@@ -8,8 +8,10 @@ Page({
       wx.showToast({ title: '缺少订单 ID', icon: 'none' })
       return
     }
+    const role = options.role || 'owner'
+    const from = options.from ? `&from=${options.from}` : '&from=history'
     wx.redirectTo({
-      url: `/pages/detail/detail?orderId=${orderId}&from=history`
+      url: `/pages/detail/detail?orderId=${orderId}&role=${role}${from}`
     })
   }
 })

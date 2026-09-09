@@ -7,6 +7,7 @@ const {
   FILTER_TABS,
   prepareOrderList
 } = require('../../modules/auth/mock')
+const { syncAppRole } = require('../../modules/auth/plaza-tab')
 
 const NAV_TITLE = {
   passenger: '乘车人订单',
@@ -33,8 +34,19 @@ Page({
   async onShow() {
     if (!auth.requireLogin()) return
     app._syncAuth()
-    this.initRole(this.data.role)
+    this.updateRoleTabs()
     await this.loadList()
+  },
+
+  updateRoleTabs() {
+    const identities = app.globalData.identities || []
+    const hasOwner = identities.includes('owner')
+    const hasPassenger = identities.includes('passenger')
+    this.setData({
+      showOwnerTab: hasOwner,
+      showPassengerTab: hasPassenger,
+      showRoleTabs: hasOwner && hasPassenger
+    })
   },
 
   initRole(roleFromRoute) {
@@ -85,8 +97,16 @@ Page({
   },
 
   async switchRole(e) {
-    this.setData({ role: e.currentTarget.dataset.role, filter: '全部' })
-    await this.loadList()
+    const role = e.currentTarget.dataset.role
+    if (role === this.data.role) return
+    try {
+      await syncAppRole(role)
+      this.setData({ role, filter: '全部' })
+      wx.setNavigationBarTitle({ title: role === 'owner' ? NAV_TITLE.owner : NAV_TITLE.passenger })
+      await this.loadList()
+    } catch (error) {
+      wx.showToast({ title: '切换失败，请重试', icon: 'none' })
+    }
   },
 
   async onFilter(e) {
@@ -96,7 +116,7 @@ Page({
 
   goDetail(e) {
     wx.navigateTo({
-      url: `/pages/detail/detail?orderId=${e.currentTarget.dataset.id}&from=history`
+      url: `/pages/detail/detail?orderId=${e.currentTarget.dataset.id}&from=history&role=${this.data.role}`
     })
   }
 })

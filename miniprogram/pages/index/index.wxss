@@ -157,6 +157,28 @@
   box-sizing: border-box;
 }
 
+.v1-owner-page.container.tab-page {
+  padding-top: 8rpx;
+}
+
+.v1-page-head {
+  margin-bottom: 16rpx;
+}
+
+.v1-page-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.v1-page-sub {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #98A2B3;
+  line-height: 1.4;
+}
+
 .v1-filter-head {
   display: flex;
   align-items: center;
@@ -175,7 +197,7 @@
   flex-shrink: 0;
   font-size: 24rpx;
   font-weight: 400;
-  color: #003087;
+  color: var(--role-owner);
 }
 
 .v1-filter-sub {

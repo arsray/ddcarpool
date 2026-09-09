@@ -6,40 +6,24 @@
   box-sizing: border-box;
 }
 
-/* Role segmented control */
-.v1-seg {
-  display: flex;
-  height: 68rpx;
-  padding: 4rpx;
-  margin-bottom: 16rpx;
-  background: #EEF1F6;
-  border-radius: 999rpx;
-  box-sizing: border-box;
-}
+/* Role segmented control — see styles/role-theme.wxss */
 
-.v1-seg-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  font-weight: 400;
-  color: #667085;
-  line-height: 1.2;
-}
-
-.v1-seg-item.on,
-.v1-seg-item.on.owner,
-.v1-seg-item.on.passenger {
-  background: #EAF1FB;
-  color: #003087;
+.v1-history-page.is-owner .v1-filter-item.on {
+  background: var(--role-owner-bg);
+  border-color: var(--role-owner-bg);
+  color: var(--role-owner);
   font-weight: 600;
 }
 
-.v1-seg-item:active {
-  opacity: 0.85;
+.v1-history-page.is-passenger .v1-filter-item.on {
+  background: var(--role-passenger-bg);
+  border-color: var(--role-passenger-bg);
+  color: var(--role-passenger);
+  font-weight: 600;
+}
+
+.v1-role-chip {
+  margin-bottom: 16rpx;
 }
 
 /* Status filter chips */
@@ -63,9 +47,6 @@
 }
 
 .v1-filter-item.on {
-  background: #EAF1FB;
-  border-color: #EAF1FB;
-  color: #003087;
   font-weight: 600;
 }
 
@@ -143,8 +124,8 @@
 
 .v1-status.status-wait,
 .v1-status.status-ing {
-  background: #EAF1FB;
-  color: #003087;
+  background: var(--role-owner-bg);
+  color: var(--role-owner);
 }
 
 .v1-status.status-done {

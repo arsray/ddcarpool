@@ -4,6 +4,7 @@ const order = require('../../modules/order/index')
 const chat = require('../../modules/chat/index')
 const { formatDateLabel } = require('../../modules/order/history-bridge')
 const { formatHistoryTimeLabel, parseDepartTime } = require('../../modules/order/time-slots')
+const { buildOrderProgress } = require('../../modules/order/order-progress')
 const { buildDetailViewModel } = require('./detail-view-model')
 const { buildDriverCard } = require('../../modules/order/driver-vehicle')
 const {
@@ -24,6 +25,21 @@ const HEADER_WATERMARKS = {
 
 function resolveHeaderWatermark(status) {
   return HEADER_WATERMARKS[status] || HEADER_WATERMARKS.matching
+}
+
+function resolveViewerPerspective(item, openId, roleHint) {
+  if (roleHint === 'passenger' && item.passengerOpenId === openId) {
+    return { isPassenger: true, isAssignedDriver: false }
+  }
+  if (roleHint === 'owner' && item.driverOpenId === openId) {
+    return { isPassenger: false, isAssignedDriver: true }
+  }
+
+  const isPassenger = item.viewerRole === 'passenger' ||
+    (!item.viewerRole && item.passengerOpenId === openId)
+  const isAssignedDriver = item.viewerRole === 'driver' ||
+    (!item.viewerRole && item.driverOpenId === openId)
+  return { isPassenger, isAssignedDriver }
 }
 
 Page({
@@ -53,19 +69,23 @@ Page({
     cancelKind: '',
     fromPlaza: false,
     fromHistory: false,
-    headerWatermark: HEADER_WATERMARKS.matching
+    roleHint: '',
+    headerWatermark: HEADER_WATERMARKS.matching,
+    progressSteps: []
   },
 
   onLoad(options) {
     this.setData({
       orderId: options.orderId || options.id || '',
       fromPlaza: options.from === 'plaza',
-      fromHistory: options.from === 'history'
+      fromHistory: options.from === 'history',
+      roleHint: options.role || ''
     })
   },
 
   onShow() {
     if (!auth.requireLogin()) return
+    this.setData({ submitting: false })
     this.loadOrder()
   },
 
@@ -87,10 +107,11 @@ Page({
       }
 
       const openId = app.globalData.openId || (await auth.ensureLogin())
-      const isPassenger = item.viewerRole === 'passenger' ||
-        (!item.viewerRole && item.passengerOpenId === openId)
-      const isAssignedDriver = item.viewerRole === 'driver' ||
-        (!item.viewerRole && item.driverOpenId === openId)
+      const { isPassenger, isAssignedDriver } = resolveViewerPerspective(
+        item,
+        openId,
+        this.data.roleHint
+      )
       const hasOwnerIdentity = app.hasIdentity('owner')
       const canAccept =
         item.status === order.ORDER_STATUS.MATCHING &&
@@ -98,13 +119,8 @@ Page({
         hasOwnerIdentity &&
         !item.driverOpenId &&
         item.viewerRole !== 'passenger'
-      const canComplete =
-        isAssignedDriver &&
-        (item.status === order.ORDER_STATUS.PENDING_DEPARTURE ||
-          item.status === order.ORDER_STATUS.IN_PROGRESS)
-      const canStart =
-        isAssignedDriver &&
-        item.status === order.ORDER_STATUS.PENDING_DEPARTURE
+      const canComplete = false
+      const canStart = false
       const canChat = chat.canEnterChat(item, openId)
       const cancelKind = resolveCancelAction(item, openId, { isPassenger, isAssignedDriver })
       const routeLabel = order.formatRoute(item.fromPointId, item.toPointId)
@@ -148,7 +164,8 @@ Page({
         canComplete,
         canCancel: !!cancelKind,
         cancelKind: cancelKind || '',
-        headerWatermark: resolveHeaderWatermark(item.status)
+        headerWatermark: resolveHeaderWatermark(item.status),
+        progressSteps: buildOrderProgress(item)
       })
     } catch (error) {
       this.setData({ loading: false, order: null, actions: [] })
@@ -169,7 +186,6 @@ Page({
       cancel_passenger: () => this.onCancel(),
       cancel_driver: () => this.onCancel(),
       chat: () => this.goChat(),
-      history: () => this.goHistory(),
       plaza: () => this.backToPlaza()
     }
     const handler = handlers[action]
@@ -220,15 +236,6 @@ Page({
     } finally {
       this.setData({ submitting: false })
     }
-  },
-
-  goHistory() {
-    if (this.data.fromHistory) {
-      wx.navigateBack()
-      return
-    }
-    const role = this.data.isPassenger ? 'passenger' : 'owner'
-    wx.navigateTo({ url: `/pages/history/history?role=${role}` })
   },
 
   goChat() {

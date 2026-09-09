@@ -1,5 +1,10 @@
-// SECURITY-REVIEW: 用户资料仅通过可信微信 OPENID 读写，外部输入按字段白名单校验。
+// SECURITY-REVIEW: 用户资料以邮箱账号 ID 为主键；微信 OpenID 仅作设备会话标记。
 const cloud = require('wx-server-sdk')
+const {
+  emailToAccountId,
+  findUserByEmail,
+  findUserByWechatOpenId
+} = require('./common/account-id')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -96,17 +101,17 @@ function sanitizePatch(input) {
 
 function sanitizeUser(user) {
   if (!user) return null
-  const { _id, _openid, ...safe } = user
+  const { _id, _openid, lastWechatOpenId, ...safe } = user
   return safe
 }
 
-async function findUser(openId) {
-  const response = await users.where({ openId }).limit(1).get()
+async function findUser(accountId) {
+  const response = await users.where({ openId: accountId }).limit(1).get()
   return response.data[0] || null
 }
 
-async function createOrUpdate(openId, patch) {
-  const existing = await findUser(openId)
+async function createOrUpdate(accountId, patch) {
+  const existing = await findUser(accountId)
   const now = db.serverDate()
   if (existing) {
     const update = { ...patch, updatedAt: now }
@@ -120,7 +125,7 @@ async function createOrUpdate(openId, patch) {
   } else {
     await users.add({
       data: {
-        openId,
+        openId: accountId,
         email: '',
         emailVerified: false,
         emailVerificationMode: '',
@@ -135,13 +140,18 @@ async function createOrUpdate(openId, patch) {
         vehicle: null,
         preference: null,
         habitTags: [],
+        lastWechatOpenId: '',
         ...patch,
         createdAt: now,
         updatedAt: now
       }
     })
   }
-  return sanitizeUser(await findUser(openId))
+  return sanitizeUser(await findUser(accountId))
+}
+
+async function resolveSessionUser(wechatOpenId) {
+  return findUserByWechatOpenId(users, wechatOpenId)
 }
 
 exports.main = async (event) => {
@@ -151,22 +161,36 @@ exports.main = async (event) => {
 
     const action = event && event.action
     if (action === 'get') {
-      return result(sanitizeUser(await findUser(OPENID)))
+      const sessionUser = await resolveSessionUser(OPENID)
+      return result(sanitizeUser(sessionUser))
     }
 
     if (action === 'bindMockEmail') {
       const email = normalizeEmail(event.email)
-      return result(await createOrUpdate(OPENID, {
+      const accountId = emailToAccountId(email)
+      const existing = await findUserByEmail(users, email)
+      const stableAccountId = existing && existing.openId ? existing.openId : accountId
+
+      return result(await createOrUpdate(stableAccountId, {
+        openId: stableAccountId,
         email,
         emailVerified: false,
         emailVerificationMode: 'mock',
         displayName: cleanString(event.displayName, 40) || email.split('@')[0],
-        nickName: cleanString(event.displayName, 40) || email.split('@')[0]
+        nickName: cleanString(event.displayName, 40) || email.split('@')[0],
+        lastWechatOpenId: OPENID
       }))
     }
 
     if (action === 'updateProfile') {
-      return result(await createOrUpdate(OPENID, sanitizePatch(event.patch || {})))
+      const sessionUser = await resolveSessionUser(OPENID)
+      if (!sessionUser || !sessionUser.openId) {
+        return failure('NOT_LOGGED_IN', '请先完成邮箱登录')
+      }
+      return result(await createOrUpdate(sessionUser.openId, {
+        ...sanitizePatch(event.patch || {}),
+        lastWechatOpenId: OPENID
+      }))
     }
 
     return failure('INVALID_ACTION', '不支持的用户操作')

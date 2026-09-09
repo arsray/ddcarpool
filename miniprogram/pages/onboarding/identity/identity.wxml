@@ -13,7 +13,7 @@
     <view class="v1-role-mark v1-role-mark--owner"></view>
     <view class="v1-role-main">
       <view class="v1-role-name">我是车主</view>
-      <view class="v1-role-desc">发布发车单，顺路带同事</view>
+      <view class="v1-role-desc">浏览广场接单，顺路带同事</view>
     </view>
     <view class="v1-check" wx:if="{{selected === 'owner'}}">✓</view>
   </view>

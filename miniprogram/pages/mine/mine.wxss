@@ -24,11 +24,19 @@
   line-height: 88rpx;
   margin-right: 16rpx;
   border-radius: 50%;
-  background: #003087;
   color: #FFFFFF;
-  font-size: 32rpx;
+  font-size: 28rpx;
   font-weight: 600;
+  letter-spacing: 1rpx;
   text-align: center;
+}
+
+.v1-profile-avatar--owner {
+  background: var(--role-owner);
+}
+
+.v1-profile-avatar--passenger {
+  background: var(--role-passenger);
 }
 
 .v1-profile-main {
@@ -46,15 +54,72 @@
   white-space: nowrap;
 }
 
+.v1-profile-mode {
+  display: inline-block;
+  margin-top: 8rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.v1-profile-mode--owner {
+  background: var(--role-owner-bg);
+  color: var(--role-owner);
+}
+
+.v1-profile-mode--passenger {
+  background: var(--role-passenger-bg);
+  color: var(--role-passenger);
+}
+
 .v1-profile-ids {
-  margin-top: 4rpx;
+  margin-top: 8rpx;
   font-size: 22rpx;
   font-weight: 400;
-  color: #667085;
   line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.v1-id-tag {
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.v1-id-tag--owner {
+  color: var(--role-owner);
+}
+
+.v1-id-tag--passenger {
+  color: var(--role-passenger);
+}
+
+.v1-id-tag--owner.is-active {
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: var(--role-owner);
+  color: #FFFFFF;
+}
+
+.v1-id-tag--passenger.is-active {
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: var(--role-passenger);
+  color: #FFFFFF;
+}
+
+.v1-id-tag.is-tappable {
+  opacity: 0.72;
+}
+
+.v1-id-tag.is-tappable:active {
+  opacity: 1;
+}
+
+.v1-id-dot {
+  margin: 0 4rpx;
+  color: #D0D5DD;
 }
 
 .v1-profile-action {

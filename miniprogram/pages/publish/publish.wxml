@@ -4,7 +4,7 @@
   </block>
 
   <block wx:elif="{{!hasPassengerIdentity}}">
-    <view class="v1-role-badge">乘客</view>
+    <view class="v1-role-badge" wx:if="{{false}}">乘客</view>
     <view class="v1-empty-card">
       <view class="v1-empty-title">需要乘车人身份</view>
       <view class="v1-empty-desc">搭车单由乘客发布，请先添加乘车人身份并设置偏好。</view>
@@ -14,10 +14,10 @@
   </block>
 
   <block wx:else>
-    <view class="v1-role-badge">乘客</view>
+    <view class="v1-role-badge" wx:if="{{false}}">乘客</view>
 
-    <view class="v1-page-head">
-      <view class="v1-page-title">发布我的行程</view>
+    <view class="v1-page-head v1-role-accent-bar--passenger">
+      <view class="v1-page-title v1-role-title--passenger">发布我的行程</view>
       <view class="v1-page-sub">填写出发信息，发布搭车需求</view>
     </view>
 

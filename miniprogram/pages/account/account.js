@@ -5,7 +5,6 @@ const { safeSwitchTab } = require('../../modules/auth/nav')
 Page({
   data: {
     userInfo: {},
-    phoneText: '未绑定 · 可选',
     identitySummary: '',
     mockUsers: [],
     currentEmail: ''
@@ -23,7 +22,6 @@ Page({
     const labels = identities.map((role) => (role === 'owner' ? '车主' : '乘车人'))
     this.setData({
       userInfo: u,
-      phoneText: u.phone || '未绑定 · 可选',
       identitySummary: labels.length ? labels.join('、') : '未设置',
       mockUsers: app.listMockTestUsers(),
       currentEmail: u.email || ''
@@ -35,7 +33,7 @@ Page({
   },
 
   viewAgreement() {
-    wx.showToast({ title: '协议预览占位', icon: 'none' })
+    wx.navigateTo({ url: '/pages/agreement/agreement' })
   },
 
   onSwitchMockUser(e) {

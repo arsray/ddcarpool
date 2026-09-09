@@ -590,7 +590,7 @@ module.exports.splitNote = splitNote;
   class="container tab-page v1-owner-page {{acceptModalVisible ? 'page-locked' : ''}}"
 >
 
-  <view class="v1-role-badge">车主</view>
+  <view class="v1-role-badge" wx:if="{{false}}">车主</view>
 
   <view class="v1-notice" wx:if="{{false}}">
     <view class="v1-notice-scroll">
@@ -599,6 +599,11 @@ module.exports.splitNote = splitNote;
         <text class="v1-notice-text">{{noticeText}}</text>
       </view>
     </view>
+  </view>
+
+  <view class="v1-page-head v1-role-accent-bar--owner">
+    <view class="v1-page-title v1-role-title--owner">顺路接单</view>
+    <view class="v1-page-sub">筛选出发信息，匹配顺路订单</view>
   </view>
 
   <view class="v1-accepted-section" wx:if="{{hasOwnerIdentity && !isPassengerOnly && !loading && acceptedOrders.length}}">
@@ -635,7 +640,7 @@ module.exports.splitNote = splitNote;
 
   <view class="v1-filter-panel" wx:if="{{hasOwnerIdentity && !isPassengerOnly && !loading}}">
     <view class="v1-filter-head">
-      <text class="v1-filter-title">筛选</text>
+      <text class="v1-filter-title v1-role-title--owner">筛选</text>
       <text class="v1-filter-reset" wx:if="{{hasActiveFilters}}" bindtap="onResetFilters">清除</text>
     </view>
     <view class="v1-filter-sub">选择出发信息，匹配顺路订单</view>
@@ -717,8 +722,7 @@ module.exports.splitNote = splitNote;
 
   <block wx:elif="{{isPassengerOnly}}">
     <view class="v1-empty">
-      <view>当前为乘车人身份，无法在广场接单</view>
-      <button class="v1-btn-secondary" bindtap="goPublish">去发布搭车单</button>
+      <view>当前为乘车人身份，无法接单</view>
       <button class="v1-btn-secondary v1-btn-secondary--ghost" bindtap="goAddOwnerIdentity">添加车主身份</button>
     </view>
   </block>
@@ -756,7 +760,6 @@ module.exports.splitNote = splitNote;
 
       <view class="v1-empty v1-empty--compact" wx:elif="{{!acceptedOrders.length}}">
         <view>暂无匹配中订单</view>
-        <button class="v1-btn-secondary" bindtap="goPublish">去发布搭车单</button>
       </view>
 
       <view class="v1-list-end" wx:if="{{acceptedOrders.length || allOrders.length}}">～已经到底啦～</view>

@@ -119,6 +119,27 @@ module.exports.splitNote = splitNote
       </view>
     </view>
 
+    <view class="v1-progress-card" wx:if="{{progressSteps.length}}">
+      <text class="v1-progress-card__title">订单进度</text>
+      <view class="v1-progress-list">
+        <view
+          class="v1-progress-item {{item.isCurrent ? 'is-current' : ''}} {{item.tone === 'muted' ? 'is-muted' : ''}}"
+          wx:for="{{progressSteps}}"
+          wx:key="label"
+          wx:for-index="index"
+        >
+          <view class="v1-progress-item__track">
+            <view class="v1-progress-item__dot"></view>
+            <view class="v1-progress-item__line" wx:if="{{index < progressSteps.length - 1}}"></view>
+          </view>
+          <view class="v1-progress-item__content">
+            <text class="v1-progress-item__label">{{item.label}}</text>
+            <text class="v1-progress-item__time">{{item.time}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view class="v1-actions" wx:if="{{actions.length}}">
       <block wx:if="{{actionRows.length}}">
         <view

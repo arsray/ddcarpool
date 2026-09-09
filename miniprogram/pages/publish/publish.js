@@ -1,5 +1,6 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
+const { ensureCorrectPlazaPage } = require('../../modules/auth/plaza-tab')
 const order = require('../../modules/order/index')
 const notification = require('../../modules/notification/index')
 const { PREFERENCE_NOTE_TAGS } = require('../../modules/auth/vehicle-data')
@@ -9,6 +10,7 @@ const {
   formatDepartTimeForStorage
 } = require('../../modules/order/time-slots')
 const { filterPoints, getPointDisplayName } = require('../../modules/order/point-search')
+const { consumeRepublishDraft, applyRepublishDraft } = require('../../modules/order/republish-draft')
 
 const COUNT_RANGE = Array.from({ length: 10 }, (_, index) => index + 1)
 
@@ -111,7 +113,10 @@ Page({
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 })
+      this.getTabBar().setData({ selected: 0 })
+      if (typeof this.getTabBar().refreshPlaza === 'function') {
+        this.getTabBar().refreshPlaza()
+      }
     }
     notification.syncTabBarBadgeFromApp()
     if (!auth.requireLogin()) return
@@ -120,6 +125,8 @@ Page({
       this.refreshPreferenceFields()
       return
     }
+    app._syncAuth()
+    ensureCorrectPlazaPage()
     this.bootstrap()
   },
 
@@ -148,36 +155,60 @@ Page({
 
     try {
       const preference = readPassengerPreference()
-      const selectedNoteMap = buildSelectedNoteMap(preference.noteTags)
-      const supplementNote = preference.note || ''
+      const republishDraft = consumeRepublishDraft()
+      let selectedNoteMap = buildSelectedNoteMap(preference.noteTags)
+      let supplementNote = preference.note || ''
+      let countIndex = Math.max(0, (preference.defaultCount || 1) - 1)
+
       const points = await order.listPoints()
       const { values: dateValues, labels: dateLabels } = buildDatePickerOptions(new Date())
-      const countIndex = Math.max(0, (preference.defaultCount || 1) - 1)
       const schedule = pickInitialSchedule(dateValues, new Date())
       const slotState = buildSlotViewState(schedule.date, new Date())
 
-      this.setData({
+      let fromIndex = -1
+      let toIndex = -1
+      let hasSelectedFrom = false
+      let hasSelectedTo = false
+      let fromPointId = ''
+      let toPointId = ''
+
+      const republish = applyRepublishDraft(republishDraft, points, COUNT_RANGE)
+      if (republish) {
+        fromIndex = republish.fromIndex
+        toIndex = republish.toIndex
+        hasSelectedFrom = republish.hasSelectedFrom
+        hasSelectedTo = republish.hasSelectedTo
+        fromPointId = republish.fromPointId
+        toPointId = republish.toPointId
+        countIndex = republish.countIndex
+        selectedNoteMap = republish.selectedNoteMap
+        supplementNote = republish.supplementNote
+      }
+
+      const nextData = {
         points,
         dateValues,
         dateLabels,
         dateIndex: schedule.dateIndex,
         countIndex,
-        fromIndex: -1,
-        toIndex: -1,
-        fromQuery: '',
-        toQuery: '',
+        fromIndex,
+        toIndex,
+        fromQuery: hasSelectedFrom ? getPointDisplayName(points, fromPointId) : '',
+        toQuery: hasSelectedTo ? getPointDisplayName(points, toPointId) : '',
         fromSuggestions: filterPoints(points, ''),
         toSuggestions: filterPoints(points, ''),
         fromDropdownOpen: false,
         toDropdownOpen: false,
-        hasSelectedFrom: false,
-        hasSelectedTo: false,
-        routePreview: '',
+        hasSelectedFrom,
+        hasSelectedTo,
+        routePreview: hasSelectedFrom && hasSelectedTo
+          ? order.formatRoute(fromPointId, toPointId, points)
+          : '',
         selectedNoteMap,
         ...slotState,
         form: {
-          fromPointId: '',
-          toPointId: '',
+          fromPointId,
+          toPointId,
           date: schedule.date,
           timeWindow: slotState.formTimeWindow,
           passengerCount: COUNT_RANGE[countIndex],
@@ -185,7 +216,9 @@ Page({
         },
         noteLength: supplementNote.length,
         loading: false
-      })
+      }
+
+      this.setData(nextData, () => this.refreshRoutePreview())
     } catch (error) {
       this.setData({ loading: false })
       wx.showToast({ title: '加载失败，请重试', icon: 'none' })
@@ -422,7 +455,20 @@ Page({
   },
 
   goAddPassengerIdentity() {
-    wx.navigateTo({ url: '/pages/onboarding/identity/identity?mode=add' })
+    wx.showModal({
+      title: '添加乘车人身份',
+      content: '添加后可在「我的」中切换乘车人模式，是否继续？',
+      confirmText: '添加',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await app.addIdentity('passenger')
+          wx.navigateTo({ url: '/pages/preference/preference?setup=1' })
+        } catch (error) {
+          wx.showToast({ title: '添加身份失败，请重试', icon: 'none' })
+        }
+      }
+    })
   },
 
   goPreference() {
@@ -478,7 +524,7 @@ Page({
 
       wx.showToast({ title: '发布成功', icon: 'success' })
       setTimeout(() => {
-        wx.navigateTo({ url: `/pages/detail/detail?orderId=${created._id}` })
+        wx.navigateTo({ url: `/pages/detail/detail?orderId=${created._id}&role=passenger` })
       }, 400)
     } catch (error) {
       const messageMap = {

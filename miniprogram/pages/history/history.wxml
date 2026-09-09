@@ -1,16 +1,18 @@
-<view class="v1-history-page container">
-  <view class="v1-seg" wx:if="{{showRoleTabs}}">
+<view class="v1-history-page container {{role === 'owner' ? 'is-owner' : 'is-passenger'}}">
+  <view class="v1-role-seg" wx:if="{{showRoleTabs}}">
     <view
-      class="v1-seg-item {{role==='passenger'?'on passenger':''}}"
-      data-role="passenger"
-      bindtap="switchRole"
-    >乘车人订单</view>
-    <view
-      class="v1-seg-item {{role==='owner'?'on owner':''}}"
+      class="v1-role-seg-item {{role==='owner'?'on owner':''}}"
       data-role="owner"
       bindtap="switchRole"
     >车主订单</view>
+    <view
+      class="v1-role-seg-item {{role==='passenger'?'on passenger':''}}"
+      data-role="passenger"
+      bindtap="switchRole"
+    >乘车人订单</view>
   </view>
+  <view wx:elif="{{showOwnerTab && !showPassengerTab}}" class="v1-role-chip v1-role-chip--owner">车主订单</view>
+  <view wx:elif="{{showPassengerTab && !showOwnerTab}}" class="v1-role-chip v1-role-chip--passenger">乘车人订单</view>
 
   <view class="v1-filter">
     <text
@@ -33,7 +35,6 @@
       <view class="v1-order-main">
         <view class="v1-order-top">
           <view class="v1-order-route">{{item.from}} → {{item.to}}</view>
-          <text class="v1-source" wx:if="{{item.sourceTag}}">{{item.sourceTag}}</text>
         </view>
         <view class="v1-order-meta">
           <text class="v1-status {{item.statusClass}}">{{item.status}}</text>

@@ -6,6 +6,10 @@
   box-sizing: border-box;
 }
 
+.v1-role-chip {
+  margin-bottom: 16rpx;
+}
+
 .v1-page-head {
   margin-bottom: 16rpx;
 }

@@ -57,6 +57,51 @@ function nowIso() {
   return new Date().toISOString()
 }
 
+const AUTO_START_LEAD_MS = 15 * 60 * 1000
+const AUTO_COMPLETE_AFTER_MS = 30 * 60 * 1000
+
+function autoAdvanceOrdersInMemory(orders) {
+  const now = Date.now()
+  let changed = false
+
+  const next = orders.map((order) => {
+    if (
+      order.status === ORDER_STATUS.PENDING_DEPARTURE &&
+      order.driverOpenId &&
+      order.departTimeAt
+    ) {
+      const departAt = new Date(order.departTimeAt).getTime()
+      if (!Number.isNaN(departAt) && now >= departAt - AUTO_START_LEAD_MS) {
+        changed = true
+        return {
+          ...order,
+          status: ORDER_STATUS.IN_PROGRESS,
+          startedAt: nowIso(),
+          updatedAt: nowIso()
+        }
+      }
+    }
+
+    if (order.status === ORDER_STATUS.IN_PROGRESS && order.startedAt) {
+      const startedAt = new Date(order.startedAt).getTime()
+      if (!Number.isNaN(startedAt) && now >= startedAt + AUTO_COMPLETE_AFTER_MS) {
+        changed = true
+        return {
+          ...order,
+          status: ORDER_STATUS.COMPLETED,
+          completedAt: nowIso(),
+          updatedAt: nowIso()
+        }
+      }
+    }
+
+    return order
+  })
+
+  if (changed) writeAllOrders(next)
+  return next
+}
+
 function expireStaleOrdersInMemory(orders) {
   const now = Date.now()
   let changed = false
@@ -67,7 +112,7 @@ function expireStaleOrdersInMemory(orders) {
     return false
   })
 
-  const next = withoutClones.map((order) => {
+  const expired = withoutClones.map((order) => {
     if (order.status !== ORDER_STATUS.MATCHING) return order
     const windowEnd = getDepartWindowEnd(order)
     if (!windowEnd || windowEnd.getTime() > now) return order
@@ -81,8 +126,8 @@ function expireStaleOrdersInMemory(orders) {
     }
   })
 
-  if (changed) writeAllOrders(next)
-  return next
+  if (changed) writeAllOrders(expired)
+  return autoAdvanceOrdersInMemory(changed ? expired : withoutClones)
 }
 
 function saveOrder(order) {

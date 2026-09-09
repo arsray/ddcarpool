@@ -29,7 +29,6 @@
 .v1-page-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1F2937;
   line-height: 1.35;
 }
 

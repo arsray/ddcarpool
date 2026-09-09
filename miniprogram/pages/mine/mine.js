@@ -1,10 +1,15 @@
 const app = getApp()
 const auth = require('../../modules/auth/index')
+const order = require('../../modules/order/index')
 const { getOngoingOrders } = require('../../modules/auth/mock')
 const { formatPreferenceSummary } = require('../../modules/auth/vehicle-data')
+const { initialsFromEmailLocalPart } = require('../../modules/auth/email')
 const { safeReLaunch, isTopPage } = require('../../modules/auth/nav')
+const { notificationMatchesRole, ensureCorrectPlazaPage, syncAppRole } = require('../../modules/auth/plaza-tab')
 const config = require('../../config/index')
 const notification = require('../../modules/notification/index')
+
+const ONGOING_CLOUD = ['matching', 'pending_departure', 'in_progress']
 
 Page({
   data: {
@@ -19,13 +24,14 @@ Page({
     preference: {},
     habitSummary: '',
     unfinishedCount: 0,
+    unfinishedLabel: '车主未完成订单',
     unreadCount: 0,
-    avatarLetter: 'J'
+    avatarInitials: 'U'
   },
 
   async onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 3 })
+      this.getTabBar().setData({ selected: 2 })
     }
     notification.syncTabBarBadgeFromApp()
     if (!isTopPage('pages/mine/mine')) return
@@ -38,16 +44,10 @@ Page({
         wx.showToast({ title: '个人资料加载失败', icon: 'none' })
       }
       try {
-        app.globalData.cloudOrders = await auth.listMyOrders()
+        await this.reloadCloudOrders()
       } catch (error) {
         console.warn('[mine] orders load failed', error)
         wx.showToast({ title: '订单加载失败', icon: 'none' })
-      }
-      try {
-        await notification.refreshNotifications()
-      } catch (error) {
-        console.warn('[mine] notifications load failed', error)
-        notification.applyNotifications([])
       }
     }
     app._syncAuth()
@@ -58,17 +58,37 @@ Page({
     this.refresh()
   },
 
+  async reloadCloudOrders() {
+    const openId = await auth.ensureLogin()
+    const role = app.globalData.userMode === 'owner' ? 'driver' : 'passenger'
+    const [orders, notifications] = await Promise.all([
+      order.listOrdersForUser(openId, { role }),
+      notification.refreshNotifications()
+    ])
+    app.globalData.cloudOrders = orders
+    app.globalData.notifications = notifications
+  },
+
   refresh() {
     const g = app.globalData
     const identities = g.identities || []
     const isOwner = g.userMode === 'owner'
     const hasBoth = identities.includes('owner') && identities.includes('passenger')
+    const currentRole = isOwner ? 'owner' : 'passenger'
     const list = isOwner ? (g.historyOwner || []) : (g.historyPassenger || [])
-    const unfinishedCount = config.useCloud
-      ? (app.globalData.cloudOrders || []).filter((item) =>
-        ['matching', 'pending_departure', 'in_progress'].includes(item.status)
+
+    let unfinishedCount = 0
+    if (config.useCloud) {
+      unfinishedCount = (g.cloudOrders || []).filter((item) =>
+        ONGOING_CLOUD.includes(item.status)
       ).length
-      : getOngoingOrders(list).length
+    } else {
+      unfinishedCount = getOngoingOrders(list).length
+    }
+
+    const unreadCount = (g.notifications || []).filter(
+      (item) => !item.read && notificationMatchesRole(item, currentRole)
+    ).length
 
     this.setData({
       userInfo: g.userInfo,
@@ -83,24 +103,22 @@ Page({
       preferenceSummary: formatPreferenceSummary(g.preference),
       habitSummary: (g.habitTags || []).join(' · ') || '未设置',
       unfinishedCount,
-      unreadCount: (g.notifications || []).filter((n) => !n.read).length,
-      avatarLetter: (g.userInfo.displayName || 'U').charAt(0).toUpperCase()
+      unfinishedLabel: isOwner ? '车主未完成订单' : '乘车人未完成订单',
+      unreadCount,
+      avatarInitials: initialsFromEmailLocalPart(g.userInfo && g.userInfo.email)
     })
   },
 
   async onSwitchMode() {
-    const next = this.data.isOwner ? 'passenger' : 'owner'
-    if (!app.hasIdentity(next)) {
-      wx.showToast({ title: '请先添加该身份', icon: 'none' })
-      return
-    }
+    if (!this.data.hasBothIdentities) return
+    const role = this.data.isOwner ? 'passenger' : 'owner'
     try {
-      await app.setUserMode(next)
+      await syncAppRole(role)
+      if (config.useCloud) {
+        await this.reloadCloudOrders()
+      }
+      ensureCorrectPlazaPage()
       this.refresh()
-      wx.showToast({
-        title: next === 'owner' ? '已切换为车主模式' : '已切换为乘车人模式',
-        icon: 'none'
-      })
     } catch (error) {
       wx.showToast({ title: '切换失败，请重试', icon: 'none' })
     }

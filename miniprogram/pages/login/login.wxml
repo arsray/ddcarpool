@@ -34,13 +34,23 @@
           bindinput="onCodeInput"
         />
         <button
-          class="v1-code-btn {{canSendCode ? '' : 'is-disabled'}}"
+          class="v1-code-btn {{canSendCode && !sendingCode ? '' : 'is-disabled'}}"
           size="mini"
-          disabled="{{!canSendCode}}"
+          disabled="{{!canSendCode || sendingCode}}"
           bindtap="sendCode"
         >{{sendText}}</button>
       </view>
       <text class="v1-error" wx:if="{{codeError}}">{{codeError}}</text>
+    </view>
+
+    <view class="v1-agreement-row">
+      <view class="v1-agreement-check {{agreedToTerms ? 'is-checked' : ''}}" bindtap="toggleAgreement">
+        <text wx:if="{{agreedToTerms}}" class="v1-agreement-check-icon">✓</text>
+      </view>
+      <view class="v1-agreement-text">
+        <text bindtap="toggleAgreement">我已阅读并同意</text>
+        <text class="v1-agreement-link" catchtap="viewAgreement">《用户服务协议》</text>
+      </view>
     </view>
 
     <button
