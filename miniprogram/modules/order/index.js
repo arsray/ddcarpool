@@ -67,6 +67,16 @@ async function listConfiguredRoutes() {
   return DEFAULT_CONFIGURED_ROUTES
 }
 
+async function updatePassengerCount(orderId, passengerCount, options) {
+  if (config.useCloud) {
+    return service.updatePassengerCount(orderId, passengerCount)
+  }
+  const openId = options && options.openId
+    ? options.openId
+    : await require('../auth/index').ensureLogin()
+  return service.updatePassengerCount(orderId, { openId, passengerCount })
+}
+
 async function completeOrder(orderId, actorOpenId) {
   return service.completeOrder(orderId, actorOpenId)
 }
@@ -96,6 +106,7 @@ module.exports = {
   expireStaleOrders,
   startTrip,
   completeOrder,
+  updatePassengerCount,
   getOrderById,
   listOrdersForUser,
   listPoints,

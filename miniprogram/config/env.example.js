@@ -8,7 +8,7 @@
  * 详见 docs/CLOUD_DEPLOYMENT.md、docs/M3_PR_REVIEW_RESPONSE.md § 开发约定
  */
 module.exports = {
-  cloudEnvId: 'YOUR_CLOUD_ENV_ID',
+  cloudEnvId: 'cloudbase-d3g3o2bbha98776ab',
   useCloud: true,
   environment: 'development',
   // development 下允许邮箱验证码预览；trial / production 会被强制关闭

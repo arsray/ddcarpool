@@ -6,6 +6,10 @@ const notification = require('./modules/notification/index')
 require('./modules/auth/session')
 const { flushNavQueue } = require('./modules/auth/nav')
 
+/** bump 版本号可再次触发一次性清空已接单，便于广场自测 */
+const PLAZA_ACCEPTED_RESET_VERSION = '20250823_v2'
+const DEV_ORDERS_PURGE_VERSION = '20250904_v1'
+
 App({
   onLaunch() {
     this._navReady = false
@@ -18,6 +22,24 @@ App({
         env: config.cloudEnvId,
         traceUser: true
       })
+    }
+
+    if (!config.useCloud) {
+      const { resetPlazaAcceptedOrders, purgeDevStageOrders } = require('./modules/order/service')
+      const { refreshPlazaSeedOrders } = require('./modules/order/seed-orders')
+      const devPurgeKey = `dev_orders_purge_${DEV_ORDERS_PURGE_VERSION}`
+      if (!wx.getStorageSync(devPurgeKey)) {
+        purgeDevStageOrders()
+        wx.setStorageSync(devPurgeKey, '1')
+      }
+      const plazaResetKey = `plaza_accepted_reset_${PLAZA_ACCEPTED_RESET_VERSION}`
+      if (!wx.getStorageSync(plazaResetKey)) {
+        resetPlazaAcceptedOrders()
+        wx.setStorageSync(plazaResetKey, '1')
+      }
+      refreshPlazaSeedOrders()
+      const { ensureChatDevSeed } = require('./modules/order/chat-dev-seed')
+      ensureChatDevSeed()
     }
 
     authStore.initFromStorage()

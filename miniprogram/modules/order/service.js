@@ -9,6 +9,7 @@ const { validateCreateOrderInput } = require('./validate')
 const { parseDepartTime, getDepartWindowEnd, formatDepartTimeDisplay, formatHistoryTimeLabel } = require('./time-slots')
 const { comparePlazaOrders } = require('./plaza-sort')
 const { snapshotDriverVehicle } = require('./driver-vehicle')
+const chatSystem = require('../chat/system-message')
 
 function getHistoryBridge() {
   return require('./history-bridge')
@@ -140,6 +141,11 @@ function saveOrder(order) {
   }
   writeAllOrders(orders)
   return order
+}
+
+function upsertOrder(order) {
+  if (!order || !order._id) return null
+  return saveOrder(order)
 }
 
 function createOrder(input) {
@@ -341,6 +347,9 @@ function acceptOrder(orderId, driver) {
 
   saveOrder(updated)
   appendPassengerNotification(updated)
+  chatSystem.appendSystemMessage(orderId, chatSystem.SYSTEM_EVENTS.ORDER_ACCEPTED, {
+    driverName
+  })
   return enrichListItem(updated, {})
 }
 
@@ -376,10 +385,9 @@ function completeOrder(orderId, actorOpenId) {
   }
 
   saveOrder(updated)
+  chatSystem.appendSystemMessage(orderId, chatSystem.SYSTEM_EVENTS.TRIP_COMPLETED)
   return enrichListItem(updated, {})
 }
-
-function cancelOrder(orderId, options) {
   const orders = expireStaleOrdersInMemory(readAllOrders())
   const order = orders.find((item) => item._id === orderId)
   const actorOpenId = options && options.openId ? options.openId.trim() : ''
@@ -417,6 +425,10 @@ function cancelOrder(orderId, options) {
     if (order.driverOpenId) {
       appendDriverNotification(updated, buildPassengerCancelNotificationTitle(updated))
     }
+    chatSystem.appendSystemMessage(
+      orderId,
+      chatSystem.SYSTEM_EVENTS.ORDER_CANCELLED_PASSENGER
+    )
     return enrichListItem(updated, {})
   }
 
@@ -431,10 +443,46 @@ function cancelOrder(orderId, options) {
     }
     saveOrder(updated)
     appendPassengerNotification(updated, buildDriverReleaseNotificationTitle(updated))
+    chatSystem.appendSystemMessage(orderId, chatSystem.SYSTEM_EVENTS.ORDER_CANCELLED_DRIVER)
     return enrichListItem(updated, {})
   }
 
   throw makeError('INVALID_STATUS', '订单当前不可取消')
+}
+
+function updatePassengerCount(orderId, options) {
+  const orders = expireStaleOrdersInMemory(readAllOrders())
+  const order = orders.find((item) => item._id === orderId)
+  const actorOpenId = options && options.openId ? options.openId.trim() : ''
+  const passengerCount = Number(options && options.passengerCount)
+
+  if (!order) {
+    throw makeError('ORDER_NOT_FOUND', '订单不存在')
+  }
+  if (!actorOpenId || order.passengerOpenId !== actorOpenId) {
+    throw makeError('FORBIDDEN', '仅乘客可修改人数')
+  }
+  if (![ORDER_STATUS.MATCHING, ORDER_STATUS.PENDING_DEPARTURE].includes(order.status)) {
+    throw makeError('INVALID_STATUS', '当前状态不可修改人数')
+  }
+  if (!Number.isInteger(passengerCount) || passengerCount < 1 || passengerCount > 10) {
+    throw makeError('INVALID_PASSENGER_COUNT', '出行人数需在 1–10 人')
+  }
+  if (order.passengerCount === passengerCount) {
+    return enrichListItem(order, {})
+  }
+
+  const timestamp = nowIso()
+  const updated = {
+    ...order,
+    passengerCount,
+    updatedAt: timestamp
+  }
+  saveOrder(updated)
+  chatSystem.appendSystemMessage(orderId, chatSystem.SYSTEM_EVENTS.PASSENGER_COUNT_CHANGED, {
+    passengerCount
+  })
+  return enrichListItem(updated, {})
 }
 
 function getPassengerHistoryItems(openId) {
@@ -526,7 +574,9 @@ module.exports = {
   acceptOrder,
   cancelOrder,
   completeOrder,
+  updatePassengerCount,
   getOrderById,
+  upsertOrder,
   listOpenOrders,
   listDriverActiveOrders,
   listOrdersForUser,

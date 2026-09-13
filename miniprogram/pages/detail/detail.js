@@ -238,8 +238,34 @@ Page({
     }
   },
 
-  goChat() {
-    wx.navigateTo({ url: `/pages/chat/chat?orderId=${this.data.orderId}` })
+  async goChat() {
+    const orderId = String(this.data.orderId || '').trim()
+    if (!orderId) {
+      wx.showToast({ title: '缺少订单 ID', icon: 'none' })
+      return
+    }
+
+    try {
+      const openId = await auth.ensureLogin()
+      const orderSnapshot = this.data.order || await order.getOrderById(orderId)
+      if (!chat.canEnterChat(orderSnapshot, openId)) {
+        wx.showToast({ title: '当前不可进入聊天', icon: 'none' })
+        return
+      }
+
+      wx.navigateTo({
+        url: `/pages/chat/chat?orderId=${encodeURIComponent(orderId)}`,
+        fail: (error) => {
+          wx.showToast({ title: '无法打开聊天页', icon: 'none' })
+          console.error('[detail] navigateTo chat failed', error)
+        }
+      })
+    } catch (error) {
+      wx.showToast({
+        title: error.message || '无法进入聊天',
+        icon: 'none'
+      })
+    }
   },
 
   async onStart() {

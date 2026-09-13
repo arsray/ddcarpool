@@ -80,6 +80,10 @@ async function completeOrder(orderId) {
   return enrich(await invoke('complete', { orderId }))
 }
 
+async function updatePassengerCount(orderId, passengerCount) {
+  return enrich(await invoke('updatePassengerCount', { orderId, passengerCount }))
+}
+
 async function expireStaleOrders() {
   return invoke('expireStale')
 }
@@ -106,6 +110,7 @@ module.exports = {
   cancelOrder,
   startTrip,
   completeOrder,
+  updatePassengerCount,
   expireStaleOrders,
   listPoints,
   listConfiguredRoutes,
