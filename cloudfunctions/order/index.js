@@ -1,8 +1,8 @@
 // SECURITY-REVIEW: 订单操作以邮箱账号 ID 授权；微信 OpenID 仅用于解析当前登录用户。
 const cloud = require('wx-server-sdk')
 const { resolveAccountId } = require('./common/account-id')
-const { appendChatSystemMessage } = require('../common/chat-system-message')
-const { SYSTEM_EVENTS } = require('../common/chat-system-events')
+const { appendChatSystemMessage } = require('./common/chat-system-message')
+const { SYSTEM_EVENTS } = require('./common/chat-system-events')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()

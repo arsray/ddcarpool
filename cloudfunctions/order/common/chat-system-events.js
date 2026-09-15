@@ -1,6 +1,6 @@
 /**
  * M4 — 聊天系统消息文案（云函数侧）
- * 源码副本：部署时须同步到 cloudfunctions/order/common/chat-system-events.js
+ * 部署副本：微信上传 order 云函数时只打包 cloudfunctions/order/，须与本目录文件保持一致。
  */
 
 const SYSTEM_EVENTS = {

@@ -1,6 +1,3 @@
-/**
- * 源码副本：部署时须同步到 cloudfunctions/order/common/chat-system-message.js
- */
 const { buildSystemMessageContent } = require('./chat-system-events')
 
 async function appendChatSystemMessage(db, orderId, event, payload) {
