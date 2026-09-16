@@ -1,4 +1,17 @@
-<view class="chat-page">
+<view class="chat-page {{showStickerPanel ? 'chat-page--sticker-open' : ''}}">
+  <view class="chat-trip-card" wx:if="{{tripCard}}">
+    <view class="chat-trip-card__main">
+      <view class="chat-trip-card__route">{{tripCard.routeLabel}}</view>
+      <view class="chat-trip-card__meta">
+        <text>{{tripCard.timeLabel}}</text>
+        <text class="chat-trip-card__dot">·</text>
+        <text>{{tripCard.passengerLine}}</text>
+      </view>
+      <view class="chat-trip-card__note" wx:if="{{tripCard.note}}">{{tripCard.note}}</view>
+    </view>
+    <view class="chat-trip-card__status">{{tripCard.statusLabel}}</view>
+  </view>
+
   <scroll-view
     class="chat-list"
     scroll-y
@@ -8,35 +21,182 @@
   >
     <view class="chat-loading-more" wx:if="{{loadingMore}}">加载更早消息…</view>
     <view class="chat-loading" wx:if="{{loading}}">加载中…</view>
-    <view class="chat-empty" wx:elif="{{!messages.length}}">还没有消息，开始沟通吧</view>
+    <view class="chat-empty" wx:elif="{{!messages.length}}">还没有消息，试试下方快捷模板吧</view>
+
     <view
       wx:for="{{messages}}"
       wx:key="_id"
       id="message-{{item._id}}"
-      class="chat-row {{item.isMine ? 'chat-row--mine' : ''}}"
+      class="chat-row {{item.isSystem ? 'chat-row--system' : (item.isMine ? 'chat-row--mine' : 'chat-row--peer')}}"
     >
-      <view class="chat-meta">{{item.senderName}} · {{item.timeLabel}}</view>
-      <view class="chat-bubble">{{item.content}}</view>
+      <view wx:if="{{item.isSystem}}" class="chat-system">
+        <text class="chat-system__text">{{item.content}}</text>
+      </view>
+
+      <view wx:else class="chat-row__inner">
+        <view class="chat-avatar" wx:if="{{!item.isMine}}">
+          <image
+            wx:if="{{item.avatarUrl}}"
+            class="chat-avatar__img"
+            src="{{item.avatarUrl}}"
+            mode="aspectFill"
+          />
+          <view
+            wx:else
+            class="chat-avatar__letter"
+            style="background-color: {{item.avatarColor}};"
+          >{{item.avatarLetter}}</view>
+        </view>
+
+        <view class="chat-body">
+          <view class="chat-content {{item.isSticker ? 'chat-content--sticker' : ''}} {{item.isVoice ? 'chat-content--voice' : ''}}">
+            <image
+              wx:if="{{item.isSticker}}"
+              class="chat-sticker-img"
+              src="{{item.stickerSrc}}"
+              mode="widthFix"
+              show-menu-by-longpress="{{false}}"
+            />
+            <view
+              wx:elif="{{item.isVoice}}"
+              class="chat-voice-bubble {{item.isMine ? 'chat-voice-bubble--mine' : 'chat-voice-bubble--peer'}} {{playingVoiceId === item._id ? 'chat-voice-bubble--playing' : ''}}"
+              style="width: {{item.voiceBubbleWidthRpx}}rpx;"
+              data-id="{{item._id}}"
+              bindtap="onVoiceMessageTap"
+            >
+              <view class="chat-voice-waves {{item.isMine ? 'chat-voice-waves--mine' : ''}}">
+                <view class="chat-voice-wave chat-voice-wave--1"></view>
+                <view class="chat-voice-wave chat-voice-wave--2"></view>
+                <view class="chat-voice-wave chat-voice-wave--3"></view>
+              </view>
+              <text class="chat-voice-duration">{{item.voiceDurationLabel}}</text>
+            </view>
+            <view wx:else class="chat-bubble">{{item.content}}</view>
+          </view>
+          <view
+            wx:if="{{item.showReadStatus}}"
+            class="chat-read {{item.readStatusClass}}"
+          >{{item.readLabel}}</view>
+        </view>
+
+        <view class="chat-avatar" wx:if="{{item.isMine}}">
+          <image
+            wx:if="{{item.avatarUrl}}"
+            class="chat-avatar__img"
+            src="{{item.avatarUrl}}"
+            mode="aspectFill"
+          />
+          <view
+            wx:else
+            class="chat-avatar__letter"
+            style="background-color: {{item.avatarColor}};"
+          >{{item.avatarLetter}}</view>
+        </view>
+      </view>
     </view>
+
     <view class="chat-spacer"></view>
   </scroll-view>
 
-  <view class="chat-compose">
-    <input
-      class="chat-input"
-      value="{{content}}"
-      maxlength="500"
-      placeholder="输入消息"
-      bindinput="onInput"
-      confirm-type="send"
-      bindconfirm="onSend"
-    />
-    <button
-      class="chat-send"
-      size="mini"
-      loading="{{sending}}"
-      disabled="{{sending || !content}}"
-      bindtap="onSend"
-    >发送</button>
+  <view class="chat-footer {{showStickerPanel ? 'chat-footer--sticker-open' : ''}}">
+    <view class="chat-templates-bar">
+      <scroll-view class="chat-quick-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
+        <view class="chat-quick-inner">
+          <view
+            wx:for="{{quickTemplates}}"
+            wx:key="id"
+            class="chat-quick-chip"
+            data-text="{{item.text}}"
+            bindtap="onQuickTemplateTap"
+          >{{item.label}}</view>
+        </view>
+      </scroll-view>
+      <view class="chat-more-btn" bindtap="toggleTemplatePanel">
+        {{showTemplatePanel ? '收起' : '更多'}}
+      </view>
+    </view>
+
+    <view class="chat-template-panel" wx:if="{{showTemplatePanel}}">
+      <view class="chat-template-panel-head">
+        <text class="chat-template-panel-title">{{roleLabel}}模板库</text>
+        <text class="chat-template-panel-hint">点击即发送</text>
+      </view>
+      <scroll-view class="chat-template-scroll" scroll-y>
+        <view wx:for="{{templateGroups}}" wx:key="id" class="chat-template-group">
+          <view class="chat-template-group-title">{{item.icon}} {{item.label}}</view>
+          <view class="chat-template-items">
+            <view
+              wx:for="{{item.items}}"
+              wx:for-item="tpl"
+              wx:key="id"
+              class="chat-template-item"
+              data-text="{{tpl.text}}"
+              bindtap="onQuickTemplateTap"
+            >{{tpl.text}}</view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="chat-toolbar">
+      <view class="chat-tool-btn" bindtap="toggleInputMode">
+        <view class="chat-tool-icon chat-tool-icon--voice" wx:if="{{inputMode === 'text'}}"></view>
+        <view class="chat-tool-icon chat-tool-icon--keyboard" wx:else></view>
+      </view>
+
+      <view class="chat-input-wrap">
+        <input
+          wx:if="{{inputMode === 'text'}}"
+          class="chat-input"
+          value="{{content}}"
+          maxlength="500"
+          placeholder=""
+          adjust-position="{{!showStickerPanel}}"
+          confirm-type="send"
+          focus="{{inputFocus}}"
+          bindinput="onInput"
+          bindconfirm="onSend"
+          bindblur="onInputBlur"
+        />
+        <view
+          wx:else
+          class="chat-voice-hold {{voiceRecording ? 'chat-voice-hold--active' : ''}}"
+          bindtouchstart="onVoiceTouchStart"
+          bindtouchend="onVoiceTouchEnd"
+          bindtouchcancel="onVoiceTouchCancel"
+        >{{voiceRecording ? '松开 结束' : '按住 说话'}}</view>
+      </view>
+
+      <view
+        class="chat-tool-btn {{showStickerPanel ? 'chat-tool-btn--active' : ''}}"
+        bindtap="toggleStickerPanel"
+      >
+        <view class="chat-tool-icon chat-tool-icon--emoji" wx:if="{{!showStickerPanel}}"></view>
+        <view class="chat-tool-icon chat-tool-icon--keyboard" wx:else></view>
+      </view>
+    </view>
+
+    <view class="chat-sticker-panel" wx:if="{{showStickerPanel}}">
+      <scroll-view
+        class="chat-sticker-scroll"
+        scroll-y
+        enhanced
+        show-scrollbar="{{false}}"
+        bounces="{{false}}"
+      >
+        <view class="chat-sticker-grid" style="{{stickerGridStyle}}">
+          <view
+            wx:for="{{stickers}}"
+            wx:key="id"
+            class="chat-sticker-item"
+            data-id="{{item.id}}"
+            bindtap="onStickerTap"
+          >
+            <image class="chat-sticker-thumb" src="{{item.src}}" mode="aspectFill" />
+            <text class="chat-sticker-label">{{item.label}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
   </view>
 </view>

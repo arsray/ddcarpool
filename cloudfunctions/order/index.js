@@ -1,6 +1,8 @@
 // SECURITY-REVIEW: 订单操作以邮箱账号 ID 授权；微信 OpenID 仅用于解析当前登录用户。
 const cloud = require('wx-server-sdk')
 const { resolveAccountId } = require('./common/account-id')
+const { appendChatSystemMessage } = require('./common/chat-system-message')
+const { SYSTEM_EVENTS } = require('./common/chat-system-events')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -297,13 +299,22 @@ async function acceptOrder(event, openId) {
         'passenger'
       )
     })
-    return publicOrder((await transaction.collection('orders').doc(orderId).get()).data, openId)
+    return {
+      accepted: publicOrder((await transaction.collection('orders').doc(orderId).get()).data, openId),
+      driverName: profile.name || '司机'
+    }
+  }).then(async (result) => {
+    await appendChatSystemMessage(db, orderId, SYSTEM_EVENTS.ORDER_ACCEPTED, {
+      driverName: result.driverName
+    })
+    return result.accepted
   })
 }
 
 async function cancelOrder(event, openId) {
   const orderId = cleanString(event.orderId, 64)
-  return db.runTransaction(async (transaction) => {
+  let systemEvent = ''
+  const result = await db.runTransaction(async (transaction) => {
     const response = await transaction.collection('orders').where({ _id: orderId }).limit(1).get()
     const order = response.data[0]
     if (!order) throw appError('ORDER_NOT_FOUND', '订单不存在')
@@ -329,6 +340,7 @@ async function cancelOrder(event, openId) {
           data: notificationData(order.driverOpenId, '乘客已取消搭车单', orderId, 'owner')
         })
       }
+      systemEvent = SYSTEM_EVENTS.ORDER_CANCELLED_PASSENGER
     } else if (order.driverOpenId === openId && order.status === 'pending_departure') {
       await transaction.collection('orders').doc(orderId).update({
         data: {
@@ -348,11 +360,16 @@ async function cancelOrder(event, openId) {
           'passenger'
         )
       })
+      systemEvent = SYSTEM_EVENTS.ORDER_CANCELLED_DRIVER
     } else {
       throw appError('FORBIDDEN', '无权取消此订单')
     }
     return publicOrder((await transaction.collection('orders').doc(orderId).get()).data, openId)
   })
+  if (systemEvent) {
+    await appendChatSystemMessage(db, orderId, systemEvent)
+  }
+  return result
 }
 
 async function transition(event, openId, target) {
@@ -374,6 +391,12 @@ async function transition(event, openId, target) {
       data: { status: target, [timestampField]: now, updatedAt: now }
     })
     return publicOrder((await transaction.collection('orders').doc(orderId).get()).data, openId)
+  }).then(async (updated) => {
+    const systemEvent = target === 'in_progress'
+      ? SYSTEM_EVENTS.TRIP_STARTED
+      : SYSTEM_EVENTS.TRIP_COMPLETED
+    await appendChatSystemMessage(db, orderId, systemEvent)
+    return updated
   })
 }
 
@@ -421,6 +444,7 @@ async function autoStartTrips() {
         data: notificationData(order.driverOpenId, '行程已开始', orderDoc._id, 'owner')
       })
     })
+    await appendChatSystemMessage(db, orderDoc._id, SYSTEM_EVENTS.TRIP_STARTED)
     updated += 1
   }
   return { updated }
@@ -455,9 +479,46 @@ async function autoCompleteTrips() {
         })
       }
     })
+    await appendChatSystemMessage(db, orderDoc._id, SYSTEM_EVENTS.TRIP_COMPLETED)
     updated += 1
   }
   return { updated }
+}
+
+async function updatePassengerCount(event, openId) {
+  const orderId = cleanString(event.orderId, 64)
+  const passengerCount = Number(event.passengerCount)
+  if (!Number.isInteger(passengerCount) || passengerCount < 1 || passengerCount > 10) {
+    throw appError('INVALID_PASSENGER_COUNT', '出行人数需在 1–10 人')
+  }
+
+  let previousCount = null
+  const updated = await db.runTransaction(async (transaction) => {
+    const response = await transaction.collection('orders').where({ _id: orderId }).limit(1).get()
+    const order = response.data[0]
+    if (!order) throw appError('ORDER_NOT_FOUND', '订单不存在')
+    if (order.passengerOpenId !== openId) throw appError('FORBIDDEN', '仅乘客可修改人数')
+    if (!['matching', 'pending_departure'].includes(order.status)) {
+      throw appError('INVALID_STATUS', '当前状态不可修改人数')
+    }
+    if (order.passengerCount === passengerCount) {
+      return publicOrder(order, openId)
+    }
+
+    previousCount = order.passengerCount
+    const now = db.serverDate()
+    await transaction.collection('orders').doc(orderId).update({
+      data: { passengerCount, updatedAt: now }
+    })
+    return publicOrder((await transaction.collection('orders').doc(orderId).get()).data, openId)
+  })
+
+  if (previousCount != null && previousCount !== passengerCount) {
+    await appendChatSystemMessage(db, orderId, SYSTEM_EVENTS.PASSENGER_COUNT_CHANGED, {
+      passengerCount
+    })
+  }
+  return updated
 }
 
 async function runScheduledTasks() {
@@ -494,6 +555,9 @@ exports.main = async (event) => {
     if (action === 'cancel') return ok(await cancelOrder(event, accountId))
     if (action === 'start') return ok(await transition(event, accountId, 'in_progress'))
     if (action === 'complete') return ok(await transition(event, accountId, 'completed'))
+    if (action === 'updatePassengerCount') {
+      return ok(await updatePassengerCount(event, accountId))
+    }
     if (action === 'expireStale') return ok(await runScheduledTasks())
     if (action === 'listPoints') return ok(await listPoints())
     if (action === 'listRoutes') return ok(await listRoutes())
