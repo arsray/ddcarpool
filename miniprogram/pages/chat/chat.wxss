@@ -556,3 +556,84 @@
   background: #dcdcdc;
   border-color: #c8c8c8;
 }
+
+.chat-voice-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.chat-voice-panel {
+  min-width: 320rpx;
+  padding: 36rpx 48rpx 32rpx;
+  border-radius: 24rpx;
+  background: rgba(40, 40, 40, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.chat-voice-panel--cancel {
+  background: rgba(120, 32, 32, 0.92);
+}
+
+.chat-voice-panel__waves {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8rpx;
+  height: 72rpx;
+}
+
+.chat-voice-panel__wave {
+  width: 8rpx;
+  border-radius: 999rpx;
+  background: #95ec69;
+  animation: chat-voice-panel-pulse 0.9s ease-in-out infinite;
+}
+
+.chat-voice-panel--cancel .chat-voice-panel__wave {
+  background: #ffb4a8;
+}
+
+.chat-voice-panel__wave--1 {
+  height: 24rpx;
+}
+
+.chat-voice-panel__wave--2 {
+  height: 48rpx;
+  animation-delay: 0.12s;
+}
+
+.chat-voice-panel__wave--3 {
+  height: 32rpx;
+  animation-delay: 0.24s;
+}
+
+.chat-voice-panel__hint {
+  color: #ffffff;
+  font-size: 28rpx;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@keyframes chat-voice-panel-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.72);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}

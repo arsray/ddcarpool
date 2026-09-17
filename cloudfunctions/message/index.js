@@ -178,21 +178,39 @@ async function markMessagesRead(orderId, openId) {
   const otherOpenId = peerOpenId(order, openId)
   if (!otherOpenId) return { marked: 0 }
 
-  const response = await messages
-    .where({ orderId, senderOpenId: otherOpenId })
-    .limit(100)
-    .get()
-
   let marked = 0
-  await Promise.all(
-    response.data.map(async (doc) => {
-      const readBy = Array.isArray(doc.readBy) ? doc.readBy.slice() : []
-      if (readBy.includes(openId)) return
-      readBy.push(openId)
-      marked += 1
-      await messages.doc(doc._id).update({ data: { readBy } })
-    })
-  )
+  let skip = 0
+  const pageSize = 100
+
+  while (true) {
+    const response = await messages
+      .where({
+        orderId,
+        senderOpenId: otherOpenId,
+        type: _.neq('system')
+      })
+      .skip(skip)
+      .limit(pageSize)
+      .get()
+
+    if (!response.data.length) break
+
+    await Promise.all(
+      response.data.map(async (doc) => {
+        const readBy = Array.isArray(doc.readBy) ? doc.readBy : []
+        if (readBy.includes(openId)) return
+        marked += 1
+        await messages.doc(doc._id).update({
+          data: {
+            readBy: _.addToSet(openId)
+          }
+        })
+      })
+    )
+
+    if (response.data.length < pageSize) break
+    skip += pageSize
+  }
 
   return { marked }
 }
@@ -203,13 +221,14 @@ exports.main = async (event) => {
     if (!OPENID) return fail('NOT_AUTHENTICATED', '请先登录')
     const accountId = await resolveAccountId(users, OPENID)
     const orderId = String(event.orderId || '').trim()
+    const action = String(event && event.action ? event.action : '').trim()
     if (!orderId) return fail('INVALID_INPUT', '订单 ID 无效')
-    if (event.action === 'list') {
+    if (action === 'list') {
       const result = await listMessages(orderId, accountId, event.before)
       return ok(result)
     }
 
-    if (event.action === 'markRead') {
+    if (action === 'markRead') {
       const result = await markMessagesRead(orderId, accountId)
       return ok(result)
     }
@@ -217,12 +236,12 @@ exports.main = async (event) => {
     const order = await getAuthorizedOrder(orderId, accountId)
     const senderFallbackName = resolveSenderFallbackName(order, accountId)
 
-    if (event.action === 'send' || event.action === 'sendSticker' || event.action === 'sendVoice') {
+    if (action === 'send' || action === 'sendSticker' || action === 'sendVoice') {
       const stickerId = String(event.stickerId || '').trim()
-      const isVoice = event.type === 'voice' || event.action === 'sendVoice'
+      const isVoice = event.type === 'voice' || action === 'sendVoice'
       const isSticker =
         !isVoice &&
-        (event.action === 'sendSticker' ||
+        (action === 'sendSticker' ||
           event.type === 'sticker' ||
           (stickerId && STICKER_IDS.has(stickerId)))
 

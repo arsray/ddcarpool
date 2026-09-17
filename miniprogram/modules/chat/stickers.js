@@ -84,11 +84,29 @@ function getStickerById(stickerId) {
   return STICKER_MAP.get(String(stickerId || '').trim()) || null
 }
 
+function getStickerByLabel(label) {
+  const text = String(label || '').trim()
+  if (!text) return null
+  return STICKERS.find((item) => item.label === text) || null
+}
+
+function resolveStickerFromMessage(item) {
+  if (!item) return null
+  const byId = getStickerById(item.stickerId)
+  if (byId) return byId
+  if (item.type === 'sticker') {
+    return getStickerByLabel(item.content)
+  }
+  return getStickerByLabel(item.content)
+}
+
 module.exports = {
   STICKER_PANEL,
   STICKER_IDS,
   listStickers,
   getStickerById,
+  getStickerByLabel,
+  resolveStickerFromMessage,
   buildStickerGridStyle,
   getStickerPanelMetrics
 }

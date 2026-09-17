@@ -4,6 +4,8 @@
 
 const config = require('../../config/index')
 
+const playSrcCache = Object.create(null)
+
 function persistLocalVoice(tempFilePath) {
   const fs = wx.getFileSystemManager()
   const dir = `${wx.env.USER_DATA_PATH}/m4_chat_voice`
@@ -46,6 +48,45 @@ async function storeVoiceFile(orderId, tempFilePath) {
   return { voiceLocalPath }
 }
 
+async function resolveVoicePlaySrc(message) {
+  if (!message) return ''
+
+  const localPath = message.voiceLocalPath || ''
+  if (localPath) {
+    try {
+      wx.getFileSystemManager().accessSync(localPath)
+      return localPath
+    } catch (error) {
+      return ''
+    }
+  }
+
+  const cachedSrc = message.voiceSrc && !String(message.voiceSrc).startsWith('cloud://')
+    ? message.voiceSrc
+    : ''
+  if (cachedSrc) return cachedSrc
+
+  const fileId = message.voiceFileId ||
+    (String(message.voiceSrc || '').startsWith('cloud://') ? message.voiceSrc : '')
+  if (!fileId) return ''
+
+  if (playSrcCache[fileId]) return playSrcCache[fileId]
+
+  if (!config.useCloud || !wx.cloud) return ''
+
+  try {
+    const response = await wx.cloud.downloadFile({ fileID: fileId })
+    const tempFilePath = response && response.tempFilePath ? response.tempFilePath : ''
+    if (tempFilePath) playSrcCache[fileId] = tempFilePath
+    return tempFilePath
+  } catch (error) {
+    const err = new Error('语音下载失败')
+    err.code = 'VOICE_DOWNLOAD_FAILED'
+    throw err
+  }
+}
+
 module.exports = {
-  storeVoiceFile
+  storeVoiceFile,
+  resolveVoicePlaySrc
 }
