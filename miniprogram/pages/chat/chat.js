@@ -32,8 +32,12 @@ Page({
     inputMode: 'text',
     inputFocus: false,
     voiceRecording: false,
+    voiceWillCancel: false,
     playingVoiceId: ''
   },
+
+  voiceStartY: 0,
+  voiceStartPromise: null,
 
   async onLoad(options) {
     const orderId = String(options.orderId || options.id || '').trim()
@@ -128,6 +132,32 @@ Page({
     return ctx
   },
 
+  playVoiceSrc(messageId, voiceSrc) {
+    const player = this.ensureVoicePlayer()
+    if (this.data.playingVoiceId === messageId) {
+      player.stop()
+      this.setData({ playingVoiceId: '' })
+      return
+    }
+
+    player.stop()
+    this.setData({ playingVoiceId: messageId })
+
+    const startPlayback = () => {
+      player.play()
+    }
+
+    if (typeof player.offCanplay === 'function') {
+      player.offCanplay()
+    }
+    player.onCanplay(startPlayback)
+    player.src = voiceSrc
+
+    if (typeof player.onCanplay !== 'function') {
+      startPlayback()
+    }
+  },
+
   buildViewMessages(result) {
     const participants = chat.mergeChatParticipants(
       result.participants || null,
@@ -140,17 +170,36 @@ Page({
     }))
   },
 
+  applyMessageResult(result, options) {
+    const opts = options || {}
+    const messages = this.buildViewMessages(result)
+    const next = {
+      messages,
+      hasMore: result.hasMore
+    }
+    if (opts.scrollToBottom !== false) {
+      next.scrollTarget = messages.length ? `message-${messages[messages.length - 1]._id}` : ''
+    }
+    this.setData(next)
+    return messages
+  },
+
+  async syncReadReceipts() {
+    await chat.markMessagesRead(this.data.orderId)
+    const refreshed = await chat.listMessages(this.data.orderId)
+    this.applyMessageResult(refreshed, { scrollToBottom: false })
+  },
+
   async loadMessages(silent) {
     if (!silent) this.setData({ loading: true })
     try {
       const result = await chat.listMessages(this.data.orderId)
-      const messages = this.buildViewMessages(result)
-      this.setData({
-        messages,
-        hasMore: result.hasMore,
-        scrollTarget: messages.length ? `message-${messages[messages.length - 1]._id}` : ''
-      })
-      await chat.markMessagesRead(this.data.orderId)
+      this.applyMessageResult(result)
+      try {
+        await this.syncReadReceipts()
+      } catch (readError) {
+        console.warn('[chat] markRead failed', readError)
+      }
     } catch (error) {
       if (!silent) wx.showToast({ title: error.message || '消息加载失败', icon: 'none' })
     } finally {
@@ -221,10 +270,13 @@ Page({
       inputMode: nextMode,
       showStickerPanel: false,
       showTemplatePanel: false,
-      inputFocus: false
+      inputFocus: false,
+      voiceRecording: false,
+      voiceWillCancel: false
     })
     if (nextMode === 'voice') {
       wx.hideKeyboard()
+      voice.ensureRecordPermission().catch(() => {})
     }
   },
 
@@ -255,22 +307,45 @@ Page({
     if (stickerId) this.sendSticker(stickerId)
   },
 
-  async onVoiceTouchStart() {
+  onVoiceTouchStart(e) {
     if (!voice.isVoiceInputEnabled() || this.data.sending || this.data.voiceRecording) return
 
-    try {
-      await voice.startHold()
-      this.setData({ voiceRecording: true })
-    } catch (error) {
+    const touch = e.touches && e.touches[0]
+    this.voiceStartY = touch ? touch.clientY : 0
+    this.voiceWillCancel = false
+    this.setData({ voiceRecording: true, voiceWillCancel: false })
+
+    this.voiceStartPromise = voice.startHold().catch((error) => {
+      this.setData({ voiceRecording: false, voiceWillCancel: false })
       wx.showToast({ title: error.message || '无法开始录音', icon: 'none' })
+      throw error
+    })
+  },
+
+  onVoiceTouchMove(e) {
+    if (!this.data.voiceRecording) return
+    const touch = e.touches && e.touches[0]
+    if (!touch) return
+    const willCancel = this.voiceStartY - touch.clientY > 80
+    if (willCancel !== this.data.voiceWillCancel) {
+      this.setData({ voiceWillCancel: willCancel })
     }
   },
 
   async onVoiceTouchEnd() {
-    if (!this.data.voiceRecording) return
-    this.setData({ voiceRecording: false })
+    if (!this.data.voiceRecording && !this.voiceStartPromise) return
+
+    const willCancel = this.data.voiceWillCancel
+    this.setData({ voiceRecording: false, voiceWillCancel: false })
 
     try {
+      if (this.voiceStartPromise) {
+        await this.voiceStartPromise.catch(() => null)
+      }
+      if (willCancel) {
+        await voice.cancelHold()
+        return
+      }
       const result = await voice.stopHold()
       if (!result) return
       await this.sendVoiceMessage(result.tempFilePath, result.durationSec)
@@ -280,14 +355,25 @@ Page({
           ? '说话时间太短'
           : (error && error.message) || '录音失败'
       wx.showToast({ title: message, icon: 'none' })
+    } finally {
+      this.voiceStartPromise = null
     }
   },
 
   async onVoiceTouchCancel() {
-    if (!this.data.voiceRecording) return
-    this.setData({ voiceRecording: false })
-    await voice.cancelHold()
+    if (!this.data.voiceRecording && !this.voiceStartPromise) return
+    this.setData({ voiceRecording: false, voiceWillCancel: false })
+    try {
+      if (this.voiceStartPromise) {
+        await this.voiceStartPromise.catch(() => null)
+      }
+      await voice.cancelHold()
+    } finally {
+      this.voiceStartPromise = null
+    }
   },
+
+  preventVoiceTouchMove() {},
 
   async sendVoiceMessage(tempFilePath, durationSec) {
     if (this.data.sending) return
@@ -298,28 +384,38 @@ Page({
       await this.loadMessages(true)
       this.scrollChatToBottom()
     } catch (error) {
-      wx.showToast({ title: error.message || '语音发送失败', icon: 'none' })
+      const msg = (error && error.message) || '语音发送失败'
+      wx.showToast({
+        title: error && error.code === 'VOICE_UPLOAD_FAILED' ? '语音上传失败' : msg,
+        icon: 'none'
+      })
     } finally {
       this.setData({ sending: false })
     }
   },
 
-  onVoiceMessageTap(e) {
+  async onVoiceMessageTap(e) {
     const messageId = e.currentTarget.dataset.id
     const message = (this.data.messages || []).find((item) => item._id === messageId)
-    if (!message || !message.isVoice || !message.voiceSrc) return
+    if (!message || !message.isVoice) return
 
-    const player = this.ensureVoicePlayer()
     if (this.data.playingVoiceId === messageId) {
-      player.stop()
-      this.setData({ playingVoiceId: '' })
+      this.playVoiceSrc(messageId, '')
       return
     }
 
-    player.stop()
-    player.src = message.voiceSrc
-    player.play()
-    this.setData({ playingVoiceId: messageId })
+    try {
+      const voiceSrc = await chat.resolveVoicePlaySrc(message)
+      if (!voiceSrc) {
+        wx.showToast({ title: '语音文件无效', icon: 'none' })
+        this.setData({ playingVoiceId: '' })
+        return
+      }
+      this.playVoiceSrc(messageId, voiceSrc)
+    } catch (error) {
+      this.setData({ playingVoiceId: '' })
+      wx.showToast({ title: (error && error.message) || '语音播放失败', icon: 'none' })
+    }
   },
 
   async onSend() {

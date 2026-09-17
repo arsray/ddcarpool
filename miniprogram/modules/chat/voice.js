@@ -10,6 +10,7 @@ let setupDone = false
 let recording = false
 let recordStartedAt = 0
 let stopPromise = null
+let startPromise = null
 
 function makeError(code, message) {
   const error = new Error(message)
@@ -93,22 +94,39 @@ function ensureRecordPermission() {
   })
 }
 
+async function awaitStartIfNeeded() {
+  if (!startPromise) return
+  await startPromise
+}
+
 async function startHold() {
   setupRecorderOnce()
-  await ensureRecordPermission()
-  if (recording) {
+  if (recording || startPromise) {
     throw makeError('RECORD_BUSY', '正在录音')
   }
 
-  recording = true
-  recordStartedAt = Date.now()
-  getRecorder().start({
-    duration: MAX_DURATION_MS,
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    encodeBitRate: 48000,
-    format: 'mp3'
-  })
+  startPromise = (async () => {
+    await ensureRecordPermission()
+    if (recording) return
+    recording = true
+    recordStartedAt = Date.now()
+    getRecorder().start({
+      duration: MAX_DURATION_MS,
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      encodeBitRate: 48000,
+      format: 'mp3'
+    })
+  })()
+
+  try {
+    await startPromise
+  } catch (error) {
+    recording = false
+    throw error
+  } finally {
+    startPromise = null
+  }
 }
 
 function normalizeStopResult(res) {
@@ -132,7 +150,8 @@ function normalizeStopResult(res) {
   }
 }
 
-function stopHold() {
+async function stopHold() {
+  await awaitStartIfNeeded()
   if (!recording) {
     return Promise.reject(makeError('NOT_RECORDING', '未在录音'))
   }
@@ -152,8 +171,9 @@ function stopHold() {
   })
 }
 
-function cancelHold() {
-  if (!recording) return Promise.resolve(null)
+async function cancelHold() {
+  await awaitStartIfNeeded()
+  if (!recording) return null
 
   return new Promise((resolve) => {
     stopPromise = {
@@ -173,6 +193,7 @@ module.exports = {
   MAX_DURATION_MS,
   isVoiceInputEnabled,
   getVoicePlaceholderHint,
+  ensureRecordPermission,
   startHold,
   stopHold,
   cancelHold,

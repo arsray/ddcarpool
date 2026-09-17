@@ -162,9 +162,10 @@
           wx:else
           class="chat-voice-hold {{voiceRecording ? 'chat-voice-hold--active' : ''}}"
           bindtouchstart="onVoiceTouchStart"
+          bindtouchmove="onVoiceTouchMove"
           bindtouchend="onVoiceTouchEnd"
           bindtouchcancel="onVoiceTouchCancel"
-        >{{voiceRecording ? '松开 结束' : '按住 说话'}}</view>
+        >按住 说话</view>
       </view>
 
       <view
@@ -197,6 +198,21 @@
           </view>
         </view>
       </scroll-view>
+    </view>
+  </view>
+
+  <view
+    wx:if="{{voiceRecording}}"
+    class="chat-voice-mask"
+    catchtouchmove="preventVoiceTouchMove"
+  >
+    <view class="chat-voice-panel {{voiceWillCancel ? 'chat-voice-panel--cancel' : ''}}">
+      <view class="chat-voice-panel__waves">
+        <view class="chat-voice-panel__wave chat-voice-panel__wave--1"></view>
+        <view class="chat-voice-panel__wave chat-voice-panel__wave--2"></view>
+        <view class="chat-voice-panel__wave chat-voice-panel__wave--3"></view>
+      </view>
+      <text class="chat-voice-panel__hint">{{voiceWillCancel ? '松开手指，取消发送' : '松开 发送'}}</text>
     </view>
   </view>
 </view>
