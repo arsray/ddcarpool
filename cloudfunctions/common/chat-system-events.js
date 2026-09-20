@@ -25,7 +25,7 @@ function buildSystemMessageContent(event, payload) {
     case SYSTEM_EVENTS.TRIP_STARTED:
       return '行程已开始'
     case SYSTEM_EVENTS.TRIP_COMPLETED:
-      return '订单已完成'
+      return '行程已完成'
     case SYSTEM_EVENTS.PASSENGER_COUNT_CHANGED:
       return `乘车人数已更新为 ${data.passengerCount || 1} 人`
     default:

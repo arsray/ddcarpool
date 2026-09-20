@@ -72,12 +72,6 @@
         <view class="v1-row-primary">账号与安全</view>
         <text class="v1-chevron">›</text>
       </view>
-      <view class="v1-group-divider"></view>
-      <view class="v1-group-row" bindtap="goNotify">
-        <view class="v1-row-primary">通知中心</view>
-        <view class="v1-row-meta" wx:if="{{unreadCount > 0}}">{{unreadCount}} 条未读</view>
-        <text class="v1-chevron">›</text>
-      </view>
     </view>
   </view>
 

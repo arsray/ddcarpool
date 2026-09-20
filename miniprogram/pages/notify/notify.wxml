@@ -8,9 +8,13 @@ function iconType(title) {
 
 function summary(title) {
   if (!title) return '点击查看详情'
-  if (title.indexOf('匹配') >= 0) return '查看订单详情或最新状态'
+  if (title.indexOf('匹配超时') >= 0) return '出发时段内无人接单，订单已关闭'
+  if (title.indexOf('重新匹配') >= 0) return '订单已回到广场，可查看详情'
+  if (title.indexOf('待出发') >= 0) return '司机已接单，请查看出发安排'
+  if (title.indexOf('已开始') >= 0) return '行程进行中，可查看详情或联系对方'
+  if (title.indexOf('已完成') >= 0) return '行程已结束，可查看详情'
+  if (title.indexOf('已关闭') >= 0) return '订单已关闭，可查看详情'
   if (title.indexOf('消息') >= 0) return '点击查看消息内容'
-  if (title.indexOf('完成') >= 0) return '行程已结束，可查看详情'
   return '点击查看详情'
 }
 

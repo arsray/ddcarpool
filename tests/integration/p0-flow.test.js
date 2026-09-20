@@ -25,7 +25,7 @@ describe('P0 Mock 主路径（Alice / Bob）', () => {
       const notifications = mockWx.getStorageSync('notifications')
       assert.ok(
         notifications.some(
-          (n) => n.recipientOpenId === ALICE.openId && String(n.title).includes('已被接单')
+          (n) => n.recipientOpenId === ALICE.openId && String(n.title).includes('待出发')
         )
       )
     })
