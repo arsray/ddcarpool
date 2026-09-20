@@ -150,6 +150,7 @@ describe('M1 登录态 30 天', () => {
       const session = mockWx.getStorageSync('authSession')
       assert.ok(session.expiresAt > Date.now())
       assert.ok(session.expiresAt <= Date.now() + SESSION_TTL_MS + 1000)
+      assert.ok(session.accountId)
     })
   })
 

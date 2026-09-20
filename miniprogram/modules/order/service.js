@@ -11,6 +11,7 @@ const { comparePlazaOrders } = require('./plaza-sort')
 const { snapshotDriverVehicle } = require('./driver-vehicle')
 const chatSystem = require('../chat/system-message')
 const notificationTitles = require('../notification/titles')
+const { notificationsStorageKey } = require('../auth/account-scope')
 
 function getHistoryBridge() {
   return require('./history-bridge')
@@ -258,7 +259,9 @@ function listOrdersForUser(openId, filters) {
 }
 
 function appendNotification(entry) {
-  const list = wx.getStorageSync('notifications') || []
+  const recipientId = entry.recipientOpenId || entry.passengerOpenId || ''
+  const storageKey = notificationsStorageKey(recipientId || undefined)
+  const list = wx.getStorageSync(storageKey) || []
   const now = new Date()
   const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   list.unshift({
@@ -267,7 +270,7 @@ function appendNotification(entry) {
     read: false,
     ...entry
   })
-  wx.setStorageSync('notifications', list)
+  wx.setStorageSync(storageKey, list)
 }
 
 function appendPassengerNotification(order, title) {

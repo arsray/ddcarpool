@@ -70,7 +70,7 @@ export const FILTER_BUCKETS = {
 
 ## users
 
-`openId` 只能由云函数从微信上下文写入。客户端提交的 openId 不参与身份判断。
+`openId` 为邮箱 derived 的 **`acct_*` 账号 ID**（与微信 OPENID 无关）。订单/通知/聊天均按 `openId` 关联。同一微信可登录多个邮箱；当前生效账号由 **`authSession.accountId` + `users.lastWechatOpenId`** 绑定，切换邮箱登录会 claim 本机微信绑定。
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|

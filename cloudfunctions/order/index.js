@@ -587,8 +587,12 @@ exports.main = async (event) => {
     if (event && event.Type === 'Timer') return ok(await runScheduledTasks())
     const { OPENID } = cloud.getWXContext()
     if (!OPENID) return fail('NOT_AUTHENTICATED', '请先登录')
-    const accountId = await resolveAccountId(db.collection('users'), OPENID)
     const action = event && event.action
+
+    if (action === 'listPoints') return ok(await listPoints())
+    if (action === 'listRoutes') return ok(await listRoutes())
+
+    const accountId = await resolveAccountId(db.collection('users'), OPENID, event.accountId)
 
     if (action === 'create') return ok(await createOrder(event, accountId))
     if (action === 'listOpen') return ok(await listOpen(accountId))
@@ -603,8 +607,6 @@ exports.main = async (event) => {
       return ok(await updatePassengerCount(event, accountId))
     }
     if (action === 'expireStale') return ok(await runScheduledTasks())
-    if (action === 'listPoints') return ok(await listPoints())
-    if (action === 'listRoutes') return ok(await listRoutes())
     return fail('INVALID_ACTION', '不支持的订单操作')
   } catch (error) {
     const code = error && error.code

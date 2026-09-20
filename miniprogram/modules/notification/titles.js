@@ -1,5 +1,5 @@
 /**
- * Tab「消息」通知标题 — 统一「状态主句 · 补充信息」
+ * Tab「消息」通知标题 — 触发事件一句（路线/时段见订单详情）
  * 云函数侧副本：cloudfunctions/order/common/notification-titles.js
  */
 
@@ -24,53 +24,34 @@ function formatRoute(order, pointNameById) {
   return `${from} → ${to}`
 }
 
-function orderContext(order, pointNameById, extra) {
-  return {
-    routeLabel: formatRoute(order, pointNameById),
-    scheduleLabel: formatSchedule(order),
-    ...(extra || {})
-  }
-}
-
 /** 司机接单 → 乘车人 Tab */
-function titleAcceptedPassenger(order, pointNameById, driverName) {
-  const ctx = orderContext(order, pointNameById, { driverName: driverName || '司机' })
-  return joinParts([
-    '订单已进入待出发',
-    `${ctx.driverName}已接单`,
-    ctx.routeLabel,
-    ctx.scheduleLabel
-  ])
+function titleAcceptedPassenger(_order, _pointNameById, _driverName) {
+  return '司机已接单'
 }
 
 /** 乘客取消（已有司机）→ 车主 Tab */
-function titlePassengerCancelOwner(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['订单已关闭', '乘客已取消', ctx.routeLabel, ctx.scheduleLabel])
+function titlePassengerCancelOwner(_order, _pointNameById) {
+  return '乘客已取消'
 }
 
 /** 司机取消接单 → 乘车人 Tab */
-function titleDriverCancelPassenger(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['订单重新匹配中', '司机已取消匹配', ctx.routeLabel, ctx.scheduleLabel])
+function titleDriverCancelPassenger(_order, _pointNameById) {
+  return '司机已取消接单'
 }
 
 /** 行程自动开始 → 双方 Tab */
-function titleTripStarted(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['行程已开始', ctx.routeLabel, ctx.scheduleLabel])
+function titleTripStarted(_order, _pointNameById) {
+  return '行程自动开始'
 }
 
 /** 行程自动完成 → 双方 Tab */
-function titleTripCompleted(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['行程已完成', ctx.routeLabel, ctx.scheduleLabel])
+function titleTripCompleted(_order, _pointNameById) {
+  return '行程自动完成'
 }
 
 /** 匹配过期 → 乘车人 Tab */
-function titleMatchExpiredPassenger(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['订单已关闭', '匹配超时', ctx.routeLabel, ctx.scheduleLabel])
+function titleMatchExpiredPassenger(_order, _pointNameById) {
+  return '匹配已超时'
 }
 
 module.exports = {

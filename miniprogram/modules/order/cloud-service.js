@@ -89,14 +89,22 @@ async function expireStaleOrders() {
 }
 
 async function listPoints() {
-  const list = await invoke('listPoints')
-  pointCache = list && list.length ? list : DEFAULT_POINTS
+  try {
+    const list = await invoke('listPoints')
+    pointCache = list && list.length ? list : DEFAULT_POINTS
+  } catch (error) {
+    pointCache = DEFAULT_POINTS
+  }
   return pointCache
 }
 
 async function listConfiguredRoutes() {
-  const list = await invoke('listRoutes')
-  routeCache = list && list.length ? list : DEFAULT_CONFIGURED_ROUTES
+  try {
+    const list = await invoke('listRoutes')
+    routeCache = list && list.length ? list : DEFAULT_CONFIGURED_ROUTES
+  } catch (error) {
+    routeCache = DEFAULT_CONFIGURED_ROUTES
+  }
   return routeCache
 }
 

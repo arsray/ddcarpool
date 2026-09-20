@@ -1,8 +1,15 @@
 const { callFunction } = require('../../utils/cloud')
-const { normalizeEmail } = require('./email')
+const { normalizeEmail, emailToAccountId } = require('./email')
 const { clearAllUserStorage } = require('./clear-storage')
 const { safeReLaunch, safeSwitchTab } = require('./nav')
 const config = require('../../config/index')
+const {
+  writeSession,
+  clearSession,
+  isSessionValid,
+  readSession
+} = require('./session')
+const { clearAccountScopedAppData } = require('./account-scope')
 
 const CACHE_KEY = 'cloudUserCache'
 const state = {
@@ -25,8 +32,33 @@ function getState() {
   return state
 }
 
+function persistUserInfo(user) {
+  if (!user || !user.email) return
+  wx.setStorageSync('userInfo', {
+    email: user.email,
+    displayName: user.displayName || user.nickName || '',
+    phone: user.phone || '',
+    department: user.department || '',
+    avatarUrl: user.avatarUrl || ''
+  })
+}
+
 function applyUser(openId, user) {
-  state.openId = openId || (user && user.openId) || null
+  const nextOpenId = openId || (user && user.openId) || null
+  const nextEmail = user && user.email ? String(user.email).trim().toLowerCase() : ''
+  const prevEmail = state.userInfo && state.userInfo.email
+    ? String(state.userInfo.email).trim().toLowerCase()
+    : ''
+  if (
+    (state.openId && nextOpenId && state.openId !== nextOpenId) ||
+    (prevEmail && nextEmail && prevEmail !== nextEmail)
+  ) {
+    state.notifications = []
+    state.historyOwner = []
+    state.historyPassenger = []
+    clearAccountScopedAppData()
+  }
+  state.openId = nextOpenId
   if (!user) {
     state.userInfo = null
     return state
@@ -47,22 +79,64 @@ function applyUser(openId, user) {
   state.preference = user.preference || null
   state.habitTags = Array.isArray(user.habitTags) ? user.habitTags : []
   wx.setStorageSync(CACHE_KEY, { openId: state.openId, user })
+  persistUserInfo(user)
+  if (user.email && state.openId) {
+    writeSession(user.email, state.openId)
+  }
   wx.setStorageSync('loggedIn', true)
   return state
 }
 
 function initFromStorage() {
+  if (!isSessionValid()) {
+    clearSession()
+    state.openId = null
+    state.userInfo = null
+    return state
+  }
+  const session = readSession()
+  const sessionAccountId = session && session.accountId ? String(session.accountId).trim() : ''
   const cached = wx.getStorageSync(CACHE_KEY)
   if (cached && cached.openId && cached.user) {
-    applyUser(cached.openId, cached.user)
+    if (!sessionAccountId || String(cached.openId).trim() === sessionAccountId) {
+      applyUser(cached.openId, cached.user)
+    }
   }
   return state
 }
 
 async function bootstrapCloudSession() {
-  const session = await callFunction('login')
-  if (session && session.user) applyUser(session.openId, session.user)
-  else state.openId = session && session.openId ? session.openId : null
+  if (!isSessionValid()) {
+    state.openId = null
+    state.userInfo = null
+    return state
+  }
+
+  const session = readSession()
+  const sessionAccountId = session && session.accountId ? String(session.accountId).trim() : ''
+  const cached = wx.getStorageSync(CACHE_KEY)
+  const accountId = sessionAccountId || (cached && cached.openId ? String(cached.openId).trim() : '')
+  if (!accountId) {
+    return state
+  }
+  if (sessionAccountId && cached && cached.openId && String(cached.openId).trim() !== sessionAccountId) {
+    try {
+      wx.removeStorageSync(CACHE_KEY)
+    } catch (error) {
+      // ignore
+    }
+  }
+
+  try {
+    const user = await callFunction('user', { action: 'get', accountId })
+    if (user) {
+      applyUser(user.openId, user)
+    }
+  } catch (error) {
+    if (error && (error.code === 'SESSION_INVALID' || error.code === 'NOT_LOGGED_IN')) {
+      logout()
+    }
+  }
   return state
 }
 
@@ -113,15 +187,20 @@ function syncGlobalData(globalData) {
 
 async function loginWithEmail(email, verificationMode) {
   const normalized = normalizeEmail(email)
-  const session = await callFunction('login')
+  clearAccountScopedAppData()
+  state.notifications = []
+  state.historyOwner = []
+  state.historyPassenger = []
   if (verificationMode === 'smtp') {
-    const refreshed = await callFunction('login')
-    if (!refreshed.user || refreshed.user.email !== normalized || !refreshed.user.emailVerified) {
+    const accountId = emailToAccountId(normalized)
+    const user = await callFunction('user', { action: 'get', accountId })
+    if (!user || user.email !== normalized || !user.emailVerified) {
       const error = new Error('EMAIL_NOT_VERIFIED')
       error.code = 'EMAIL_NOT_VERIFIED'
       throw error
     }
-    applyUser(refreshed.openId, refreshed.user)
+    applyUser(user.openId, user)
+    writeSession(normalized, user.openId)
     return state
   }
   if (!config.allowMockEmailVerification) {
@@ -135,6 +214,7 @@ async function loginWithEmail(email, verificationMode) {
     displayName: normalized.split('@')[0]
   })
   applyUser(user.openId, user)
+  writeSession(normalized, user.openId)
   return state
 }
 

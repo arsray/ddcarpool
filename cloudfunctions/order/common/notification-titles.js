@@ -23,47 +23,28 @@ function formatRoute(order, pointNameById) {
   return `${from} → ${to}`
 }
 
-function orderContext(order, pointNameById, extra) {
-  return {
-    routeLabel: formatRoute(order, pointNameById),
-    scheduleLabel: formatSchedule(order),
-    ...(extra || {})
-  }
+function titleAcceptedPassenger(_order, _pointNameById, _driverName) {
+  return '司机已接单'
 }
 
-function titleAcceptedPassenger(order, pointNameById, driverName) {
-  const ctx = orderContext(order, pointNameById, { driverName: driverName || '司机' })
-  return joinParts([
-    '订单已进入待出发',
-    `${ctx.driverName}已接单`,
-    ctx.routeLabel,
-    ctx.scheduleLabel
-  ])
+function titlePassengerCancelOwner(_order, _pointNameById) {
+  return '乘客已取消'
 }
 
-function titlePassengerCancelOwner(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['订单已关闭', '乘客已取消', ctx.routeLabel, ctx.scheduleLabel])
+function titleDriverCancelPassenger(_order, _pointNameById) {
+  return '司机已取消接单'
 }
 
-function titleDriverCancelPassenger(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['订单重新匹配中', '司机已取消匹配', ctx.routeLabel, ctx.scheduleLabel])
+function titleTripStarted(_order, _pointNameById) {
+  return '行程自动开始'
 }
 
-function titleTripStarted(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['行程已开始', ctx.routeLabel, ctx.scheduleLabel])
+function titleTripCompleted(_order, _pointNameById) {
+  return '行程自动完成'
 }
 
-function titleTripCompleted(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['行程已完成', ctx.routeLabel, ctx.scheduleLabel])
-}
-
-function titleMatchExpiredPassenger(order, pointNameById) {
-  const ctx = orderContext(order, pointNameById)
-  return joinParts(['订单已关闭', '匹配超时', ctx.routeLabel, ctx.scheduleLabel])
+function titleMatchExpiredPassenger(_order, _pointNameById) {
+  return '匹配已超时'
 }
 
 module.exports = {

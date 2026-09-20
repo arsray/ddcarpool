@@ -4,7 +4,16 @@
 
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const { withOrderModule, ALICE, BOB, buildCreateInput, futureDepartWindow, loadModule } = require('../helpers/setup')
+const {
+  withOrderModule,
+  ALICE,
+  BOB,
+  buildCreateInput,
+  futureDepartWindow,
+  loadModule,
+  getMockNotifications,
+  clearMockNotifications
+} = require('../helpers/setup')
 
 const { ORDER_STATUS } = loadModule('modules/order/constants/status.js')
 
@@ -122,10 +131,10 @@ describe('M3 列表查询', () => {
       const plaza = await order.listOpenOrders({ viewerOpenId: BOB.openId })
       assert.ok(!plaza.some((item) => item._id === created._id))
 
-      const notes = mockWx.getStorageSync('notifications')
+      const notes = getMockNotifications(mockWx, ALICE.openId)
       assert.ok(
         notes.some(
-          (n) => n.recipientOpenId === ALICE.openId && String(n.title).includes('匹配超时')
+          (n) => n.recipientOpenId === ALICE.openId && String(n.title).includes('匹配已超时')
         )
       )
     })
@@ -137,13 +146,12 @@ describe('M3 通知写入', () => {
     await withOrderModule(null, async ({ order, mockWx }) => {
       const created = await order.createOrder(buildCreateInput())
       await order.acceptOrder(created._id, { openId: BOB.openId, name: BOB.name })
-      const notes = mockWx.getStorageSync('notifications')
+      const notes = getMockNotifications(mockWx, ALICE.openId)
       const hit = notes.find((n) => n.recipientOpenId === ALICE.openId)
       assert.ok(hit)
       assert.equal(hit.targetType, 'passenger')
       assert.equal(hit.targetId, created._id)
-      assert.match(String(hit.title), /^订单已进入待出发/)
-      assert.ok(String(hit.title).includes('Bob已接单'))
+      assert.equal(String(hit.title), '司机已接单')
     })
   })
 
@@ -151,14 +159,13 @@ describe('M3 通知写入', () => {
     await withOrderModule(null, async ({ order, mockWx }) => {
       const created = await order.createOrder(buildCreateInput())
       await order.acceptOrder(created._id, { openId: BOB.openId, name: BOB.name })
-      mockWx.setStorageSync('notifications', [])
+      clearMockNotifications(mockWx, ALICE.openId)
       await order.cancelOrder(created._id, { openId: BOB.openId })
-      const notes = mockWx.getStorageSync('notifications')
+      const notes = getMockNotifications(mockWx, ALICE.openId)
       const hit = notes.find((n) => n.recipientOpenId === ALICE.openId)
       assert.ok(hit)
       assert.equal(hit.targetType, 'passenger')
-      assert.match(String(hit.title), /^订单重新匹配中/)
-      assert.ok(String(hit.title).includes('司机已取消匹配'))
+      assert.equal(String(hit.title), '司机已取消接单')
     })
   })
 
@@ -166,28 +173,28 @@ describe('M3 通知写入', () => {
     await withOrderModule(null, async ({ order, mockWx }) => {
       const created = await order.createOrder(buildCreateInput())
       await order.acceptOrder(created._id, { openId: BOB.openId, name: BOB.name })
-      mockWx.setStorageSync('notifications', [])
+      clearMockNotifications(mockWx, BOB.openId)
       await order.cancelOrder(created._id, { openId: ALICE.openId })
-      const notes = mockWx.getStorageSync('notifications')
+      const notes = getMockNotifications(mockWx, BOB.openId)
       const hit = notes.find((n) => n.recipientOpenId === BOB.openId)
       assert.ok(hit)
       assert.equal(hit.targetType, 'owner')
-      assert.match(String(hit.title), /^订单已关闭/)
-      assert.ok(String(hit.title).includes('乘客已取消'))
+      assert.equal(String(hit.title), '乘客已取消')
     })
   })
 
   it('匹配中乘客取消（无司机）不写入 Tab 通知', async () => {
     await withOrderModule(null, async ({ order, mockWx }) => {
       const created = await order.createOrder(buildCreateInput())
-      mockWx.setStorageSync('notifications', [])
+      clearMockNotifications(mockWx, ALICE.openId)
+      clearMockNotifications(mockWx, BOB.openId)
       await order.cancelOrder(created._id, { openId: ALICE.openId })
-      const notes = mockWx.getStorageSync('notifications')
+      const notes = getMockNotifications(mockWx, ALICE.openId)
       assert.equal(notes.length, 0)
     })
   })
 
-  it('过期关单仅通知乘车人且含匹配超时', async () => {
+  it('过期关单仅通知乘车人且为匹配已超时', async () => {
     await withOrderModule(null, async ({ order, mockWx }) => {
       const created = await order.createOrder(buildCreateInput())
       const orders = mockWx.getStorageSync('m3_orders_v1')
@@ -199,14 +206,13 @@ describe('M3 通知写入', () => {
             : item
         )
       )
-      mockWx.setStorageSync('notifications', [])
+      clearMockNotifications(mockWx, ALICE.openId)
       await order.expireStaleOrders()
-      const notes = mockWx.getStorageSync('notifications')
+      const notes = getMockNotifications(mockWx, ALICE.openId)
       assert.equal(notes.length, 1)
       assert.equal(notes[0].recipientOpenId, ALICE.openId)
       assert.equal(notes[0].targetType, 'passenger')
-      assert.match(String(notes[0].title), /^订单已关闭/)
-      assert.ok(String(notes[0].title).includes('匹配超时'))
+      assert.equal(String(notes[0].title), '匹配已超时')
     })
   })
 })

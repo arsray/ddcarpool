@@ -7,6 +7,11 @@ function normalizeEmail(email) {
   return (email || '').trim().toLowerCase()
 }
 
+/** 与云函数 account-id 一致的邮箱账号 ID（acct_*） */
+function emailToAccountId(email) {
+  return `acct_${normalizeEmail(email).replace(/[^a-z0-9]/g, '_')}`
+}
+
 function normalizeLocalPart(raw) {
   let val = normalizeEmail(raw)
   if (val.includes('@')) {
@@ -82,6 +87,7 @@ function initialsFromEmailLocalPart(emailOrLocal) {
 module.exports = {
   DISNEY_SUFFIX,
   normalizeEmail,
+  emailToAccountId,
   normalizeLocalPart,
   buildDisneyEmail,
   validateEmailPrefix,

@@ -18,11 +18,12 @@ Page({
     modeLabel: '车主模式',
     switchLabel: '切换乘车人',
     hasBothIdentities: false,
+    hasOwnerIdentity: false,
+    hasPassengerIdentity: false,
     hasVehicle: false,
     hasPreference: false,
     vehicle: {},
     preference: {},
-    habitSummary: '',
     unfinishedCount: 0,
     unfinishedLabel: '车主未完成订单',
     avatarInitials: 'U'
@@ -73,6 +74,8 @@ Page({
     const identities = g.identities || []
     const isOwner = g.userMode === 'owner'
     const hasBoth = identities.includes('owner') && identities.includes('passenger')
+    const hasOwnerIdentity = identities.includes('owner')
+    const hasPassengerIdentity = identities.includes('passenger')
     const currentRole = isOwner ? 'owner' : 'passenger'
     const list = isOwner ? (g.historyOwner || []) : (g.historyPassenger || [])
 
@@ -89,6 +92,8 @@ Page({
       userInfo: g.userInfo,
       isOwner,
       hasBothIdentities: hasBoth,
+      hasOwnerIdentity,
+      hasPassengerIdentity,
       modeLabel: isOwner ? '车主模式' : '乘车人模式',
       switchLabel: isOwner ? '切换乘车人' : '切换车主',
       vehicle: g.vehicle || {},
@@ -96,7 +101,6 @@ Page({
       hasVehicle: !!(g.vehicle && g.vehicle.plate),
       hasPreference: !!g.preference,
       preferenceSummary: formatPreferenceSummary(g.preference),
-      habitSummary: (g.habitTags || []).join(' · ') || '未设置',
       unfinishedCount,
       unfinishedLabel: isOwner ? '车主未完成订单' : '乘车人未完成订单',
       avatarInitials: initialsFromEmailLocalPart(g.userInfo && g.userInfo.email)
@@ -119,7 +123,6 @@ Page({
   },
 
   goVehicle() { wx.navigateTo({ url: '/pages/vehicle/vehicle' }) },
-  goHabitTags() { wx.navigateTo({ url: '/pages/habit-tags/habit-tags' }) },
   goPreference() { wx.navigateTo({ url: '/pages/preference/preference' }) },
   goHistory() {
     wx.navigateTo({ url: `/pages/history/history?role=${this.data.isOwner ? 'owner' : 'passenger'}` })

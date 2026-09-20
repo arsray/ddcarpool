@@ -1,19 +1,36 @@
 const cloud = require('wx-server-sdk')
-const { findUserByWechatOpenId } = require('./common/account-id')
+const { findUserByAccountId, resolveAccountId } = require('./common/account-id')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const users = db.collection('users')
 
-exports.main = async () => {
+exports.main = async (event) => {
   try {
     const { OPENID } = cloud.getWXContext()
     if (!OPENID) {
       return { ok: false, code: 'NOT_AUTHENTICATED', message: '无法识别当前用户' }
     }
 
-    const user = await findUserByWechatOpenId(users, OPENID)
+    const clientAccountId = event && event.accountId
+    if (!clientAccountId) {
+      return {
+        ok: true,
+        data: { openId: null, user: null }
+      }
+    }
 
+    let accountId
+    try {
+      accountId = await resolveAccountId(users, OPENID, clientAccountId)
+    } catch (error) {
+      return {
+        ok: true,
+        data: { openId: null, user: null }
+      }
+    }
+
+    const user = await findUserByAccountId(users, accountId)
     return {
       ok: true,
       data: {

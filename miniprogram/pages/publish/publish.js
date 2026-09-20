@@ -154,6 +154,9 @@ Page({
     }
 
     try {
+      if (auth.getProfile) {
+        await auth.getProfile()
+      }
       const preference = readPassengerPreference()
       const republishDraft = consumeRepublishDraft()
       let selectedNoteMap = buildSelectedNoteMap(preference.noteTags)
@@ -221,6 +224,11 @@ Page({
       this.setData(nextData, () => this.refreshRoutePreview())
     } catch (error) {
       this.setData({ loading: false })
+      const code = error && error.code
+      if (code === 'SESSION_INVALID' || code === 'NOT_LOGGED_IN') {
+        wx.showToast({ title: '登录已失效，请重新登录', icon: 'none' })
+        return
+      }
       wx.showToast({ title: '加载失败，请重试', icon: 'none' })
     }
   },

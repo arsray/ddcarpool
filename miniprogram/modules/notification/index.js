@@ -1,5 +1,13 @@
 const config = require('../../config/index')
 const { callFunction } = require('../../utils/cloud')
+const {
+  getActiveAccountId,
+  notificationsStorageKey,
+  clearAccountScopedAppData,
+  clearLegacyNotificationsStorage
+} = require('../auth/account-scope')
+
+let lastAppliedAccountId = ''
 
 function countUnread(notifications) {
   return (notifications || []).filter((item) => !item.read).length
@@ -31,7 +39,22 @@ function syncTabBarBadgeFromApp() {
   }
 }
 
+function resetNotificationRuntime() {
+  lastAppliedAccountId = ''
+  clearAccountScopedAppData()
+  if (config.useCloud) {
+    const cloudStore = require('../auth/cloud-store')
+    if (cloudStore.setNotifications) cloudStore.setNotifications([])
+  }
+}
+
 function applyNotifications(notifications) {
+  const accountId = getActiveAccountId()
+  if (accountId && lastAppliedAccountId && accountId !== lastAppliedAccountId) {
+    resetNotificationRuntime()
+  }
+  if (accountId) lastAppliedAccountId = accountId
+
   const list = Array.isArray(notifications) ? notifications : []
   try {
     const app = getApp()
@@ -43,7 +66,8 @@ function applyNotifications(notifications) {
     const cloudStore = require('../auth/cloud-store')
     if (cloudStore.setNotifications) cloudStore.setNotifications(list)
   } else {
-    wx.setStorageSync('notifications', list)
+    clearLegacyNotificationsStorage()
+    wx.setStorageSync(notificationsStorageKey(accountId), list)
     const store = require('../auth/store')
     store.getState().notifications = list
   }
@@ -53,9 +77,10 @@ function applyNotifications(notifications) {
 
 async function listNotifications() {
   if (config.useCloud) {
+    if (!getActiveAccountId()) return []
     return callFunction('notification', { action: 'list' })
   }
-  return wx.getStorageSync('notifications') || []
+  return wx.getStorageSync(notificationsStorageKey()) || []
 }
 
 async function refreshNotifications() {
@@ -75,7 +100,7 @@ async function markRead(notificationId) {
     applyNotifications(next)
     return { notificationId, read: true }
   }
-  const list = wx.getStorageSync('notifications') || []
+  const list = wx.getStorageSync(notificationsStorageKey()) || []
   const next = list.map((item) => item.id === notificationId || item._id === notificationId
     ? { ...item, read: true }
     : item)
@@ -88,7 +113,9 @@ module.exports = {
   syncTabBarBadge,
   syncTabBarBadgeFromApp,
   applyNotifications,
+  resetNotificationRuntime,
   listNotifications,
   refreshNotifications,
-  markRead
+  markRead,
+  notificationsStorageKey
 }
