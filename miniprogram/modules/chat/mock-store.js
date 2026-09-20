@@ -77,6 +77,9 @@ function serializeMessage(doc, order, participants, viewerOpenId) {
     type: doc.type || 'text',
     content: doc.content || '',
     stickerId: doc.stickerId || '',
+    voiceFileId: doc.voiceFileId || '',
+    voiceLocalPath: doc.voiceLocalPath || '',
+    durationSec: doc.durationSec || 0,
     senderOpenId: doc.senderOpenId,
     senderName: doc.senderName || sender.name,
     senderAvatarUrl: sender.avatarUrl,
@@ -159,7 +162,9 @@ function markMessagesRead(orderId, openId) {
   const all = readAll()
   let marked = 0
   const next = all.map((doc) => {
-    if (doc.orderId !== orderId || doc.senderOpenId !== otherOpenId) return doc
+    if (doc.orderId !== orderId || doc.senderOpenId !== otherOpenId || doc.type === 'system') {
+      return doc
+    }
     const readBy = Array.isArray(doc.readBy) ? doc.readBy.slice() : []
     if (readBy.includes(openId)) return doc
     readBy.push(openId)

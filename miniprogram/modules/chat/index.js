@@ -120,7 +120,7 @@ async function sendVoice(orderId, tempFilePath, durationSec) {
   }
 
   return callFunction('message', {
-    action: 'send',
+    action: 'sendVoice',
     type: 'voice',
     orderId,
     voiceFileId: stored.voiceFileId,
@@ -147,11 +147,10 @@ async function sendSticker(orderId, stickerId) {
   // 走 send + type=sticker，与 cloudfunctions/message 的 send 分支一致；
   // 部署含表情支持的 message 云函数后才会存为 sticker 类型。
   return callFunction('message', {
-    action: 'send',
+    action: 'sendSticker',
     orderId,
     type: 'sticker',
-    stickerId: sticker.id,
-    content: sticker.label
+    stickerId: sticker.id
   })
 }
 
@@ -187,11 +186,12 @@ function enrichMessage(item) {
     }
   }
 
-  const isSticker = item.type === 'sticker' || Boolean(item.stickerId)
+  const sticker = stickers.resolveStickerFromMessage(item)
+  const isSticker = item.type === 'sticker' || Boolean(item.stickerId) || Boolean(sticker)
   if (isSticker) {
-    const sticker = stickers.getStickerById(item.stickerId)
     return {
       ...item,
+      stickerId: (sticker && sticker.id) || item.stickerId || '',
       isSticker: Boolean(sticker),
       isVoice: false,
       stickerSrc: sticker ? sticker.src : '',
@@ -238,6 +238,7 @@ module.exports = {
   sendVoice,
   sendSticker,
   enrichMessage,
+  resolveVoicePlaySrc: voiceStorage.resolveVoicePlaySrc,
   buildParticipantsFromOrder,
   mergeChatParticipants,
   listStickers: stickers.listStickers,
