@@ -1,16 +1,18 @@
 /**
  * 登录会话 — 30 天有效（M1）
  * 验证码本身仍 10 分钟过期（verify.js）
+ * accountId = 邮箱 derived acct_*，与微信 OPENID 解耦
  */
 
 const SESSION_STORAGE_KEY = 'authSession'
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
-function writeSession(email) {
+function writeSession(email, accountId) {
   const normalized = (email || '').trim().toLowerCase()
   wx.setStorageSync('loggedIn', true)
   wx.setStorageSync(SESSION_STORAGE_KEY, {
     email: normalized,
+    accountId: accountId ? String(accountId).trim() : '',
     expiresAt: Date.now() + SESSION_TTL_MS,
     createdAt: Date.now()
   })
@@ -28,17 +30,22 @@ function readSession() {
 function isSessionValid() {
   const session = readSession()
   const userInfo = wx.getStorageSync('userInfo')
+  const cache = wx.getStorageSync('cloudUserCache')
 
   if (session && session.expiresAt) {
     if (Date.now() > session.expiresAt) {
       clearSession()
       wx.removeStorageSync('userInfo')
+      wx.removeStorageSync('cloudUserCache')
       return false
     }
-    return !!wx.getStorageSync('loggedIn') && !!userInfo
+    const hasAccount =
+      (session.accountId && String(session.accountId).trim()) ||
+      (cache && cache.openId) ||
+      (userInfo && userInfo.email)
+    return !!wx.getStorageSync('loggedIn') && !!hasAccount
   }
 
-  // 兼容旧版：仅有 loggedIn 无 session 记录时视为有效，下次登录会写入 session
   return !!wx.getStorageSync('loggedIn') && !!userInfo
 }
 
@@ -50,6 +57,18 @@ function getSessionRemainingDays() {
   return Math.ceil(remainMs / (24 * 60 * 60 * 1000))
 }
 
+function getSessionAccountId() {
+  const session = readSession()
+  if (session && session.accountId) return String(session.accountId).trim()
+  try {
+    const cache = wx.getStorageSync('cloudUserCache')
+    if (cache && cache.openId) return String(cache.openId).trim()
+  } catch (error) {
+    // ignore
+  }
+  return ''
+}
+
 module.exports = {
   SESSION_STORAGE_KEY,
   SESSION_TTL_MS,
@@ -57,5 +76,6 @@ module.exports = {
   clearSession,
   readSession,
   isSessionValid,
-  getSessionRemainingDays
+  getSessionRemainingDays,
+  getSessionAccountId
 }

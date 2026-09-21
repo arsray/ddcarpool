@@ -2,6 +2,12 @@
 const crypto = require('crypto')
 const cloud = require('wx-server-sdk')
 const { sendVerificationEmail } = require('./smtp-adapter')
+const {
+  emailToAccountId,
+  findUserByEmail,
+  findUserByAccountId,
+  claimWechatBinding
+} = require('./common/account-id')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -114,39 +120,48 @@ async function verifyCode(openId, email, code) {
     return failure('EMAIL_CODE_INVALID', '验证码无效或已过期')
   }
 
-  const alreadyBound = await users.where({
-    email,
-    emailVerified: true,
-    openId: _.neq(openId)
-  }).limit(1).get()
-  if (alreadyBound.data.length) {
+  const accountId = emailToAccountId(email)
+  const existingByEmail = await findUserByEmail(users, email)
+  if (
+    existingByEmail &&
+    existingByEmail.emailVerified &&
+    existingByEmail.openId !== accountId
+  ) {
     return failure('EMAIL_BIND_FAILED', '邮箱绑定失败，请联系管理员')
   }
 
-  const existing = await users.where({ openId }).limit(1).get()
-  const user = existing.data[0]
-  const update = {
+  const now = db.serverDate()
+  const existing = await findUserByAccountId(users, accountId)
+  const profile = {
+    openId: accountId,
     email,
     emailVerified: true,
     emailVerificationMode: 'smtp',
-    updatedAt: db.serverDate()
+    displayName: email.split('@')[0],
+    nickName: email.split('@')[0],
+    updatedAt: now
   }
-  if (user) {
-    await users.doc(user._id).update({ data: update })
+  if (existing) {
+    await users.doc(existing._id).update({ data: profile })
   } else {
     await users.add({
       data: {
-        openId,
-        displayName: email.split('@')[0],
-        nickName: email.split('@')[0],
+        ...profile,
         identities: [],
         onboardingComplete: false,
         userMode: 'owner',
-        ...update,
-        createdAt: db.serverDate()
+        avatarUrl: '',
+        phone: '',
+        department: '',
+        vehicle: null,
+        preference: null,
+        habitTags: [],
+        lastWechatOpenId: '',
+        createdAt: now
       }
     })
   }
+  await claimWechatBinding(users, db, openId, accountId)
   await verifications.doc(record._id).update({
     data: { used: true, usedAt: db.serverDate() }
   })

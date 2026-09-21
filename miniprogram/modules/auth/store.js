@@ -18,6 +18,11 @@ const {
   isSessionValid,
   SESSION_TTL_MS
 } = require('./session')
+const {
+  notificationsStorageKey,
+  clearLegacyNotificationsStorage,
+  clearAccountScopedAppData
+} = require('./account-scope')
 
 function mockOpenId(email) {
   const normalized = normalizeEmail(email || '')
@@ -96,7 +101,7 @@ function initFromStorage() {
 
   s.historyOwner = mergeOwnerOrders(s.userInfo)
   s.historyPassenger = mergePassengerOrders(s.userInfo)
-  s.notifications = wx.getStorageSync('notifications') || []
+  s.notifications = wx.getStorageSync(notificationsStorageKey(mockOpenId(s.userInfo && s.userInfo.email))) || []
 
   if (!s.identities.length && s.onboardingComplete === false && s.vehicle) {
     s.identities = ['owner']
@@ -156,19 +161,22 @@ function syncGlobalData(globalData) {
 
 function loginWithEmail(email) {
   const normalized = normalizeEmail(email)
+  clearAccountScopedAppData()
   const snapshots = readUserSnapshots()
   const stored = wx.getStorageSync('userInfo')
   const isReturning = stored && stored.email === normalized
 
+  const accountId = mockOpenId(normalized)
+
   if (snapshots[normalized]) {
     applyUserSnapshot(snapshots[normalized])
-    writeSession(normalized)
+    writeSession(normalized, accountId)
     initFromStorage()
     return
   }
 
   if (isReturning) {
-    writeSession(normalized)
+    writeSession(normalized, accountId)
     initFromStorage()
     return
   }
@@ -183,14 +191,13 @@ function loginWithEmail(email) {
   }
 
   wx.setStorageSync('userInfo', userInfo)
-  writeSession(normalized)
   wx.setStorageSync('identities', [])
   wx.setStorageSync('onboardingComplete', false)
   wx.setStorageSync('userMode', 'owner')
   wx.removeStorageSync('vehicle')
   wx.removeStorageSync('preference')
   wx.removeStorageSync('habitTags')
-
+  writeSession(normalized, accountId)
   initFromStorage()
 }
 
@@ -299,14 +306,17 @@ function saveCurrentUserSnapshot() {
     vehicle: wx.getStorageSync('vehicle') || null,
     preference: wx.getStorageSync('preference') || null,
     habitTags: wx.getStorageSync('habitTags') || [],
-    notifications: wx.getStorageSync('notifications') || []
+    notifications: wx.getStorageSync(notificationsStorageKey(mockOpenId(email))) || []
   }
   writeUserSnapshots(snapshots)
 }
 
 function applyUserSnapshot(snapshot) {
   wx.setStorageSync('userInfo', snapshot.userInfo)
-  writeSession(snapshot.userInfo && snapshot.userInfo.email)
+  writeSession(
+    snapshot.userInfo && snapshot.userInfo.email,
+    mockOpenId(snapshot.userInfo && snapshot.userInfo.email)
+  )
   wx.setStorageSync('identities', snapshot.identities || [])
   wx.setStorageSync('onboardingComplete', !!snapshot.onboardingComplete)
   wx.setStorageSync('userMode', snapshot.userMode || 'owner')
@@ -329,7 +339,9 @@ function applyUserSnapshot(snapshot) {
     wx.removeStorageSync('habitTags')
   }
 
-  wx.setStorageSync('notifications', snapshot.notifications || [])
+  const accountId = mockOpenId(snapshot.userInfo && snapshot.userInfo.email)
+  clearLegacyNotificationsStorage()
+  wx.setStorageSync(notificationsStorageKey(accountId), snapshot.notifications || [])
 }
 
 function switchMockUser(email) {

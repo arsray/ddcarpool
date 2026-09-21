@@ -13,7 +13,8 @@ const {
   buildCreateInput,
   loadModule,
   ALICE,
-  BOB
+  BOB,
+  getMockNotifications
 } = require('../helpers/setup')
 
 const { sendCodeLocal, verifyCodeLocal } = loadModule('modules/auth/verify.js')
@@ -37,8 +38,10 @@ describe('旅程 A：Mock 账号快速路径（Alice 发单 → Bob 接单）', 
 
       await order.acceptOrder(created._id, { openId: bobOpenId, name: 'Bob' })
 
-      const notes = mockWx.getStorageSync('notifications')
-      assert.ok(notes.some((n) => n.recipientOpenId === ALICE.openId))
+      const notes = getMockNotifications(mockWx, ALICE.openId)
+      const hit = notes.find((n) => n.recipientOpenId === ALICE.openId)
+      assert.ok(hit)
+      assert.equal(String(hit.title), '司机已接单')
 
       store.initFromStorage()
       const ownerHistory = store.getState().historyOwner

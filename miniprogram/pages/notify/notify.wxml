@@ -6,16 +6,7 @@ function iconType(title) {
   return 'order'
 }
 
-function summary(title) {
-  if (!title) return '点击查看详情'
-  if (title.indexOf('匹配') >= 0) return '查看订单详情或最新状态'
-  if (title.indexOf('消息') >= 0) return '点击查看消息内容'
-  if (title.indexOf('完成') >= 0) return '行程已结束，可查看详情'
-  return '点击查看详情'
-}
-
 module.exports.iconType = iconType
-module.exports.summary = summary
 </wxs>
 
 <view class="container tab-page v1-notify-page">
@@ -66,7 +57,6 @@ module.exports.summary = summary
             <text class="v1-notify-title {{item.read ? '' : 'v1-notify-title--unread'}}">{{item.title}}</text>
             <text class="v1-notify-time">{{item.time}}</text>
           </view>
-          <text class="v1-notify-sub">{{notifyFmt.summary(item.title)}}</text>
         </view>
 
         <text class="v1-notify-arrow">›</text>

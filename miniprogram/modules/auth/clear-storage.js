@@ -1,6 +1,8 @@
 /**
  * 登出 / 切换账号时清理本地会话数据（不含 mock 用户快照）
  */
+const { clearAllNotificationsStorage } = require('./account-scope')
+
 const USER_KEYS = [
   'cloudUserCache',
   'loggedIn',
@@ -18,6 +20,7 @@ const USER_KEYS = [
 ]
 
 function clearAllUserStorage() {
+  clearAllNotificationsStorage()
   USER_KEYS.forEach((key) => {
     try {
       wx.removeStorageSync(key)

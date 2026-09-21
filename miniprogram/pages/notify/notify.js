@@ -74,7 +74,8 @@ Page({
         .map(formatItem)
       this.setData({ list: filtered })
     } catch (error) {
-      notification.syncTabBarBadgeFromApp()
+      notification.applyNotifications([])
+      this.setData({ list: [] })
       wx.showToast({ title: '消息加载失败', icon: 'none' })
     } finally {
       this.setData({ loading: false })

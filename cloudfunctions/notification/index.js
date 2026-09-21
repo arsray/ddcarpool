@@ -19,7 +19,7 @@ exports.main = async (event) => {
   try {
     const { OPENID } = cloud.getWXContext()
     if (!OPENID) return fail('NOT_AUTHENTICATED', '请先登录')
-    const accountId = await resolveAccountId(db.collection('users'), OPENID)
+    const accountId = await resolveAccountId(db.collection('users'), OPENID, event.accountId)
 
     if (event.action === 'list') {
       const response = await notifications
@@ -27,7 +27,10 @@ exports.main = async (event) => {
         .orderBy('createdAt', 'desc')
         .limit(PAGE_SIZE)
         .get()
-      return ok(response.data.map(({ _openid, recipientOpenId, ...item }) => item))
+      const rows = response.data.filter(
+        (row) => row && String(row.recipientOpenId || '').trim() === accountId
+      )
+      return ok(rows.map(({ _openid, recipientOpenId, ...item }) => item))
     }
 
     if (event.action === 'markRead') {

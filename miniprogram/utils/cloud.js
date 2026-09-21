@@ -12,6 +12,34 @@ function isCloudEnabled() {
   return Boolean(config.useCloud && wx.cloud)
 }
 
+function getClientAccountId() {
+  try {
+    const { getSessionAccountId, readSession } = require('../modules/auth/session')
+    const fromSession = getSessionAccountId()
+    if (fromSession) return fromSession
+    const session = readSession()
+    if (session && session.email) {
+      const { emailToAccountId } = require('../modules/auth/email')
+      return emailToAccountId(session.email)
+    }
+  } catch (error) {
+    // App 未加载 session 模块时忽略
+  }
+  try {
+    const cache = wx.getStorageSync('cloudUserCache')
+    const userInfo = wx.getStorageSync('userInfo')
+    if (cache && cache.openId && userInfo && userInfo.email) {
+      const session = wx.getStorageSync('authSession')
+      if (session && session.email && userInfo.email === session.email) {
+        return String(cache.openId).trim()
+      }
+    }
+  } catch (error) {
+    // ignore
+  }
+  return ''
+}
+
 async function callFunction(name, data, options) {
   if (!isCloudEnabled()) {
     throw makeError('CLOUD_DISABLED', '云服务尚未启用')
@@ -29,9 +57,14 @@ async function callFunction(name, data, options) {
   })
 
   try {
-    // SECURITY-REVIEW: 云函数参数均视为不可信输入，服务端必须再次校验并从微信上下文取身份。
+    const accountId = getClientAccountId()
+    const payload = { ...(data || {}) }
+    if (accountId && payload.accountId == null) {
+      payload.accountId = accountId
+    }
+    // SECURITY-REVIEW: accountId 不可信；云函数须用 OPENID + lastWechatOpenId 绑定校验。
     const response = await Promise.race([
-      wx.cloud.callFunction({ name, data: data || {} }),
+      wx.cloud.callFunction({ name, data: payload }),
       timeout
     ])
     const result = response && response.result

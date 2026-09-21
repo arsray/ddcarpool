@@ -3,6 +3,7 @@ const cloud = require('wx-server-sdk')
 const { resolveAccountId } = require('./common/account-id')
 const { appendChatSystemMessage } = require('./common/chat-system-message')
 const { SYSTEM_EVENTS } = require('./common/chat-system-events')
+const notificationTitles = require('./common/notification-titles')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
@@ -258,6 +259,15 @@ function notificationData(recipientOpenId, title, targetId, targetType) {
   }
 }
 
+async function loadPointNameMap() {
+  const response = await points.where({ enabled: _.neq(false) }).limit(100).get()
+  const map = {}
+  response.data.forEach((item) => {
+    map[item.pointId] = item.name
+  })
+  return map
+}
+
 async function acceptOrder(event, openId) {
   const orderId = cleanString(event.orderId, 64)
   const profile = await currentProfile(openId)
@@ -291,10 +301,11 @@ async function acceptOrder(event, openId) {
     await transaction.collection('orders').doc(orderId).update({
       data: updateData
     })
+    const pointNameById = await loadPointNameMap()
     await transaction.collection('notifications').add({
       data: notificationData(
         order.passengerOpenId,
-        `${profile.name || '司机'} 已接取您的订单`,
+        notificationTitles.titleAcceptedPassenger(order, pointNameById, profile.name || '司机'),
         orderId,
         'passenger'
       )
@@ -336,8 +347,14 @@ async function cancelOrder(event, openId) {
         }
       })
       if (order.driverOpenId) {
+        const pointNameById = await loadPointNameMap()
         await transaction.collection('notifications').add({
-          data: notificationData(order.driverOpenId, '乘客已取消搭车单', orderId, 'owner')
+          data: notificationData(
+            order.driverOpenId,
+            notificationTitles.titlePassengerCancelOwner(order, pointNameById),
+            orderId,
+            'owner'
+          )
         })
       }
       systemEvent = SYSTEM_EVENTS.ORDER_CANCELLED_PASSENGER
@@ -352,10 +369,11 @@ async function cancelOrder(event, openId) {
           updatedAt: now
         }
       })
+      const pointNameById = await loadPointNameMap()
       await transaction.collection('notifications').add({
         data: notificationData(
           order.passengerOpenId,
-          '司机已取消匹配，订单已重新开放',
+          notificationTitles.titleDriverCancelPassenger(order, pointNameById),
           orderId,
           'passenger'
         )
@@ -401,18 +419,40 @@ async function transition(event, openId, target) {
 }
 
 async function expireStale() {
-  const response = await orders.where({
+  const staleResponse = await orders.where({
     status: 'matching',
     departTimeEndAt: _.lte(new Date())
-  }).update({
-    data: {
-      status: 'closed',
-      closeReason: 'expired',
-      closedAt: db.serverDate(),
-      updatedAt: db.serverDate()
-    }
-  })
-  return { updated: response.stats ? response.stats.updated : 0 }
+  }).limit(100).get()
+
+  if (!staleResponse.data.length) {
+    return { updated: 0 }
+  }
+
+  const pointNameById = await loadPointNameMap()
+  const now = db.serverDate()
+  let updated = 0
+
+  for (const orderDoc of staleResponse.data) {
+    await orders.doc(orderDoc._id).update({
+      data: {
+        status: 'closed',
+        closeReason: 'expired',
+        closedAt: now,
+        updatedAt: now
+      }
+    })
+    await notifications.add({
+      data: notificationData(
+        orderDoc.passengerOpenId,
+        notificationTitles.titleMatchExpiredPassenger(orderDoc, pointNameById),
+        orderDoc._id,
+        'passenger'
+      )
+    })
+    updated += 1
+  }
+
+  return { updated }
 }
 
 async function autoStartTrips() {
@@ -437,11 +477,13 @@ async function autoStartTrips() {
       await transaction.collection('orders').doc(orderDoc._id).update({
         data: { status: 'in_progress', startedAt: now, updatedAt: now }
       })
+      const pointNameById = await loadPointNameMap()
+      const startedTitle = notificationTitles.titleTripStarted(order, pointNameById)
       await transaction.collection('notifications').add({
-        data: notificationData(order.passengerOpenId, '行程已开始', orderDoc._id, 'passenger')
+        data: notificationData(order.passengerOpenId, startedTitle, orderDoc._id, 'passenger')
       })
       await transaction.collection('notifications').add({
-        data: notificationData(order.driverOpenId, '行程已开始', orderDoc._id, 'owner')
+        data: notificationData(order.driverOpenId, startedTitle, orderDoc._id, 'owner')
       })
     })
     await appendChatSystemMessage(db, orderDoc._id, SYSTEM_EVENTS.TRIP_STARTED)
@@ -470,12 +512,14 @@ async function autoCompleteTrips() {
       await transaction.collection('orders').doc(orderDoc._id).update({
         data: { status: 'completed', completedAt: now, updatedAt: now }
       })
+      const pointNameById = await loadPointNameMap()
+      const completedTitle = notificationTitles.titleTripCompleted(order, pointNameById)
       await transaction.collection('notifications').add({
-        data: notificationData(order.passengerOpenId, '订单已完成', orderDoc._id, 'passenger')
+        data: notificationData(order.passengerOpenId, completedTitle, orderDoc._id, 'passenger')
       })
       if (order.driverOpenId) {
         await transaction.collection('notifications').add({
-          data: notificationData(order.driverOpenId, '订单已完成', orderDoc._id, 'owner')
+          data: notificationData(order.driverOpenId, completedTitle, orderDoc._id, 'owner')
         })
       }
     })
@@ -543,8 +587,12 @@ exports.main = async (event) => {
     if (event && event.Type === 'Timer') return ok(await runScheduledTasks())
     const { OPENID } = cloud.getWXContext()
     if (!OPENID) return fail('NOT_AUTHENTICATED', '请先登录')
-    const accountId = await resolveAccountId(db.collection('users'), OPENID)
     const action = event && event.action
+
+    if (action === 'listPoints') return ok(await listPoints())
+    if (action === 'listRoutes') return ok(await listRoutes())
+
+    const accountId = await resolveAccountId(db.collection('users'), OPENID, event.accountId)
 
     if (action === 'create') return ok(await createOrder(event, accountId))
     if (action === 'listOpen') return ok(await listOpen(accountId))
@@ -559,8 +607,6 @@ exports.main = async (event) => {
       return ok(await updatePassengerCount(event, accountId))
     }
     if (action === 'expireStale') return ok(await runScheduledTasks())
-    if (action === 'listPoints') return ok(await listPoints())
-    if (action === 'listRoutes') return ok(await listRoutes())
     return fail('INVALID_ACTION', '不支持的订单操作')
   } catch (error) {
     const code = error && error.code

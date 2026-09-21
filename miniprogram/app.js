@@ -89,6 +89,14 @@ App({
   async loginWithEmail(email, verificationMode) {
     await authStore.loginWithEmail(email, verificationMode)
     this._syncAuth()
+    if (config.useCloud && authStore.isLoggedIn()) {
+      try {
+        notification.resetNotificationRuntime()
+        await notification.refreshNotifications()
+      } catch (error) {
+        notification.applyNotifications([])
+      }
+    }
   },
 
   routeAfterLogin() {
@@ -98,6 +106,8 @@ App({
   logout() {
     authStore.logout()
     this.globalData.cloudOrders = []
+    notification.resetNotificationRuntime()
+    notification.applyNotifications([])
     this._syncAuth()
   },
 

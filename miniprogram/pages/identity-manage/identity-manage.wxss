@@ -25,15 +25,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   min-height: 96rpx;
   padding: 20rpx 28rpx;
   border-radius: 20rpx;
   border: 2rpx solid transparent;
   box-sizing: border-box;
-}
-
-.identity-single .identity-chip {
-  max-width: 360rpx;
 }
 
 .identity-chip--owner {

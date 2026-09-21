@@ -64,7 +64,18 @@ async function withMockWx(initialStorage, fn) {
   }
 }
 
-async function withOrderModule(initialStorage, fn) {
+function getMockNotifications(mockWx, openId) {
+  const key = openId ? `notifications_${openId}` : 'notifications'
+  const notes = mockWx.getStorageSync(key)
+  return Array.isArray(notes) ? notes : []
+}
+
+function clearMockNotifications(mockWx, openId) {
+  const key = openId ? `notifications_${openId}` : 'notifications'
+  mockWx.setStorageSync(key, [])
+}
+
+function withOrderModule(initialStorage, fn) {
   return withMockWx(initialStorage || { m3_orders_v1: [], notifications: [] }, async (mockWx) => {
     const order = loadModule('modules/order/index.js')
     return fn({ order, mockWx })
@@ -107,5 +118,7 @@ module.exports = {
   withOrderModule,
   withAuthStore,
   simulatePassengerOnboarding,
-  simulateOwnerOnboarding
+  simulateOwnerOnboarding,
+  getMockNotifications,
+  clearMockNotifications
 }

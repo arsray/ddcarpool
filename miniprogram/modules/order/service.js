@@ -10,6 +10,8 @@ const { parseDepartTime, getDepartWindowEnd, formatDepartTimeDisplay, formatHist
 const { comparePlazaOrders } = require('./plaza-sort')
 const { snapshotDriverVehicle } = require('./driver-vehicle')
 const chatSystem = require('../chat/system-message')
+const notificationTitles = require('../notification/titles')
+const { notificationsStorageKey } = require('../auth/account-scope')
 
 function getHistoryBridge() {
   return require('./history-bridge')
@@ -38,6 +40,14 @@ function formatRoute(fromPointId, toPointId) {
   const fromName = from ? from.name : '未知起点'
   const toName = to ? to.name : '未知终点'
   return `${fromName} → ${toName}`
+}
+
+function getPointNameMap() {
+  const map = {}
+  DEFAULT_POINTS.forEach((point) => {
+    map[point.pointId] = point.name
+  })
+  return map
 }
 
 const STORAGE_KEY = 'm3_orders_v1'
@@ -113,18 +123,24 @@ function expireStaleOrdersInMemory(orders) {
     return false
   })
 
+  const pointNameById = getPointNameMap()
   const expired = withoutClones.map((order) => {
     if (order.status !== ORDER_STATUS.MATCHING) return order
     const windowEnd = getDepartWindowEnd(order)
     if (!windowEnd || windowEnd.getTime() > now) return order
     changed = true
-    return {
+    const closed = {
       ...order,
       status: ORDER_STATUS.CLOSED,
       closeReason: CLOSE_REASON.EXPIRED,
       closedAt: nowIso(),
       updatedAt: nowIso()
     }
+    appendPassengerNotification(
+      closed,
+      notificationTitles.titleMatchExpiredPassenger(closed, pointNameById)
+    )
+    return closed
   })
 
   if (changed) writeAllOrders(expired)
@@ -242,18 +258,10 @@ function listOrdersForUser(openId, filters) {
     .sort((a, b) => parseDepartTime(b.departTime).getTime() - parseDepartTime(a.departTime).getTime())
 }
 
-function buildAcceptNotificationTitle(order) {
-  const { formatDateLabel } = getHistoryBridge()
-  const departDate = parseDepartTime(order.departTime)
-  const dateLabel = departDate ? formatDateLabel(departDate) : (order.departTime || '').slice(0, 10)
-  const timeLabel = formatHistoryTimeLabel(order)
-  const routeLabel = formatRoute(order.fromPointId, order.toPointId)
-  const schedule = [dateLabel, timeLabel].filter(Boolean).join(' ')
-  return `${schedule} ${routeLabel} 已被接单`
-}
-
 function appendNotification(entry) {
-  const list = wx.getStorageSync('notifications') || []
+  const recipientId = entry.recipientOpenId || entry.passengerOpenId || ''
+  const storageKey = notificationsStorageKey(recipientId || undefined)
+  const list = wx.getStorageSync(storageKey) || []
   const now = new Date()
   const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   list.unshift({
@@ -262,12 +270,13 @@ function appendNotification(entry) {
     read: false,
     ...entry
   })
-  wx.setStorageSync('notifications', list)
+  wx.setStorageSync(storageKey, list)
 }
 
 function appendPassengerNotification(order, title) {
+  if (!title) return
   appendNotification({
-    title: title || buildAcceptNotificationTitle(order),
+    title,
     targetType: 'passenger',
     targetId: order._id,
     passengerOpenId: order.passengerOpenId || '',
@@ -275,20 +284,10 @@ function appendPassengerNotification(order, title) {
   })
 }
 
-function buildPassengerCancelNotificationTitle(order) {
-  const routeLabel = formatRoute(order.fromPointId, order.toPointId)
-  return `乘客已取消搭车单 · ${routeLabel}`
-}
-
-function buildDriverReleaseNotificationTitle(order) {
-  const routeLabel = formatRoute(order.fromPointId, order.toPointId)
-  return `司机已取消匹配 · 您的订单重新匹配中 · ${routeLabel}`
-}
-
 function appendDriverNotification(order, title) {
-  if (!order.driverOpenId) return
+  if (!order.driverOpenId || !title) return
   appendNotification({
-    title: title || buildPassengerCancelNotificationTitle(order),
+    title,
     targetType: 'owner',
     targetId: order._id,
     recipientOpenId: order.driverOpenId
@@ -346,7 +345,10 @@ function acceptOrder(orderId, driver) {
   }
 
   saveOrder(updated)
-  appendPassengerNotification(updated)
+  appendPassengerNotification(
+    updated,
+    notificationTitles.titleAcceptedPassenger(updated, getPointNameMap(), driverName)
+  )
   chatSystem.appendSystemMessage(orderId, chatSystem.SYSTEM_EVENTS.ORDER_ACCEPTED, {
     driverName
   })
@@ -388,6 +390,8 @@ function completeOrder(orderId, actorOpenId) {
   chatSystem.appendSystemMessage(orderId, chatSystem.SYSTEM_EVENTS.TRIP_COMPLETED)
   return enrichListItem(updated, {})
 }
+
+function cancelOrder(orderId, options) {
   const orders = expireStaleOrdersInMemory(readAllOrders())
   const order = orders.find((item) => item._id === orderId)
   const actorOpenId = options && options.openId ? options.openId.trim() : ''
@@ -423,7 +427,10 @@ function completeOrder(orderId, actorOpenId) {
     }
     saveOrder(updated)
     if (order.driverOpenId) {
-      appendDriverNotification(updated, buildPassengerCancelNotificationTitle(updated))
+      appendDriverNotification(
+        updated,
+        notificationTitles.titlePassengerCancelOwner(updated, getPointNameMap())
+      )
     }
     chatSystem.appendSystemMessage(
       orderId,
@@ -442,7 +449,10 @@ function completeOrder(orderId, actorOpenId) {
       updatedAt: timestamp
     }
     saveOrder(updated)
-    appendPassengerNotification(updated, buildDriverReleaseNotificationTitle(updated))
+    appendPassengerNotification(
+      updated,
+      notificationTitles.titleDriverCancelPassenger(updated, getPointNameMap())
+    )
     chatSystem.appendSystemMessage(orderId, chatSystem.SYSTEM_EVENTS.ORDER_CANCELLED_DRIVER)
     return enrichListItem(updated, {})
   }

@@ -4,7 +4,7 @@
 
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const { withOrderModule, ALICE, BOB, buildCreateInput } = require('../helpers/setup')
+const { withOrderModule, ALICE, BOB, buildCreateInput, getMockNotifications } = require('../helpers/setup')
 
 describe('P0 Mock 主路径（Alice / Bob）', () => {
   it('Alice 发单 → Bob 广场可见 → 接单 → Alice 收到通知', async () => {
@@ -22,10 +22,10 @@ describe('P0 Mock 主路径（Alice / Bob）', () => {
       const afterAccept = await order.getOrderById(created._id)
       assert.equal(afterAccept.status, order.ORDER_STATUS.PENDING_DEPARTURE)
 
-      const notifications = mockWx.getStorageSync('notifications')
+      const notifications = getMockNotifications(mockWx, ALICE.openId)
       assert.ok(
         notifications.some(
-          (n) => n.recipientOpenId === ALICE.openId && String(n.title).includes('已被接单')
+          (n) => n.recipientOpenId === ALICE.openId && String(n.title) === '司机已接单'
         )
       )
     })

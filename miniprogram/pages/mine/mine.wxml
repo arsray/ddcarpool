@@ -15,7 +15,7 @@
     </view>
   </view>
 
-  <view class="v1-section" wx:if="{{isOwner}}">
+  <view class="v1-section" wx:if="{{hasOwnerIdentity && isOwner}}">
     <view class="v1-section-title">我的车辆</view>
     <view class="v1-row-card" bindtap="goVehicle">
       <view class="v1-row-main">
@@ -32,15 +32,9 @@
     </view>
   </view>
 
-  <view class="v1-section">
-    <view class="v1-section-title">{{isOwner ? '乘车习惯' : '乘车偏好'}}</view>
-    <view class="v1-row-card" wx:if="{{isOwner}}" bindtap="goHabitTags">
-      <view class="v1-row-main">
-        <view class="v1-row-primary {{habitSummary == '未设置' ? 'is-muted' : ''}}">{{habitSummary}}</view>
-      </view>
-      <text class="v1-chevron">›</text>
-    </view>
-    <view class="v1-row-card" wx:else bindtap="goPreference">
+  <view class="v1-section" wx:if="{{hasPassengerIdentity && !isOwner}}">
+    <view class="v1-section-title">乘车偏好</view>
+    <view class="v1-row-card" bindtap="goPreference">
       <view class="v1-row-main">
         <block wx:if="{{hasPreference}}">
           <view class="v1-row-primary">默认 {{preference.defaultCount}} 人 · {{preferenceSummary}}</view>
@@ -70,12 +64,6 @@
     <view class="v1-group-card">
       <view class="v1-group-row" bindtap="goAccount">
         <view class="v1-row-primary">账号与安全</view>
-        <text class="v1-chevron">›</text>
-      </view>
-      <view class="v1-group-divider"></view>
-      <view class="v1-group-row" bindtap="goNotify">
-        <view class="v1-row-primary">通知中心</view>
-        <view class="v1-row-meta" wx:if="{{unreadCount > 0}}">{{unreadCount}} 条未读</view>
         <text class="v1-chevron">›</text>
       </view>
     </view>

@@ -5,7 +5,7 @@ const { getOngoingOrders } = require('../../modules/auth/mock')
 const { formatPreferenceSummary } = require('../../modules/auth/vehicle-data')
 const { initialsFromEmailLocalPart } = require('../../modules/auth/email')
 const { safeReLaunch, isTopPage } = require('../../modules/auth/nav')
-const { notificationMatchesRole, ensureCorrectPlazaPage, syncAppRole } = require('../../modules/auth/plaza-tab')
+const { ensureCorrectPlazaPage, syncAppRole } = require('../../modules/auth/plaza-tab')
 const config = require('../../config/index')
 const notification = require('../../modules/notification/index')
 
@@ -18,14 +18,14 @@ Page({
     modeLabel: '车主模式',
     switchLabel: '切换乘车人',
     hasBothIdentities: false,
+    hasOwnerIdentity: false,
+    hasPassengerIdentity: false,
     hasVehicle: false,
     hasPreference: false,
     vehicle: {},
     preference: {},
-    habitSummary: '',
     unfinishedCount: 0,
     unfinishedLabel: '车主未完成订单',
-    unreadCount: 0,
     avatarInitials: 'U'
   },
 
@@ -74,6 +74,8 @@ Page({
     const identities = g.identities || []
     const isOwner = g.userMode === 'owner'
     const hasBoth = identities.includes('owner') && identities.includes('passenger')
+    const hasOwnerIdentity = identities.includes('owner')
+    const hasPassengerIdentity = identities.includes('passenger')
     const currentRole = isOwner ? 'owner' : 'passenger'
     const list = isOwner ? (g.historyOwner || []) : (g.historyPassenger || [])
 
@@ -86,14 +88,12 @@ Page({
       unfinishedCount = getOngoingOrders(list).length
     }
 
-    const unreadCount = (g.notifications || []).filter(
-      (item) => !item.read && notificationMatchesRole(item, currentRole)
-    ).length
-
     this.setData({
       userInfo: g.userInfo,
       isOwner,
       hasBothIdentities: hasBoth,
+      hasOwnerIdentity,
+      hasPassengerIdentity,
       modeLabel: isOwner ? '车主模式' : '乘车人模式',
       switchLabel: isOwner ? '切换乘车人' : '切换车主',
       vehicle: g.vehicle || {},
@@ -101,10 +101,8 @@ Page({
       hasVehicle: !!(g.vehicle && g.vehicle.plate),
       hasPreference: !!g.preference,
       preferenceSummary: formatPreferenceSummary(g.preference),
-      habitSummary: (g.habitTags || []).join(' · ') || '未设置',
       unfinishedCount,
       unfinishedLabel: isOwner ? '车主未完成订单' : '乘车人未完成订单',
-      unreadCount,
       avatarInitials: initialsFromEmailLocalPart(g.userInfo && g.userInfo.email)
     })
   },
@@ -125,11 +123,9 @@ Page({
   },
 
   goVehicle() { wx.navigateTo({ url: '/pages/vehicle/vehicle' }) },
-  goHabitTags() { wx.navigateTo({ url: '/pages/habit-tags/habit-tags' }) },
   goPreference() { wx.navigateTo({ url: '/pages/preference/preference' }) },
   goHistory() {
     wx.navigateTo({ url: `/pages/history/history?role=${this.data.isOwner ? 'owner' : 'passenger'}` })
   },
-  goAccount() { wx.navigateTo({ url: '/pages/account/account' }) },
-  goNotify() { wx.switchTab({ url: '/pages/notify/notify' }) }
+  goAccount() { wx.navigateTo({ url: '/pages/account/account' }) }
 })

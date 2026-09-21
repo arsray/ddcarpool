@@ -3,7 +3,8 @@ const cloud = require('wx-server-sdk')
 const {
   emailToAccountId,
   findUserByEmail,
-  findUserByWechatOpenId
+  claimWechatBinding,
+  resolveAccountId
 } = require('./common/account-id')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -150,10 +151,6 @@ async function createOrUpdate(accountId, patch) {
   return sanitizeUser(await findUser(accountId))
 }
 
-async function resolveSessionUser(wechatOpenId) {
-  return findUserByWechatOpenId(users, wechatOpenId)
-}
-
 exports.main = async (event) => {
   try {
     const { OPENID } = cloud.getWXContext()
@@ -161,8 +158,8 @@ exports.main = async (event) => {
 
     const action = event && event.action
     if (action === 'get') {
-      const sessionUser = await resolveSessionUser(OPENID)
-      return result(sanitizeUser(sessionUser))
+      const accountId = await resolveAccountId(users, OPENID, event.accountId)
+      return result(sanitizeUser(await findUser(accountId)))
     }
 
     if (action === 'bindMockEmail') {
@@ -171,26 +168,22 @@ exports.main = async (event) => {
       const existing = await findUserByEmail(users, email)
       const stableAccountId = existing && existing.openId ? existing.openId : accountId
 
-      return result(await createOrUpdate(stableAccountId, {
+      await createOrUpdate(stableAccountId, {
         openId: stableAccountId,
         email,
         emailVerified: false,
         emailVerificationMode: 'mock',
         displayName: cleanString(event.displayName, 40) || email.split('@')[0],
-        nickName: cleanString(event.displayName, 40) || email.split('@')[0],
-        lastWechatOpenId: OPENID
-      }))
+        nickName: cleanString(event.displayName, 40) || email.split('@')[0]
+      })
+      await claimWechatBinding(users, db, OPENID, stableAccountId)
+      return result(sanitizeUser(await findUser(stableAccountId)))
     }
 
     if (action === 'updateProfile') {
-      const sessionUser = await resolveSessionUser(OPENID)
-      if (!sessionUser || !sessionUser.openId) {
-        return failure('NOT_LOGGED_IN', '请先完成邮箱登录')
-      }
-      return result(await createOrUpdate(sessionUser.openId, {
-        ...sanitizePatch(event.patch || {}),
-        lastWechatOpenId: OPENID
-      }))
+      const accountId = await resolveAccountId(users, OPENID, event.accountId)
+      await createOrUpdate(accountId, sanitizePatch(event.patch || {}))
+      return result(sanitizeUser(await findUser(accountId)))
     }
 
     return failure('INVALID_ACTION', '不支持的用户操作')

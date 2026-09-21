@@ -219,7 +219,7 @@ exports.main = async (event) => {
   try {
     const { OPENID } = cloud.getWXContext()
     if (!OPENID) return fail('NOT_AUTHENTICATED', '请先登录')
-    const accountId = await resolveAccountId(users, OPENID)
+    const accountId = await resolveAccountId(users, OPENID, event.accountId)
     const orderId = String(event.orderId || '').trim()
     const action = String(event && event.action ? event.action : '').trim()
     if (!orderId) return fail('INVALID_INPUT', '订单 ID 无效')
