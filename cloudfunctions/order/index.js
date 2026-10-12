@@ -200,6 +200,55 @@ async function createOrder(event, openId) {
   })
 }
 
+async function updateMatchingOrder(event, openId) {
+  const orderId = cleanString(event.orderId, 50)
+  if (!orderId) throw appError('INVALID_INPUT', '订单 ID 无效')
+  const input = validateCreateInput(event)
+  await validatePoints(input.fromPointId, input.toPointId)
+
+  return db.runTransaction(async (transaction) => {
+    const existingRes = await transaction.collection('orders').doc(orderId).get()
+    const existing = existingRes.data
+    if (!existing) throw appError('ORDER_NOT_FOUND', '订单不存在')
+    if (existing.status !== 'matching') {
+      throw appError('INVALID_STATUS', '订单当前不可编辑')
+    }
+    if (existing.passengerOpenId !== openId) {
+      throw appError('FORBIDDEN', '无权编辑此订单')
+    }
+
+    const overlapping = await transaction.collection('orders').where({
+      passengerOpenId: openId,
+      status: _.in(ACTIVE_STATUSES)
+    }).limit(100).get()
+    const hasOverlap = overlapping.data.some((item) => (
+      item._id !== orderId &&
+      new Date(item.departTimeAt).getTime() < input.departTimeEndAt.getTime() &&
+      new Date(item.departTimeEndAt).getTime() > input.departTimeAt.getTime()
+    ))
+    if (hasOverlap) {
+      throw appError('OVERLAPPING_ORDER', '该时段已有进行中的订单')
+    }
+
+    const now = db.serverDate()
+    await transaction.collection('orders').doc(orderId).update({
+      data: {
+        fromPointId: input.fromPointId,
+        toPointId: input.toPointId,
+        departTime: input.departTime,
+        departTimeEnd: input.departTimeEnd,
+        departTimeAt: input.departTimeAt,
+        departTimeEndAt: input.departTimeEndAt,
+        passengerCount: input.passengerCount,
+        note: input.note,
+        updatedAt: now
+      }
+    })
+    const updated = await transaction.collection('orders').doc(orderId).get()
+    return publicOrder(updated.data, openId)
+  })
+}
+
 async function listOpen(openId) {
   await runScheduledTasks()
   const response = await orders.where({ status: 'matching' })
@@ -217,11 +266,15 @@ async function listOpen(openId) {
 }
 
 async function listDriverActive(openId) {
-  const response = await orders.where({
-    driverOpenId: openId,
-    status: _.in(['pending_departure', 'in_progress'])
-  }).orderBy('departTimeAt', 'asc').limit(PAGE_SIZE).get()
-  return response.data.map((item) => publicOrder(item, openId))
+  const activeStatuses = new Set(['pending_departure', 'in_progress'])
+  const response = await orders.where({ driverOpenId: openId }).limit(100).get()
+  return response.data
+    .filter((item) => activeStatuses.has(item.status))
+    .sort(
+      (a, b) => new Date(a.departTimeAt).getTime() - new Date(b.departTimeAt).getTime()
+    )
+    .slice(0, PAGE_SIZE)
+    .map((item) => publicOrder(item, openId))
 }
 
 async function listForUser(openId, role) {
@@ -595,6 +648,7 @@ exports.main = async (event) => {
     const accountId = await resolveAccountId(db.collection('users'), OPENID, event.accountId)
 
     if (action === 'create') return ok(await createOrder(event, accountId))
+    if (action === 'update') return ok(await updateMatchingOrder(event, accountId))
     if (action === 'listOpen') return ok(await listOpen(accountId))
     if (action === 'listDriverActive') return ok(await listDriverActive(accountId))
     if (action === 'listForUser') return ok(await listForUser(accountId, event.role))

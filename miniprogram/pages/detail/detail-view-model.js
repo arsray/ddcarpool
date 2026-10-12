@@ -9,6 +9,7 @@ const DEFAULT_CTA_LABELS = {
   accept: '确认接单',
   start: '开始行程',
   complete: '完成',
+  edit: '编辑搭车单',
   cancel_passenger: '取消搭车单',
   cancel_driver: '取消匹配',
   chat: '联系同行人',
@@ -19,6 +20,7 @@ const CTA_VARIANT = {
   accept: 'accent',
   start: 'primary',
   complete: 'secondary',
+  edit: 'secondary',
   cancel_passenger: 'danger',
   cancel_driver: 'danger',
   chat: 'secondary',
@@ -40,7 +42,8 @@ const DETAIL_COPY = {
       roleLabel: '我发布的',
       statusTitle: '匹配中',
       statusHint: '等待司机在广场接单',
-      ctas: [{ key: 'cancel_passenger' }]
+      ctas: [{ key: 'edit' }, { key: 'cancel_passenger' }],
+      actionRows: [['edit', 'cancel_passenger']]
     },
     driver: {
       roleLabel: '顺路订单',
@@ -147,6 +150,8 @@ function isCtaAvailable(key, ctx) {
     case 'cancel_driver':
       if (ctx.cancelKind === CANCEL_KIND.DRIVER_RELEASE) return true
       return Boolean(ctx.isAssignedDriver && ctx.status === ORDER_STATUS.PENDING_DEPARTURE)
+    case 'edit':
+      return Boolean(ctx.isPassenger && ctx.status === ORDER_STATUS.MATCHING)
     case 'chat':
       return ctx.canChat
     case 'plaza':
@@ -219,7 +224,7 @@ function buildDetailViewModel(ctx) {
   const nonDangerActions = actions.filter((action) => action.variant !== 'danger')
   const actionRows = buildActionRows(copy.actionRows, actionsByKey)
   const actionGroups = actionRows.length
-    ? { primary: [], secondary: nonDangerActions, danger: dangerActions }
+    ? { primary: [], secondary: [], danger: [] }
     : groupActions(actions)
 
   return {

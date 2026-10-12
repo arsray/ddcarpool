@@ -64,6 +64,18 @@ async function createOrder(input) {
   }))
 }
 
+async function updateOrder(orderId, input) {
+  return enrich(await invoke('update', {
+    orderId,
+    fromPointId: input.fromPointId,
+    toPointId: input.toPointId,
+    departTime: input.departTime,
+    departTimeEnd: input.departTimeEnd,
+    passengerCount: input.passengerCount,
+    note: input.note
+  }))
+}
+
 async function acceptOrder(orderId) {
   return enrich(await invoke('accept', { orderId }))
 }
@@ -86,6 +98,10 @@ async function updatePassengerCount(orderId, passengerCount) {
 
 async function expireStaleOrders() {
   return invoke('expireStale')
+}
+
+function getCachedPoints() {
+  return pointCache
 }
 
 async function listPoints() {
@@ -114,12 +130,14 @@ module.exports = {
   listOrdersForUser,
   getOrderById,
   createOrder,
+  updateOrder,
   acceptOrder,
   cancelOrder,
   startTrip,
   completeOrder,
   updatePassengerCount,
   expireStaleOrders,
+  getCachedPoints,
   listPoints,
   listConfiguredRoutes,
   routeLabel

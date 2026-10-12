@@ -65,6 +65,19 @@ describe('M3 广场筛选匹配', () => {
     assert.ok(!view.matchedOrders.some((o) => o._id === 'o2'))
   })
 
+  it('未选日期时时间下拉包含全部 15 分钟时段', () => {
+    const view = buildPlazaFilterView(orders, points, {
+      date: '',
+      timeWindow: '',
+      fromPointId: '',
+      toPointId: ''
+    }, now)
+    assert.ok(view.filterTimeLabels.includes('全部'))
+    assert.ok(view.filterTimeLabels.length > 5)
+    assert.ok(view.filterTimeLabels.some((label) => label.includes('08:15')))
+    assert.ok(view.filterTimeLabels.some((label) => label.includes('18:00') || label.includes('17:45')))
+  })
+
   it('有筛选条件时分「符合条件 / 其他」两区', () => {
     const view = buildPlazaFilterView(orders, points, {
       date: orders[0].departTime.slice(0, 10),

@@ -32,6 +32,10 @@ async function createOrder(input) {
   return service.createOrder(input)
 }
 
+async function updateOrder(orderId, input) {
+  return service.updateOrder(orderId, input)
+}
+
 async function acceptOrder(orderId, driver) {
   return service.acceptOrder(orderId, driver)
 }
@@ -88,6 +92,13 @@ async function listPoints() {
     .sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
+function getCachedPoints() {
+  if (config.useCloud && service.getCachedPoints) {
+    return service.getCachedPoints()
+  }
+  return null
+}
+
 function formatRoute(fromPointId, toPointId, points) {
   const list = points || DEFAULT_POINTS
   const from = list.find((p) => p.pointId === fromPointId)
@@ -101,6 +112,7 @@ module.exports = {
   listOpenOrders,
   listDriverActiveOrders,
   createOrder,
+  updateOrder,
   acceptOrder,
   cancelOrder,
   expireStaleOrders,
@@ -110,6 +122,7 @@ module.exports = {
   getOrderById,
   listOrdersForUser,
   listPoints,
+  getCachedPoints,
   listConfiguredRoutes,
   formatRoute,
   computeMatchScore,

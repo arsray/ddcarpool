@@ -6,21 +6,21 @@ const { DEFAULT_POINTS } = require('./constants/points')
 
 /** @type {Record<string, { aliases?: string[], initials?: string[] }>} */
 const POINT_SEARCH_META = {
-  'poi-01': { aliases: ['203', '米奇'], initials: ['mqdj', 'mlx'] },
+  'poi-01': { aliases: ['203', '米奇'], initials: ['mqdj'] },
   'poi-02': { aliases: ['603'], initials: ['yjryhdzx'] },
-  'poi-03': { aliases: ['TD', '团队', '团队大楼'], initials: ['dsntddil', 'tddil'] },
+  'poi-03': { aliases: ['TD', '团队', '团队大楼'], initials: ['dsntddl', 'tddl', 'td'] },
   'poi-04': { aliases: ['TG', 'Pirates', '615', '安保大楼'], initials: ['bzw', 'abdl'] },
-  'poi-05': { aliases: ['北门', 'CPK'], initials: ['zycf', 'zycfbm', 'bm'] },
+  'poi-05': { aliases: ['北门', 'CPK'], initials: ['zycf', 'bm'] },
   'poi-06': { aliases: ['PAB', '项目'], initials: ['xmxzl', 'xm'] },
-  'poi-07': { aliases: ['ENT', '604'], initials: ['ylycdil', 'yl'] },
+  'poi-07': { aliases: ['ENT', '604'], initials: ['ylycdl', 'yl'] },
   'poi-08': { aliases: [], initials: ['xm'] },
-  'poi-09': { aliases: ['TL', '史迪奇'], initials: ['mrsj', 'sdq'] },
-  'poi-10': { aliases: ['乐园', 'H1'], initials: ['dslyjd', 'ly'] },
-  'poi-11': { aliases: ['玩总', 'H2'], initials: ['wjzbsjd', 'wz'] },
+  'poi-09': { aliases: ['TL', '明日', 'Tomorrowland'], initials: ['mrsj', 'mr'] },
+  'poi-10': { aliases: ['乐园', 'H1', 'Disneyland Hotel'], initials: ['dsnlyjd', 'ly'] },
+  'poi-11': { aliases: ['玩总', 'H2', 'Toy Story Hotel'], initials: ['wjzdyjd', 'wz'] },
   'poi-12': { aliases: ['申迪'], initials: ['sdwhzx', 'sd'] },
   'poi-13': { aliases: ['小白楼'], initials: ['dxl', 'xbl'] },
-  'poi-14': { aliases: ['苏小柳'], initials: ['bst', 'sxl'] },
-  'poi-15': { aliases: [], initials: ['ytb'] }
+  'poi-14': { aliases: ['奥特莱斯'], initials: ['bst'] },
+  'poi-15': { aliases: ['羽毛球'], initials: ['ytb'] }
 }
 
 function normalizeLatin(value) {
@@ -52,7 +52,7 @@ function getSearchablePoints(points) {
     .map(enrichPointForSearch)
 }
 
-const MIN_LATIN_QUERY_LENGTH = 2
+const MIN_LATIN_QUERY_LENGTH = 1
 
 function isLatinToken(value) {
   return /^[a-z0-9]+$/i.test(String(value || '').trim())

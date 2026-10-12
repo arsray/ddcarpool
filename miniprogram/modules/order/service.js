@@ -190,6 +190,37 @@ function createOrder(input) {
   return order
 }
 
+function updateOrder(orderId, input) {
+  const orders = expireStaleOrdersInMemory(readAllOrders())
+  const existing = orders.find((item) => item._id === orderId)
+  if (!existing) {
+    throw makeError('ORDER_NOT_FOUND', '订单不存在')
+  }
+  if (existing.status !== ORDER_STATUS.MATCHING) {
+    throw makeError('INVALID_STATUS', '订单当前不可编辑')
+  }
+  const passengerOpenId = (input && input.passengerOpenId ? input.passengerOpenId : '').trim()
+  if (!passengerOpenId || existing.passengerOpenId !== passengerOpenId) {
+    throw makeError('FORBIDDEN', '无权编辑此订单')
+  }
+
+  const others = orders.filter((item) => item._id !== orderId)
+  const validated = validateCreateOrderInput(input, others)
+  const timestamp = nowIso()
+  const updated = {
+    ...existing,
+    fromPointId: validated.fromPointId,
+    toPointId: validated.toPointId,
+    departTime: validated.departTime,
+    departTimeEnd: validated.departTimeEnd,
+    passengerCount: validated.passengerCount,
+    note: validated.note,
+    updatedAt: timestamp
+  }
+  saveOrder(updated)
+  return enrichListItem(updated, {})
+}
+
 function getOrderById(orderId) {
   const orders = expireStaleOrdersInMemory(readAllOrders())
   return orders.find((item) => item._id === orderId) || null
@@ -581,6 +612,7 @@ function replacePlazaSeedOrders(seedOrders) {
 
 module.exports = {
   createOrder,
+  updateOrder,
   acceptOrder,
   cancelOrder,
   completeOrder,

@@ -1,3 +1,5 @@
+<page-meta page-style="{{dateDropdownOpen || timeDropdownOpen || fromDropdownOpen || toDropdownOpen || countDropdownOpen ? 'overflow:hidden;height:100%;' : ''}}" />
+
 <view class="container tab-page v1-passenger-page">
   <block wx:if="{{loading}}">
     <view class="v1-empty">加载中…</view>
@@ -17,38 +19,36 @@
     <view class="v1-role-badge" wx:if="{{false}}">乘客</view>
 
     <view class="v1-page-head v1-role-accent-bar--passenger">
-      <view class="v1-page-title v1-role-title--passenger">发布我的行程</view>
-      <view class="v1-page-sub">填写出发信息，发布搭车需求</view>
+      <view class="v1-page-title v1-role-title--passenger">{{pageTitle}}</view>
+      <view class="v1-page-sub">{{pageSub}}</view>
     </view>
 
     <view class="v1-form-card">
       <view class="v1-field-block">
         <view class="v1-field-row">
-          <view class="v1-field-col">
+          <view id="publish-field-date" class="v1-field-col v1-field-col--menu {{dateDropdownOpen ? 'v1-field-col--raised' : ''}}">
             <text class="v1-label">出发日期</text>
-            <picker mode="selector" range="{{dateLabels}}" value="{{dateIndex}}" bindchange="onDateChange">
-              <view class="v1-picker">
+            <view class="v1-inline-menu">
+              <view class="v1-picker" bindtap="onDateFieldTap">
                 <text class="v1-picker-val">{{dateLabels[dateIndex]}}</text>
                 <text class="v1-picker-arrow">›</text>
               </view>
-            </picker>
+            </view>
           </view>
-          <view class="v1-field-col">
+          <view id="publish-field-time" class="v1-field-col v1-field-col--menu {{timeDropdownOpen ? 'v1-field-col--raised' : ''}}">
             <text class="v1-label">出发时间</text>
-            <picker
-              wx:if="{{hasAvailableSlots}}"
-              mode="selector"
-              range="{{timeLabels}}"
-              value="{{timeIndex}}"
-              bindchange="onTimeChange"
-            >
-              <view class="v1-picker">
+            <view class="v1-inline-menu">
+              <view
+                class="v1-picker"
+                wx:if="{{hasAvailableSlots}}"
+                bindtap="onTimeFieldTap"
+              >
                 <text class="v1-picker-val">{{form.timeWindow}}</text>
                 <text class="v1-picker-arrow">›</text>
               </view>
-            </picker>
-            <view class="v1-picker v1-picker--disabled" wx:else>
-              <text class="v1-picker-placeholder">当日可选时间窗已结束，请换日期</text>
+              <view class="v1-picker v1-picker--disabled" wx:else>
+                <text class="v1-picker-placeholder">当日可选时间窗已结束，请换日期</text>
+              </view>
             </view>
           </view>
         </view>
@@ -56,7 +56,7 @@
       </view>
 
       <view class="v1-route-block">
-        <view class="v1-field">
+        <view id="publish-field-from" class="v1-field {{fromDropdownOpen ? 'v1-field--raised' : ''}}">
           <text class="v1-label v1-label--emph">出发地点</text>
           <view class="v1-poi-search">
             <view class="v1-picker v1-picker--route v1-picker--input">
@@ -66,31 +66,17 @@
                 value="{{fromQuery}}"
                 placeholder="请输入或选择地点"
                 confirm-type="search"
+                adjust-position="{{false}}"
+                cursor="{{fromCursor}}"
                 bindinput="onFromQueryInput"
                 bindfocus="onFromFocus"
                 bindblur="onFromBlur"
               />
             </view>
-            <scroll-view
-              scroll-y
-              class="v1-poi-suggestions"
-              wx:if="{{fromDropdownOpen}}"
-              catchtouchmove="noop"
-            >
-              <view
-                class="v1-poi-suggestion"
-                wx:for="{{fromSuggestions}}"
-                wx:key="pointId"
-                data-id="{{item.pointId}}"
-                catchtap="onSelectFrom"
-              >
-                <text class="v1-poi-suggestion__name">{{item.name}}</text>
-              </view>
-            </scroll-view>
           </view>
         </view>
 
-        <view class="v1-field v1-field--last-route">
+        <view id="publish-field-to" class="v1-field v1-field--last-route {{toDropdownOpen ? 'v1-field--raised' : ''}}">
           <text class="v1-label v1-label--emph">目的地</text>
           <view class="v1-poi-search">
             <view class="v1-picker v1-picker--route v1-picker--input">
@@ -100,27 +86,13 @@
                 value="{{toQuery}}"
                 placeholder="请输入或选择地点"
                 confirm-type="search"
+                adjust-position="{{false}}"
+                cursor="{{toCursor}}"
                 bindinput="onToQueryInput"
                 bindfocus="onToFocus"
                 bindblur="onToBlur"
               />
             </view>
-            <scroll-view
-              scroll-y
-              class="v1-poi-suggestions"
-              wx:if="{{toDropdownOpen}}"
-              catchtouchmove="noop"
-            >
-              <view
-                class="v1-poi-suggestion"
-                wx:for="{{toSuggestions}}"
-                wx:key="pointId"
-                data-id="{{item.pointId}}"
-                catchtap="onSelectTo"
-              >
-                <text class="v1-poi-suggestion__name">{{item.name}}</text>
-              </view>
-            </scroll-view>
           </view>
         </view>
         <text class="v1-caption">支持点位名称、别名或拼音首字母，如 603 / PAB / mq</text>
@@ -128,16 +100,14 @@
 
       <view class="v1-route-preview" wx:if="{{routePreview}}">{{routePreview}}</view>
 
-      <view class="v1-field">
-        <picker mode="selector" range="{{countRange}}" value="{{countIndex}}" bindchange="onCountChange">
-          <view class="v1-inline-label-row">
-            <text class="v1-label v1-label--inline">出行人数</text>
-            <view class="v1-inline-picker">
-              <text class="v1-inline-picker-val">{{form.passengerCount}}人</text>
-              <text class="v1-picker-arrow">›</text>
-            </view>
+      <view id="publish-field-count" class="v1-field {{countDropdownOpen ? 'v1-field--raised' : ''}}">
+        <text class="v1-label">出行人数</text>
+        <view class="v1-inline-menu">
+          <view class="v1-picker" bindtap="onCountFieldTap">
+            <text class="v1-picker-val">{{form.passengerCount}}人</text>
+            <text class="v1-picker-arrow">›</text>
           </view>
-        </picker>
+        </view>
       </view>
 
       <view class="v1-field">
@@ -178,8 +148,41 @@
         disabled="{{submitting}}"
         bindtap="onSubmit"
       >
-        发布搭车单
+        {{submitLabel}}
       </button>
+    </view>
+
+    <view
+      wx:if="{{dateDropdownOpen || timeDropdownOpen || fromDropdownOpen || toDropdownOpen || countDropdownOpen}}"
+      class="v1-filter-float-mask"
+      catchtap="closeAllDropdowns"
+    />
+    <view
+      wx:if="{{(dateDropdownOpen || timeDropdownOpen || fromDropdownOpen || toDropdownOpen || countDropdownOpen) && publishFloatItems.length}}"
+      class="v1-filter-float-menu"
+      style="top: {{publishFloatTop}}px; left: {{publishFloatLeft}}px; width: {{publishFloatWidth}}px;"
+      catchtap="noop"
+    >
+      <scroll-view
+        scroll-y
+        enable-flex
+        class="v1-filter-float-scroll"
+        style="height: {{inlineMenuHeightPx}}px;"
+        bindtouchstart="onPublishFloatTouchStart"
+        bindtouchend="onPublishFloatTouchEnd"
+        bindscroll="onPublishFloatScroll"
+      >
+        <view
+          class="v1-poi-suggestion"
+          wx:for="{{publishFloatItems}}"
+          wx:key="key"
+          data-index="{{item.index}}"
+          data-id="{{item.pointId}}"
+          bindtap="onPublishFloatPick"
+        >
+          <text class="v1-poi-suggestion__name">{{item.label}}</text>
+        </view>
+      </scroll-view>
     </view>
 
     <view class="tab-bottom-spacer"></view>
