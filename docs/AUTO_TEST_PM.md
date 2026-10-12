@@ -87,7 +87,7 @@ npm test
 
 | 能力 | 负责人 | M1 侧现状 |
 |------|:------:|----------|
-| **编辑订单** `updateOrder` | M3 | detail「编辑」仅 Toast |
+| **编辑订单** `updateOrder` | M3 | matching 乘客详情「编辑搭车单」→ 发布页保存；需部署 `order` 云函数 |
 | **行程中** `startTrip` | M3 | P0 跳过，待出发可直接完成 |
 | **再来一单预填** | M3 | M1 仅跳发布 Tab |
 

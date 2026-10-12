@@ -161,6 +161,7 @@ matching ──司机接单──→ pending_departure ──出发──→ in_
 | 当前 status | 操作 | 执行者 | 新 status | 备注 |
 |-------------|------|--------|-----------|------|
 | `matching` | 接单 accept | 司机（≠ passengerOpenId） | `pending_departure` | 写 driver*、matchedAt；**M1 通知乘客** |
+| `matching` | 编辑 update | 乘客（`passengerOpenId`） | `matching` | 云 `order` · `action: update`；校验 POI/时间窗与重叠单；更新 `updatedAt` |
 | `matching` | 取消 cancel | 乘客 | `closed` | closeReason=`cancelled_by_passenger` |
 | `matching` | 过期 expire | 系统 | `closed` | `departTime` 已过；closeReason=`expired` |
 | `pending_departure` | 出发 start | 司机 | `in_progress` | 写 startedAt；或到点自动触发（实现二选一，PRD 允许） |
@@ -266,7 +267,7 @@ matching ──司机接单──→ pending_departure ──出发──→ in_
 | `login` | 维护者 | 真实 openid 与当前用户状态 |
 | `user` | 维护者 | Profile、身份、车辆与偏好 |
 | `emailAuth` | 维护者 + M1 SMTP | 验证码摘要、限流、校验和发信适配 |
-| `order` | 维护者 | 订单 CRUD、事务化接单、状态迁移和过期任务 |
+| `order` | 维护者 | 订单 CRUD（含 `action: update` 编辑 matching 单）、事务化接单、状态迁移和过期任务 |
 | `notification` | 维护者 | 当前用户通知和已读状态 |
 | `message` | 维护者 | 参与者聊天与分页 |
 | `seedConfig` | 维护者 | 管理员幂等导入 POI / 路线 |
