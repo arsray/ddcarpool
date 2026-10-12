@@ -201,7 +201,7 @@ async function createOrder(event, openId) {
 }
 
 async function updateMatchingOrder(event, openId) {
-  const orderId = cleanString(event.orderId, 50)
+  const orderId = cleanString(event.orderId, 64)
   if (!orderId) throw appError('INVALID_INPUT', '订单 ID 无效')
   const input = validateCreateInput(event)
   await validatePoints(input.fromPointId, input.toPointId)

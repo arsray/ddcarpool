@@ -131,6 +131,7 @@ Cloud 模式不提供 Bob/Alice 账号切换；开发期 Mock 邮箱验证只写
 |------|--------|------|
 | `listOpenOrders(options)` | P0 | 广场：`matching` + 未过期；默认 `matchScore` 降序 |
 | `createOrder(input)` | P0 | 乘客发单 → `matching` |
+| `updateOrder(orderId, input)` | P0 | 乘客编辑本人 `matching` 单（POI/出发时间/人数/备注）；云 `order` · `action: update` |
 | `acceptOrder(orderId, driver?)` | P0 | 司机接单 → `pending_departure`；忽略客户端身份参数 |
 | `cancelOrder(orderId, options)` | P1 | 乘客取消 → `closed`；司机取消匹配 → `matching`（Mock 已实现，见 [`M3_INTEGRATION_STATUS.md`](./M3_INTEGRATION_STATUS.md)） |
 | `expireStaleOrders()` | P0 | `matching` 且过点 → `closed` |
