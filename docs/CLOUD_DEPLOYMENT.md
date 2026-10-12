@@ -63,7 +63,7 @@ module.exports = {
 1. `cloudfunctions/login`
 2. `cloudfunctions/user`
 3. `cloudfunctions/emailAuth`
-4. `cloudfunctions/order`
+4. `cloudfunctions/order`（含匹配中订单 **编辑** `action: update`；未部署时保存修改会报「不支持的订单操作」）
 5. `cloudfunctions/notification`
 6. `cloudfunctions/message`
 7. `cloudfunctions/seedConfig`

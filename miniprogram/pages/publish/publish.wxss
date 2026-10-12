@@ -6,6 +6,30 @@
   box-sizing: border-box;
 }
 
+.v1-filter-float-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 200;
+}
+
+.v1-filter-float-menu {
+  position: fixed;
+  z-index: 201;
+  background: #FFFFFF;
+  border: 1rpx solid #E7ECF2;
+  border-radius: 16rpx;
+  box-shadow: 0 12rpx 32rpx rgba(16, 24, 40, 0.12);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.v1-filter-float-scroll {
+  width: 100%;
+}
+
 /* Role badge */
 .v1-role-badge {
   display: inline-flex;
@@ -187,12 +211,31 @@
   color: #1F2937;
 }
 
+.v1-field-col--menu {
+  position: relative;
+}
+
+.v1-field-col--raised,
+.v1-field--raised {
+  position: relative;
+  z-index: 120;
+}
+
+.v1-inline-menu {
+  position: relative;
+}
+
+.v1-poi-search {
+  position: relative;
+}
+
 .v1-poi-suggestions {
   position: absolute;
   left: 0;
   right: 0;
   top: calc(100% + 8rpx);
-  z-index: 20;
+  z-index: 50;
+  height: 360rpx;
   max-height: 360rpx;
   background: #FFFFFF;
   border: 1rpx solid #E7ECF2;

@@ -1,4 +1,4 @@
-<page-meta page-style="{{acceptModalVisible ? 'overflow:hidden;height:100%;' : ''}}" />
+<page-meta page-style="{{acceptModalVisible || filterDateDropdownOpen || filterTimeDropdownOpen || filterFromDropdownOpen || filterToDropdownOpen ? 'overflow:hidden;height:100%;' : ''}}" />
 <!-- ===== M2 Homepage UI Prototype ===== -->
 
 <view class="m2-home tab-page" wx:if="{{uiPrototypeMode}}">
@@ -542,7 +542,7 @@ module.exports.splitNote = splitNote;
 </wxs>
 
 <template name="v1OrderCard">
-  <view class="v1-order-card">
+  <view class="v1-order-card {{dimmed ? 'v1-order-card--muted' : ''}}">
     <view class="v1-order-head">
       <text class="v1-order-time">{{item.dateLabel}} · {{item.timeLabel}}</text>
       <text class="v1-order-count">{{item.passengerCount}}人</text>
@@ -638,26 +638,35 @@ module.exports.splitNote = splitNote;
     wx:if="{{hasOwnerIdentity && !isPassengerOnly && !loading && acceptedOrders.length}}"
   ></view>
 
-  <view class="v1-filter-panel" wx:if="{{hasOwnerIdentity && !isPassengerOnly && !loading}}">
+  <view class="v1-filter-panel" wx:if="{{hasOwnerIdentity && !isPassengerOnly}}">
     <view class="v1-filter-head">
       <text class="v1-filter-title v1-role-title--owner">筛选</text>
       <text class="v1-filter-reset" wx:if="{{hasActiveFilters}}" bindtap="onResetFilters">清除</text>
     </view>
     <view class="v1-filter-sub">选择出发信息，匹配顺路订单</view>
     <view class="v1-filter-grid">
-      <picker class="v1-filter-picker" mode="selector" range="{{filterDateLabels}}" value="{{filterDateIndex}}" bindchange="onFilterDateChange">
-        <view class="v1-filter-chip">
+      <view
+        id="filter-field-date"
+        class="v1-filter-picker v1-filter-picker--menu {{filterDateDropdownOpen ? 'v1-filter-picker--raised' : ''}}"
+      >
+        <view class="v1-filter-chip" bindtap="onFilterDateOpen">
           <text class="v1-filter-key">日期</text>
           <text class="v1-filter-val">{{filterDateLabels[filterDateIndex]}}</text>
         </view>
-      </picker>
-      <picker class="v1-filter-picker" mode="selector" range="{{filterTimeLabels}}" value="{{filterTimeIndex}}" bindchange="onFilterTimeChange">
-        <view class="v1-filter-chip">
+      </view>
+      <view
+        id="filter-field-time"
+        class="v1-filter-picker v1-filter-picker--menu {{filterTimeDropdownOpen ? 'v1-filter-picker--raised' : ''}}"
+      >
+        <view class="v1-filter-chip" bindtap="onFilterTimeOpen">
           <text class="v1-filter-key">时间</text>
           <text class="v1-filter-val">{{filterTimeLabels[filterTimeIndex]}}</text>
         </view>
-      </picker>
-      <view class="v1-filter-picker v1-filter-picker--search">
+      </view>
+      <view
+        id="filter-field-from"
+        class="v1-filter-picker v1-filter-picker--search {{filterFromDropdownOpen ? 'v1-filter-picker--raised' : ''}}"
+      >
         <view class="v1-filter-search">
           <text class="v1-filter-key">出发</text>
           <input
@@ -665,27 +674,19 @@ module.exports.splitNote = splitNote;
             value="{{filterFromQuery}}"
             placeholder="请选择地点"
             confirm-type="search"
+            adjust-position="{{true}}"
+            cursor-spacing="{{filterPoiCursorSpacing}}"
+            cursor="{{filterFromCursor}}"
             bindinput="onFilterFromQueryInput"
             bindfocus="onFilterFromFocus"
             bindblur="onFilterFromBlur"
           />
         </view>
-        <scroll-view
-          scroll-y
-          class="v1-filter-suggestions"
-          wx:if="{{filterFromDropdownOpen}}"
-          catchtouchmove="noop"
-        >
-          <view
-            class="v1-filter-suggestion"
-            wx:for="{{filterFromSuggestions}}"
-            wx:key="pointId"
-            data-id="{{item.pointId}}"
-            catchtap="onSelectFilterFrom"
-          >{{item.name}}</view>
-        </scroll-view>
       </view>
-      <view class="v1-filter-picker v1-filter-picker--search">
+      <view
+        id="filter-field-to"
+        class="v1-filter-picker v1-filter-picker--search {{filterToDropdownOpen ? 'v1-filter-picker--raised' : ''}}"
+      >
         <view class="v1-filter-search">
           <text class="v1-filter-key">到达</text>
           <input
@@ -693,61 +694,57 @@ module.exports.splitNote = splitNote;
             value="{{filterToQuery}}"
             placeholder="请选择地点"
             confirm-type="search"
+            adjust-position="{{true}}"
+            cursor-spacing="{{filterPoiCursorSpacing}}"
+            cursor="{{filterToCursor}}"
             bindinput="onFilterToQueryInput"
             bindfocus="onFilterToFocus"
             bindblur="onFilterToBlur"
           />
         </view>
-        <scroll-view
-          scroll-y
-          class="v1-filter-suggestions"
-          wx:if="{{filterToDropdownOpen}}"
-          catchtouchmove="noop"
-        >
-          <view
-            class="v1-filter-suggestion"
-            wx:for="{{filterToSuggestions}}"
-            wx:key="pointId"
-            data-id="{{item.pointId}}"
-            catchtap="onSelectFilterTo"
-          >{{item.name}}</view>
-        </scroll-view>
       </view>
     </view>
   </view>
 
-  <block wx:if="{{loading}}">
-    <view class="v1-empty">加载中…</view>
-  </block>
-
-  <block wx:elif="{{isPassengerOnly}}">
+  <block wx:if="{{isPassengerOnly}}">
     <view class="v1-empty">
       <view>当前为乘车人身份，无法接单</view>
       <button class="v1-btn-secondary v1-btn-secondary--ghost" bindtap="goAddOwnerIdentity">添加车主身份</button>
     </view>
   </block>
 
-  <block wx:elif="{{!isPassengerOnly && !loading}}">
+  <block wx:elif="{{!isPassengerOnly}}">
     <view class="v1-order-list">
+      <view class="v1-list-loading" wx:if="{{loading && !allOrders.length && !acceptedOrders.length}}">加载订单中…</view>
+      <block wx:elif="{{loading && (allOrders.length || acceptedOrders.length)}}">
+        <view class="v1-list-loading v1-list-loading--inline">更新中…</view>
+      </block>
       <block wx:if="{{allOrders.length}}">
         <view class="v1-pool-head">
           <view class="v1-pool-head-main">
             <view class="v1-section-title">订单池</view>
             <view class="v1-pool-hint" wx:if="{{!hasActiveFilters}}">看看有没有顺路的小伙伴</view>
+            <view class="v1-pool-hint" wx:else>数字为符合当前筛选的订单数</view>
           </view>
-          <text class="v1-pool-count">{{allOrders.length}} 条待接</text>
+          <text class="v1-pool-count">{{displayPoolCount}} 条{{hasActiveFilters ? '符合筛选' : '待接'}}</text>
         </view>
 
         <block wx:if="{{hasActiveFilters}}">
-          <view class="v1-section-subtitle">筛选结果</view>
+          <view class="v1-plaza-section v1-plaza-section--matched">
+            <view class="v1-plaza-section-title">筛选匹配</view>
+            <view class="v1-plaza-section-desc">{{matchedOrders.length}} 条顺路可接</view>
+          </view>
           <view class="v1-empty v1-empty--inline" wx:if="{{!matchedOrders.length}}">暂无完全符合条件的订单</view>
           <block wx:for="{{matchedOrders}}" wx:key="_id">
             <template is="v1OrderCard" data="{{item: item}}" />
           </block>
 
-          <view class="v1-section-subtitle v1-section-subtitle--gap" wx:if="{{otherOrders.length}}">其他待接订单</view>
+          <view class="v1-plaza-section v1-plaza-section--other" wx:if="{{otherOrders.length}}">
+            <view class="v1-plaza-section-title">其他待接订单</view>
+            <view class="v1-plaza-section-desc">不满足当前筛选，仍可浏览</view>
+          </view>
           <block wx:for="{{otherOrders}}" wx:key="_id">
-            <template is="v1OrderCard" data="{{item: item}}" />
+            <template is="v1OrderCard" data="{{item: item, dimmed: true}}" />
           </block>
         </block>
 
@@ -766,6 +763,37 @@ module.exports.splitNote = splitNote;
       <view class="list-bottom-spacer" wx:if="{{acceptedOrders.length || allOrders.length}}"></view>
     </view>
   </block>
+
+  <view
+    wx:if="{{filterDateDropdownOpen || filterTimeDropdownOpen || filterFromDropdownOpen || filterToDropdownOpen}}"
+    class="v1-filter-float-mask"
+    catchtap="closeFilterDropdowns"
+  />
+  <view
+    wx:if="{{(filterDateDropdownOpen || filterTimeDropdownOpen || filterFromDropdownOpen || filterToDropdownOpen) && filterFloatItems.length}}"
+    class="v1-filter-float-menu"
+    style="top: {{filterFloatTop}}px; left: {{filterFloatLeft}}px; width: {{filterFloatWidth}}px;"
+    catchtap="noop"
+  >
+    <scroll-view
+      scroll-y
+      enable-flex
+      class="v1-filter-float-scroll"
+      style="height: {{inlineMenuHeightPx}}px;"
+      bindtouchstart="onFilterFloatTouchStart"
+      bindtouchend="onFilterFloatTouchEnd"
+      bindscroll="onFilterFloatScroll"
+    >
+      <view
+        class="v1-filter-suggestion"
+        wx:for="{{filterFloatItems}}"
+        wx:key="key"
+        data-index="{{item.index}}"
+        data-id="{{item.pointId}}"
+        bindtap="onFilterFloatPick"
+      >{{item.label}}</view>
+    </scroll-view>
+  </view>
 
   <view
   class="v1-accept-mask"

@@ -6,9 +6,23 @@ Component({
     unreadCount: 0,
     plazaPath: '/pages/index/index',
     list: [
-      { key: 'plaza', text: '广场', icon: 'plaza' },
-      { key: 'notify', pagePath: '/pages/notify/notify', text: '消息', icon: 'message' },
-      { key: 'mine', pagePath: '/pages/mine/mine', text: '我的', icon: 'mine' }
+      {
+        key: 'plaza',
+        text: '广场',
+        iconSrc: '/assets/tabbar/tab-home.png'
+      },
+      {
+        key: 'notify',
+        pagePath: '/pages/notify/notify',
+        text: '消息',
+        iconSrc: '/assets/tabbar/tab-message.png'
+      },
+      {
+        key: 'mine',
+        pagePath: '/pages/mine/mine',
+        text: '我的',
+        iconSrc: '/assets/tabbar/tab-mine.png'
+      }
     ]
   },
 

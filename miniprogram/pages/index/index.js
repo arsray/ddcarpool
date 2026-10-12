@@ -1,13 +1,22 @@
 const app = getApp()
+const config = require('../../config/index')
 const auth = require('../../modules/auth/index')
 const order = require('../../modules/order/index')
 const notification = require('../../modules/notification/index')
+const { DEFAULT_POINTS } = require('../../modules/order/constants/points')
+const poiPickerTouch = require('../../modules/order/poi-picker-touch')
 const { buildPlazaFilterView, buildDefaultPlazaFilters } = require('../../modules/order/plaza-filter')
 const { filterPoints, getPointDisplayName } = require('../../modules/order/point-search')
 const { formatDateLabel } = require('../../modules/order/history-bridge')
 const { formatHistoryTimeLabel, parseDepartTime } = require('../../modules/order/time-slots')
 
 const { ensureCorrectPlazaPage } = require('../../modules/auth/plaza-tab')
+const {
+  menuHeightPx,
+  measureAnchorRect,
+  layoutMenuBelowField,
+  poiCursorSpacingPx
+} = require('../../modules/ui/inline-menu')
 
 const ACCEPT_ERROR_MESSAGES = {
   ORDER_NOT_FOUND: '订单不存在',
@@ -105,10 +114,22 @@ Page({
     filterTimeIndex: 0,
     filterFromQuery: '',
     filterToQuery: '',
+    filterFromCursor: -1,
+    filterToCursor: -1,
     filterFromSuggestions: [],
     filterToSuggestions: [],
     filterFromDropdownOpen: false,
     filterToDropdownOpen: false,
+    filterDateDropdownOpen: false,
+    filterTimeDropdownOpen: false,
+    inlineMenuHeightPx: 160,
+    filterFloatTop: 0,
+    filterFloatLeft: 0,
+    filterFloatWidth: 0,
+    filterFloatItems: [],
+    filterFloatField: '',
+    keyboardHeightPx: 0,
+    filterPoiCursorSpacing: 0,
     filterFromLabels: ['全部'],
     filterFromValues: [''],
     filterFromIndex: 0,
@@ -116,6 +137,7 @@ Page({
     filterToValues: [''],
     filterToIndex: 0,
     hasActiveFilters: false,
+    displayPoolCount: 0,
     hasOwnerIdentity: false,
     isPassengerOnly: false,
     heroTitle: '广场',
@@ -215,8 +237,31 @@ Page({
   },
 
   onLoad() {
+    this.setData({ inlineMenuHeightPx: menuHeightPx(320) })
     this._plazaFiltersTouched = false
     this._plazaFilters = null
+    this._plazaHasLoaded = false
+    this._loadOrdersInFlight = null
+    const warmPoints = this.resolveInitialPoints()
+    if (warmPoints.length) {
+      this.setData({ points: warmPoints })
+    }
+    if (config.useCloud) {
+      order.listPoints().catch(() => {})
+    }
+
+    auth.store.initFromStorage()
+    app._syncAuth()
+    const identities = app.globalData.identities || []
+    const hasOwnerIdentity = identities.includes('owner')
+    const isPassengerOnly = identities.includes('passenger') && !hasOwnerIdentity
+    if (
+      hasOwnerIdentity &&
+      app.globalData.userMode !== 'passenger' &&
+      auth.store.isLoggedIn()
+    ) {
+      this.loadOrders()
+    }
   },
 
   onReady() {
@@ -262,17 +307,64 @@ Page({
     app._syncAuth()
     ensureCorrectPlazaPage()
 
+    const identities = app.globalData.identities || []
+    const hasOwnerIdentity = identities.includes('owner')
+    const isPassengerOnly = identities.includes('passenger') && !hasOwnerIdentity
+
     this.setData({
-      userMode: app.globalData.userMode || 'owner'
+      userMode: app.globalData.userMode || 'owner',
+      hasOwnerIdentity,
+      isPassengerOnly
     })
 
-    const identities = app.globalData.identities || []
-    const hasOwner = identities.includes('owner')
-    if (!hasOwner || app.globalData.userMode === 'passenger') {
+    if (!hasOwnerIdentity || app.globalData.userMode === 'passenger') {
       return
     }
 
-    this.loadOrders()
+    if (this._loadOrdersInFlight) {
+      return
+    }
+
+    const hasCachedPlaza = this._plazaHasLoaded && (
+      this.data.allOrders.length > 0 ||
+      this.data.acceptedOrders.length > 0 ||
+      this.data.hasActiveFilters
+    )
+    this.loadOrders({ silent: hasCachedPlaza })
+    this.attachKeyboardListener()
+  },
+
+  onHide() {
+    this.detachKeyboardListener()
+  },
+
+  onUnload() {
+    this.detachKeyboardListener()
+  },
+
+  attachKeyboardListener() {
+    if (this._keyboardHeightListener || typeof wx.onKeyboardHeightChange !== 'function') return
+    this._keyboardHeightListener = (res) => {
+      const keyboardHeightPx = (res && res.height) || 0
+      this.setData({ keyboardHeightPx })
+      this.syncFilterFloatMenuLayout()
+    }
+    wx.onKeyboardHeightChange(this._keyboardHeightListener)
+    this.attachKeyboardListener = this.attachKeyboardListener.bind(this)
+  },
+
+  detachKeyboardListener() {
+    if (this._keyboardHeightListener && typeof wx.offKeyboardHeightChange === 'function') {
+      wx.offKeyboardHeightChange(this._keyboardHeightListener)
+    }
+    this._keyboardHeightListener = null
+  },
+
+  async syncFilterFloatMenuLayout() {
+    const field = this.data.filterFloatField
+    if (field !== 'from' && field !== 'to') return
+    if (!this.data.filterFromDropdownOpen && !this.data.filterToDropdownOpen) return
+    await this.placeFilterFloatMenu(field)
   },
 
   async onPullDownRefresh() {
@@ -337,53 +429,269 @@ Page({
       filterToSuggestions: [],
       filterFromDropdownOpen: false,
       filterToDropdownOpen: false,
-      hasActiveFilters: view.hasActiveFilters
+      filterDateDropdownOpen: false,
+      filterTimeDropdownOpen: false,
+      hasActiveFilters: view.hasActiveFilters,
+      displayPoolCount: view.hasActiveFilters
+        ? (view.matchedOrders || []).length
+        : enriched.length
     })
   },
 
-  async loadOrders() {
+  resolveInitialPoints() {
+    const cached = order.getCachedPoints && order.getCachedPoints()
+    if (cached && cached.length) return cached
+    return DEFAULT_POINTS.filter((point) => point.enabled !== false)
+  },
+
+  resolvePointsRefreshTask() {
+    const cached = order.getCachedPoints && order.getCachedPoints()
+    if (cached && cached.length) {
+      return Promise.resolve(cached)
+    }
+    return order.listPoints()
+  },
+
+  async loadOrders(options = {}) {
+    if (this._loadOrdersInFlight) {
+      return this._loadOrdersInFlight
+    }
+
+    const silent = options.silent === true
     const identities = app.globalData.identities || []
     const hasOwnerIdentity = identities.includes('owner')
     const isPassengerOnly = identities.includes('passenger') && !hasOwnerIdentity
 
-    this.setData({ loading: true, hasOwnerIdentity, isPassengerOnly })
-    applyHeroView(this, hasOwnerIdentity, isPassengerOnly, this.data.acceptedOrders)
+    const task = (async () => {
+      if (!silent) {
+        this.setData({ loading: true, hasOwnerIdentity, isPassengerOnly })
+      } else {
+        this.setData({ hasOwnerIdentity, isPassengerOnly })
+      }
+      applyHeroView(this, hasOwnerIdentity, isPassengerOnly, this.data.acceptedOrders)
 
-    if (isPassengerOnly) {
-      applyHeroView(this, hasOwnerIdentity, isPassengerOnly, [])
-      this.setData({ matchedOrders: [], otherOrders: [], allOrders: [], acceptedOrders: [], loading: false })
-      return
-    }
+      if (isPassengerOnly) {
+        applyHeroView(this, hasOwnerIdentity, isPassengerOnly, [])
+        this.setData({
+          matchedOrders: [],
+          otherOrders: [],
+          allOrders: [],
+          acceptedOrders: [],
+          loading: false
+        })
+        return
+      }
 
-    try {
-      await order.expireStaleOrders()
-      const openId = app.globalData.openId || (await auth.ensureLogin())
-      const [rawOrders, rawAccepted] = await Promise.all([
-        order.listOpenOrders({ viewerOpenId: openId }),
-        order.listDriverActiveOrders(openId)
-      ])
-      const points = await order.listPoints()
-      this.applyFilterView(rawOrders, points, this.getPlazaFilters())
-      const acceptedOrders = enrichOrders(rawAccepted, points)
-      applyHeroView(this, hasOwnerIdentity, isPassengerOnly, acceptedOrders)
-      this.setData({
-        acceptedOrders,
-        loading: false
-      })
-    } catch (error) {
-      applyHeroView(this, hasOwnerIdentity, isPassengerOnly, [])
-      this.setData({ loading: false, matchedOrders: [], otherOrders: [], allOrders: [], acceptedOrders: [] })
-      wx.showToast({ title: '加载广场失败', icon: 'none' })
-    }
+      order.expireStaleOrders().catch(() => {})
+
+      try {
+        let openId = app.globalData.openId
+        if (!openId) {
+          openId = await auth.ensureLogin()
+        }
+
+        let points = this.resolveInitialPoints()
+        const rawOrders = await order.listOpenOrders({ viewerOpenId: openId })
+        let rawAccepted = []
+        let driverActiveFailed = false
+
+        try {
+          const [acceptedList, freshPoints] = await Promise.all([
+            order.listDriverActiveOrders(openId),
+            this.resolvePointsRefreshTask()
+          ])
+          rawAccepted = acceptedList || []
+          if (freshPoints && freshPoints.length) {
+            points = freshPoints
+          }
+        } catch (driverError) {
+          driverActiveFailed = true
+          console.warn('[plaza] listDriverActive failed', driverError && driverError.code)
+        }
+
+        this.applyFilterView(rawOrders, points, this.getPlazaFilters())
+        const acceptedOrders = enrichOrders(rawAccepted, points)
+        applyHeroView(this, hasOwnerIdentity, isPassengerOnly, acceptedOrders)
+        this.setData({ acceptedOrders, points, loading: false })
+        this._plazaHasLoaded = true
+
+        if (driverActiveFailed) {
+          wx.showToast({
+            title: '广场已更新，待出发列表暂不可用',
+            icon: 'none'
+          })
+        }
+      } catch (error) {
+        const hadPlazaData = (this.data.allOrders || []).length > 0
+          || (this.data.acceptedOrders || []).length > 0
+        if (!silent) {
+          if (!hadPlazaData) {
+            applyHeroView(this, hasOwnerIdentity, isPassengerOnly, [])
+            this.setData({
+              loading: false,
+              matchedOrders: [],
+              otherOrders: [],
+              allOrders: [],
+              acceptedOrders: []
+            })
+          } else {
+            this.setData({ loading: false })
+          }
+          wx.showToast({ title: '加载广场失败', icon: 'none' })
+        } else {
+          this.setData({ loading: false })
+          wx.showToast({ title: '刷新失败', icon: 'none' })
+        }
+      }
+    })()
+
+    this._loadOrdersInFlight = task.finally(() => {
+      this._loadOrdersInFlight = null
+    })
+    return this._loadOrdersInFlight
   },
 
   updateFilters(nextFilters) {
     this.applyFilterView(this.data.allOrders, this.data.points, nextFilters)
   },
 
-  onFilterDateChange(e) {
-    const index = Number(e.detail.value)
+  closeFilterDropdowns(except) {
+    const field = except || ''
+    this.setData({
+      filterDateDropdownOpen: field === 'date',
+      filterTimeDropdownOpen: field === 'time',
+      filterFromDropdownOpen: field === 'from',
+      filterToDropdownOpen: field === 'to',
+      filterFloatField: field,
+      filterFloatItems: field ? this.buildFilterFloatItems(field) : []
+    })
+    if (!field) {
+      poiPickerTouch.scheduleFloatMenuTouchEnd(this, 0)
+    }
+  },
+
+  onFilterFloatTouchStart() {
+    poiPickerTouch.markFloatMenuTouch(this)
+  },
+
+  onFilterFloatTouchEnd() {
+    poiPickerTouch.scheduleFloatMenuTouchEnd(this)
+  },
+
+  onFilterFloatScroll() {
+    poiPickerTouch.markFloatMenuTouch(this)
+  },
+
+  buildFilterFloatItems(field) {
+    if (field === 'date') {
+      return this.data.filterDateLabels.map((label, index) => ({
+        key: `date-${index}`,
+        label,
+        index
+      }))
+    }
+    if (field === 'time') {
+      return this.data.filterTimeLabels.map((label, index) => ({
+        key: `time-${index}`,
+        label,
+        index
+      }))
+    }
+    if (field === 'from') {
+      return this.data.filterFromSuggestions.map((item) => ({
+        key: item.pointId,
+        label: item.name,
+        pointId: item.pointId
+      }))
+    }
+    if (field === 'to') {
+      return this.data.filterToSuggestions.map((item) => ({
+        key: item.pointId,
+        label: item.name,
+        pointId: item.pointId
+      }))
+    }
+    return []
+  },
+
+  async openFilterFloatMenu(field) {
+    const items = this.buildFilterFloatItems(field)
+    if (typeof wx.stopPullDownRefresh === 'function') {
+      wx.stopPullDownRefresh()
+    }
+    this.setData({
+      filterFloatField: field,
+      filterFloatItems: items,
+      filterDateDropdownOpen: field === 'date',
+      filterTimeDropdownOpen: field === 'time',
+      filterFromDropdownOpen: field === 'from',
+      filterToDropdownOpen: field === 'to'
+    })
+    await this.placeFilterFloatMenu(field)
+    if (field === 'from' || field === 'to') {
+      setTimeout(() => this.placeFilterFloatMenu(field), 320)
+    }
+  },
+
+  async placeFilterFloatMenu(field) {
+    const selector = `#filter-field-${field}`
+    const rect = await measureAnchorRect(this, selector)
+    if (!rect) return
+
+    const layout = layoutMenuBelowField(rect)
+    this.setData({
+      filterFloatTop: layout.top,
+      filterFloatLeft: layout.left,
+      filterFloatWidth: layout.width
+    })
+  },
+
+  onFilterFloatPick(e) {
+    poiPickerTouch.lockPickerTap(this)
+    const { index, id } = e.currentTarget.dataset
+    const field = this.data.filterFloatField
+    if (field === 'date') {
+      this.onFilterDatePick({ currentTarget: { dataset: { index: Number(index) } } })
+      return
+    }
+    if (field === 'time') {
+      this.onFilterTimePick({ currentTarget: { dataset: { index: Number(index) } } })
+      return
+    }
+    if (field === 'from') {
+      this.onSelectFilterFrom({ currentTarget: { dataset: { id } } })
+      return
+    }
+    if (field === 'to') {
+      this.onSelectFilterTo({ currentTarget: { dataset: { id } } })
+    }
+  },
+
+  onFilterDateOpen() {
+    if (this.data.filterDateDropdownOpen) {
+      this.closeFilterDropdowns()
+      return
+    }
+    this.openFilterFloatMenu('date')
+  },
+
+  onFilterTimeOpen() {
+    if (this.data.filterTimeDropdownOpen) {
+      this.closeFilterDropdowns()
+      return
+    }
+    this.openFilterFloatMenu('time')
+  },
+
+  onFilterDatePick(e) {
+    poiPickerTouch.lockPickerTap(this)
+    const index = Number(e.currentTarget.dataset.index)
     const date = this.data.filterDateValues[index] || ''
+    this.setData({
+      filterDateDropdownOpen: false,
+      filterFloatField: '',
+      filterFloatItems: []
+    })
     this.commitPlazaFilters({
       ...this.getPlazaFilters(),
       date,
@@ -391,9 +699,15 @@ Page({
     })
   },
 
-  onFilterTimeChange(e) {
-    const index = Number(e.detail.value)
+  onFilterTimePick(e) {
+    poiPickerTouch.lockPickerTap(this)
+    const index = Number(e.currentTarget.dataset.index)
     const timeWindow = this.data.filterTimeValues[index] || ''
+    this.setData({
+      filterTimeDropdownOpen: false,
+      filterFloatField: '',
+      filterFloatItems: []
+    })
     this.commitPlazaFilters({
       ...this.getPlazaFilters(),
       timeWindow
@@ -402,26 +716,32 @@ Page({
 
   onFilterFromFocus() {
     this._filterFromRevert = this.getPlazaFilters().fromPointId || ''
+    const query = this.data.filterFromQuery || ''
     this.setData({
-      filterFromDropdownOpen: true,
-      filterToDropdownOpen: false,
-      filterFromSuggestions: filterPoints(this.data.points, '')
-    })
+      filterFromSuggestions: filterPoints(this.data.points, ''),
+      filterFromCursor: query.length,
+      filterPoiCursorSpacing: poiCursorSpacingPx(this.data.inlineMenuHeightPx)
+    }, () => this.openFilterFloatMenu('from'))
   },
 
   onFilterToFocus() {
     this._filterToRevert = this.getPlazaFilters().toPointId || ''
+    const query = this.data.filterToQuery || ''
     this.setData({
-      filterToDropdownOpen: true,
-      filterFromDropdownOpen: false,
-      filterToSuggestions: filterPoints(this.data.points, '')
-    })
+      filterToSuggestions: filterPoints(this.data.points, ''),
+      filterToCursor: query.length,
+      filterPoiCursorSpacing: poiCursorSpacingPx(this.data.inlineMenuHeightPx)
+    }, () => this.openFilterFloatMenu('to'))
+  },
+
+  onFilterSuggestionTouchStart() {
+    poiPickerTouch.onSuggestionTouchStart(this)
   },
 
   onFilterFromBlur() {
-    setTimeout(() => {
-      if (this._poiPickerTapLock) {
-        this._poiPickerTapLock = false
+    poiPickerTouch.runAfterBlur(() => {
+      if (poiPickerTouch.shouldDeferPoiBlur(this)) {
+        if (this._poiPickerTapLock) this._poiPickerTapLock = false
         return
       }
 
@@ -435,7 +755,11 @@ Page({
           fromQuery: '',
           fromPointId: ''
         })
-        this.setData({ filterFromDropdownOpen: false })
+        this.setData({
+          filterFromDropdownOpen: false,
+          filterFloatField: '',
+          filterFloatItems: []
+        })
         return
       }
 
@@ -446,7 +770,9 @@ Page({
         if (point) {
           this.setData({
             filterFromQuery: point.name,
-            filterFromDropdownOpen: false
+            filterFromDropdownOpen: false,
+            filterFloatField: '',
+            filterFloatItems: []
           })
           return
         }
@@ -456,15 +782,17 @@ Page({
         filterFromQuery: committed.fromPointId
           ? getPointDisplayName(points, committed.fromPointId)
           : '',
-        filterFromDropdownOpen: false
+        filterFromDropdownOpen: false,
+        filterFloatField: '',
+        filterFloatItems: []
       })
-    }, 200)
+    })
   },
 
   onFilterToBlur() {
-    setTimeout(() => {
-      if (this._poiPickerTapLock) {
-        this._poiPickerTapLock = false
+    poiPickerTouch.runAfterBlur(() => {
+      if (poiPickerTouch.shouldDeferPoiBlur(this)) {
+        if (this._poiPickerTapLock) this._poiPickerTapLock = false
         return
       }
 
@@ -478,7 +806,11 @@ Page({
           toQuery: '',
           toPointId: ''
         })
-        this.setData({ filterToDropdownOpen: false })
+        this.setData({
+          filterToDropdownOpen: false,
+          filterFloatField: '',
+          filterFloatItems: []
+        })
         return
       }
 
@@ -489,7 +821,9 @@ Page({
         if (point) {
           this.setData({
             filterToQuery: point.name,
-            filterToDropdownOpen: false
+            filterToDropdownOpen: false,
+            filterFloatField: '',
+            filterFloatItems: []
           })
           return
         }
@@ -499,9 +833,11 @@ Page({
         filterToQuery: committed.toPointId
           ? getPointDisplayName(points, committed.toPointId)
           : '',
-        filterToDropdownOpen: false
+        filterToDropdownOpen: false,
+        filterFloatField: '',
+        filterFloatItems: []
       })
-    }, 200)
+    })
   },
 
   onFilterFromQueryInput(e) {
@@ -509,8 +845,13 @@ Page({
     this.setData({
       filterFromQuery: fromQuery,
       filterFromSuggestions: filterPoints(this.data.points, fromQuery),
-      filterFromDropdownOpen: true,
       filterToDropdownOpen: false
+    }, () => {
+      if (this.data.filterFromDropdownOpen) {
+        this.setData({ filterFloatItems: this.buildFilterFloatItems('from') })
+      } else {
+        this.openFilterFloatMenu('from')
+      }
     })
   },
 
@@ -519,8 +860,13 @@ Page({
     this.setData({
       filterToQuery: toQuery,
       filterToSuggestions: filterPoints(this.data.points, toQuery),
-      filterToDropdownOpen: true,
       filterFromDropdownOpen: false
+    }, () => {
+      if (this.data.filterToDropdownOpen) {
+        this.setData({ filterFloatItems: this.buildFilterFloatItems('to') })
+      } else {
+        this.openFilterFloatMenu('to')
+      }
     })
   },
 
@@ -528,12 +874,14 @@ Page({
     const pointId = e.currentTarget.dataset.id
     const point = this.data.points.find((item) => item.pointId === pointId)
     if (!point) return
-    this._poiPickerTapLock = true
+    poiPickerTouch.lockPickerTap(this)
     this.setData({
       filterFromQuery: point.name,
       filterFromSuggestions: filterPoints(this.data.points, ''),
       filterFromDropdownOpen: false,
-      filterToDropdownOpen: false
+      filterToDropdownOpen: false,
+      filterFloatField: '',
+      filterFloatItems: []
     })
     this.commitPlazaFilters({
       ...this.getPlazaFilters(),
@@ -546,12 +894,14 @@ Page({
     const pointId = e.currentTarget.dataset.id
     const point = this.data.points.find((item) => item.pointId === pointId)
     if (!point) return
-    this._poiPickerTapLock = true
+    poiPickerTouch.lockPickerTap(this)
     this.setData({
       filterToQuery: point.name,
       filterToSuggestions: filterPoints(this.data.points, ''),
       filterToDropdownOpen: false,
-      filterFromDropdownOpen: false
+      filterFromDropdownOpen: false,
+      filterFloatField: '',
+      filterFloatItems: []
     })
     this.commitPlazaFilters({
       ...this.getPlazaFilters(),
@@ -617,7 +967,7 @@ Page({
 
       wx.showToast({ title: '接单成功', icon: 'success' })
       this.resetAcceptModal()
-      await this.loadOrders()
+      await this.loadOrders({ silent: true })
     } catch (error) {
       wx.showToast({
         title: ACCEPT_ERROR_MESSAGES[error.code] || error.message || '接单失败',

@@ -14,6 +14,7 @@ const {
   CANCEL_ERROR_MESSAGES,
   CANCEL_KIND
 } = order
+const { buildEditDraftFromOrder, setEditOrderDraft } = require('../../modules/order/republish-draft')
 
 const HEADER_WATERMARKS = {
   matching: '/assets/detail-watermark-mickey.png',
@@ -186,7 +187,8 @@ Page({
       cancel_passenger: () => this.onCancel(),
       cancel_driver: () => this.onCancel(),
       chat: () => this.goChat(),
-      plaza: () => this.backToPlaza()
+      plaza: () => this.backToPlaza(),
+      edit: () => this.goEditOrder()
     }
     const handler = handlers[action]
     if (handler) handler()
@@ -284,6 +286,16 @@ Page({
 
   backToPlaza() {
     wx.switchTab({ url: '/pages/index/index' })
+  },
+
+  goEditOrder() {
+    const item = this.data.order
+    if (!item || item.status !== order.ORDER_STATUS.MATCHING || !this.data.isPassenger) {
+      wx.showToast({ title: '当前订单不可编辑', icon: 'none' })
+      return
+    }
+    setEditOrderDraft(buildEditDraftFromOrder(item))
+    wx.switchTab({ url: '/pages/publish/publish' })
   },
 
   resolveCancelKind() {

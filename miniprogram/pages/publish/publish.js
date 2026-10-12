@@ -10,7 +10,18 @@ const {
   formatDepartTimeForStorage
 } = require('../../modules/order/time-slots')
 const { filterPoints, getPointDisplayName } = require('../../modules/order/point-search')
-const { consumeRepublishDraft, applyRepublishDraft } = require('../../modules/order/republish-draft')
+const poiPickerTouch = require('../../modules/order/poi-picker-touch')
+const {
+  menuHeightPx,
+  measureAnchorRect,
+  layoutMenuBelowField
+} = require('../../modules/ui/inline-menu')
+const {
+  consumeRepublishDraft,
+  consumeEditOrderDraft,
+  applyRepublishDraft,
+  applyEditOrderDraft
+} = require('../../modules/order/republish-draft')
 
 const COUNT_RANGE = Array.from({ length: 10 }, (_, index) => index + 1)
 
@@ -73,11 +84,21 @@ function readPassengerPreference() {
 Page({
   data: {
     hasPassengerIdentity: false,
+    editMode: false,
+    editingOrderId: '',
+    pageTitle: '发布我的行程',
+    pageSub: '填写出发信息，发布搭车需求',
+    submitLabel: '发布行程',
     loading: true,
     submitting: false,
+    dateDropdownOpen: false,
+    timeDropdownOpen: false,
+    countDropdownOpen: false,
     points: [],
     fromQuery: '',
     toQuery: '',
+    fromCursor: -1,
+    toCursor: -1,
     fromSuggestions: [],
     toSuggestions: [],
     fromDropdownOpen: false,
@@ -108,7 +129,13 @@ Page({
     },
     routePreview: '',
     maxNoteLength: MAX_NOTE_LENGTH,
-    noteLength: 0
+    noteLength: 0,
+    inlineMenuHeightPx: 180,
+    publishFloatTop: 0,
+    publishFloatLeft: 0,
+    publishFloatWidth: 0,
+    publishFloatItems: [],
+    publishFloatField: ''
   },
 
   onShow() {
@@ -146,7 +173,11 @@ Page({
 
   async bootstrap() {
     const hasPassengerIdentity = app.hasIdentity('passenger')
-    this.setData({ hasPassengerIdentity, loading: true })
+    this.setData({
+      hasPassengerIdentity,
+      loading: true,
+      inlineMenuHeightPx: menuHeightPx(360)
+    })
 
     if (!hasPassengerIdentity) {
       this.setData({ loading: false })
@@ -158,6 +189,7 @@ Page({
         await auth.getProfile()
       }
       const preference = readPassengerPreference()
+      const editDraft = consumeEditOrderDraft()
       const republishDraft = consumeRepublishDraft()
       let selectedNoteMap = buildSelectedNoteMap(preference.noteTags)
       let supplementNote = preference.note || ''
@@ -166,7 +198,10 @@ Page({
       const points = await order.listPoints()
       const { values: dateValues, labels: dateLabels } = buildDatePickerOptions(new Date())
       const schedule = pickInitialSchedule(dateValues, new Date())
-      const slotState = buildSlotViewState(schedule.date, new Date())
+      let slotState = buildSlotViewState(schedule.date, new Date())
+      let dateIndex = schedule.dateIndex
+      let formDate = schedule.date
+      let formTimeWindow = slotState.formTimeWindow
 
       let fromIndex = -1
       let toIndex = -1
@@ -174,26 +209,64 @@ Page({
       let hasSelectedTo = false
       let fromPointId = ''
       let toPointId = ''
+      let editMode = false
+      let editingOrderId = ''
 
-      const republish = applyRepublishDraft(republishDraft, points, COUNT_RANGE)
-      if (republish) {
-        fromIndex = republish.fromIndex
-        toIndex = republish.toIndex
-        hasSelectedFrom = republish.hasSelectedFrom
-        hasSelectedTo = republish.hasSelectedTo
-        fromPointId = republish.fromPointId
-        toPointId = republish.toPointId
-        countIndex = republish.countIndex
-        selectedNoteMap = republish.selectedNoteMap
-        supplementNote = republish.supplementNote
+      const editApplied = editDraft
+        ? applyEditOrderDraft(editDraft, points, COUNT_RANGE, dateValues, { buildSlotViewState })
+        : null
+      if (editApplied) {
+        editMode = true
+        editingOrderId = editApplied.orderId
+        fromIndex = editApplied.fromIndex
+        toIndex = editApplied.toIndex
+        hasSelectedFrom = editApplied.hasSelectedFrom
+        hasSelectedTo = editApplied.hasSelectedTo
+        fromPointId = editApplied.fromPointId
+        toPointId = editApplied.toPointId
+        countIndex = editApplied.countIndex
+        selectedNoteMap = editApplied.selectedNoteMap
+        supplementNote = editApplied.supplementNote
+        dateIndex = editApplied.dateIndex
+        formDate = editApplied.formDate
+        formTimeWindow = editApplied.formTimeWindow
+        slotState = {
+          timeSlots: editApplied.timeSlots,
+          timeLabels: editApplied.timeLabels,
+          timeIndex: editApplied.timeIndex,
+          selectedSlot: editApplied.selectedSlot,
+          hasAvailableSlots: editApplied.hasAvailableSlots,
+          formTimeWindow: editApplied.formTimeWindow
+        }
+      } else {
+        const republish = applyRepublishDraft(republishDraft, points, COUNT_RANGE)
+        if (republish) {
+          fromIndex = republish.fromIndex
+          toIndex = republish.toIndex
+          hasSelectedFrom = republish.hasSelectedFrom
+          hasSelectedTo = republish.hasSelectedTo
+          fromPointId = republish.fromPointId
+          toPointId = republish.toPointId
+          countIndex = republish.countIndex
+          selectedNoteMap = republish.selectedNoteMap
+          supplementNote = republish.supplementNote
+        }
       }
 
       const nextData = {
         points,
         dateValues,
         dateLabels,
-        dateIndex: schedule.dateIndex,
+        editMode,
+        editingOrderId,
+        pageTitle: editMode ? '编辑我的行程' : '发布我的行程',
+        pageSub: editMode ? '修改出发信息，保存后继续匹配' : '填写出发信息，发布搭车需求',
+        submitLabel: editMode ? '保存修改' : '发布行程',
+        dateIndex,
         countIndex,
+        dateDropdownOpen: false,
+        timeDropdownOpen: false,
+        countDropdownOpen: false,
         fromIndex,
         toIndex,
         fromQuery: hasSelectedFrom ? getPointDisplayName(points, fromPointId) : '',
@@ -212,8 +285,8 @@ Page({
         form: {
           fromPointId,
           toPointId,
-          date: schedule.date,
-          timeWindow: slotState.formTimeWindow,
+          date: formDate,
+          timeWindow: formTimeWindow,
           passengerCount: COUNT_RANGE[countIndex],
           note: supplementNote
         },
@@ -246,7 +319,7 @@ Page({
 
   selectFromPoint(point) {
     if (!point) return
-    this._poiPickerTapLock = true
+    poiPickerTouch.lockPickerTap(this)
     const fromIndex = this.data.points.findIndex((item) => item.pointId === point.pointId)
     this.setData({
       fromIndex,
@@ -254,6 +327,8 @@ Page({
       fromSuggestions: filterPoints(this.data.points, ''),
       fromDropdownOpen: false,
       toDropdownOpen: false,
+      publishFloatField: '',
+      publishFloatItems: [],
       hasSelectedFrom: true,
       'form.fromPointId': point.pointId
     }, () => this.refreshRoutePreview())
@@ -261,7 +336,7 @@ Page({
 
   selectToPoint(point) {
     if (!point) return
-    this._poiPickerTapLock = true
+    poiPickerTouch.lockPickerTap(this)
     const toIndex = this.data.points.findIndex((item) => item.pointId === point.pointId)
     this.setData({
       toIndex,
@@ -269,6 +344,8 @@ Page({
       toSuggestions: filterPoints(this.data.points, ''),
       toDropdownOpen: false,
       fromDropdownOpen: false,
+      publishFloatField: '',
+      publishFloatItems: [],
       hasSelectedTo: true,
       'form.toPointId': point.pointId
     }, () => this.refreshRoutePreview())
@@ -276,33 +353,39 @@ Page({
 
   onFromFocus() {
     this._fromRevertPointId = this.data.hasSelectedFrom ? this.data.form.fromPointId : ''
+    const fromQuery = this.data.fromQuery || ''
     this.setData({
-      fromDropdownOpen: true,
-      toDropdownOpen: false,
-      fromSuggestions: filterPoints(this.data.points, '')
-    })
+      fromSuggestions: filterPoints(this.data.points, ''),
+      fromCursor: fromQuery.length
+    }, () => this.openPublishFloatMenu('from'))
   },
 
   onToFocus() {
     this._toRevertPointId = this.data.hasSelectedTo ? this.data.form.toPointId : ''
+    const toQuery = this.data.toQuery || ''
     this.setData({
-      toDropdownOpen: true,
-      fromDropdownOpen: false,
-      toSuggestions: filterPoints(this.data.points, '')
-    })
+      toSuggestions: filterPoints(this.data.points, ''),
+      toCursor: toQuery.length
+    }, () => this.openPublishFloatMenu('to'))
+  },
+
+  onPoiSuggestionTouchStart() {
+    poiPickerTouch.onSuggestionTouchStart(this)
   },
 
   onFromBlur() {
-    setTimeout(() => {
-      if (this._poiPickerTapLock) {
-        this._poiPickerTapLock = false
+    poiPickerTouch.runAfterBlur(() => {
+      if (poiPickerTouch.shouldDeferPoiBlur(this)) {
+        if (this._poiPickerTapLock) this._poiPickerTapLock = false
         return
       }
       const { hasSelectedFrom, form, points } = this.data
       if (hasSelectedFrom && form.fromPointId) {
         this.setData({
           fromQuery: getPointDisplayName(points, form.fromPointId),
-          fromDropdownOpen: false
+          fromDropdownOpen: false,
+          publishFloatField: '',
+          publishFloatItems: []
         })
         return
       }
@@ -329,20 +412,22 @@ Page({
         fromIndex: -1,
         'form.fromPointId': ''
       }, () => this.refreshRoutePreview())
-    }, 200)
+    })
   },
 
   onToBlur() {
-    setTimeout(() => {
-      if (this._poiPickerTapLock) {
-        this._poiPickerTapLock = false
+    poiPickerTouch.runAfterBlur(() => {
+      if (poiPickerTouch.shouldDeferPoiBlur(this)) {
+        if (this._poiPickerTapLock) this._poiPickerTapLock = false
         return
       }
       const { hasSelectedTo, form, points } = this.data
       if (hasSelectedTo && form.toPointId) {
         this.setData({
           toQuery: getPointDisplayName(points, form.toPointId),
-          toDropdownOpen: false
+          toDropdownOpen: false,
+          publishFloatField: '',
+          publishFloatItems: []
         })
         return
       }
@@ -369,7 +454,7 @@ Page({
         toIndex: -1,
         'form.toPointId': ''
       }, () => this.refreshRoutePreview())
-    }, 200)
+    })
   },
 
   noop() {},
@@ -380,12 +465,18 @@ Page({
     this.setData({
       fromQuery: query,
       fromSuggestions: suggestions,
-      fromDropdownOpen: true,
       toDropdownOpen: false,
       hasSelectedFrom: false,
       fromIndex: -1,
       'form.fromPointId': ''
-    }, () => this.refreshRoutePreview())
+    }, () => {
+      this.refreshRoutePreview()
+      if (this.data.fromDropdownOpen) {
+        this.setData({ publishFloatItems: this.buildPublishFloatItems('from') })
+      } else {
+        this.openPublishFloatMenu('from')
+      }
+    })
   },
 
   onToQueryInput(e) {
@@ -394,12 +485,18 @@ Page({
     this.setData({
       toQuery: query,
       toSuggestions: suggestions,
-      toDropdownOpen: true,
       fromDropdownOpen: false,
       hasSelectedTo: false,
       toIndex: -1,
       'form.toPointId': ''
-    }, () => this.refreshRoutePreview())
+    }, () => {
+      this.refreshRoutePreview()
+      if (this.data.toDropdownOpen) {
+        this.setData({ publishFloatItems: this.buildPublishFloatItems('to') })
+      } else {
+        this.openPublishFloatMenu('to')
+      }
+    })
   },
 
   onSelectFrom(e) {
@@ -414,33 +511,185 @@ Page({
     this.selectToPoint(point)
   },
 
-  onDateChange(e) {
-    const dateIndex = Number(e.detail.value)
+  closeAllDropdowns() {
+    this.setData({
+      dateDropdownOpen: false,
+      timeDropdownOpen: false,
+      countDropdownOpen: false,
+      fromDropdownOpen: false,
+      toDropdownOpen: false,
+      publishFloatField: '',
+      publishFloatItems: []
+    })
+    poiPickerTouch.scheduleFloatMenuTouchEnd(this, 0)
+  },
+
+  onPublishFloatTouchStart() {
+    poiPickerTouch.markFloatMenuTouch(this)
+  },
+
+  onPublishFloatTouchEnd() {
+    poiPickerTouch.scheduleFloatMenuTouchEnd(this)
+  },
+
+  onPublishFloatScroll() {
+    poiPickerTouch.markFloatMenuTouch(this)
+  },
+
+  buildPublishFloatItems(field) {
+    if (field === 'date') {
+      return this.data.dateLabels.map((label, index) => ({
+        key: `date-${index}`,
+        label,
+        index
+      }))
+    }
+    if (field === 'time') {
+      return this.data.timeLabels.map((label, index) => ({
+        key: `time-${index}`,
+        label,
+        index
+      }))
+    }
+    if (field === 'from') {
+      return this.data.fromSuggestions.map((item) => ({
+        key: item.pointId,
+        label: item.name,
+        pointId: item.pointId
+      }))
+    }
+    if (field === 'to') {
+      return this.data.toSuggestions.map((item) => ({
+        key: item.pointId,
+        label: item.name,
+        pointId: item.pointId
+      }))
+    }
+    if (field === 'count') {
+      return this.data.countRange.map((count, index) => ({
+        key: `count-${count}`,
+        label: `${count}人`,
+        index
+      }))
+    }
+    return []
+  },
+
+  async openPublishFloatMenu(field) {
+    const selector = `#publish-field-${field}`
+    const items = this.buildPublishFloatItems(field)
+    const rect = await measureAnchorRect(this, selector)
+    if (!rect) return
+
+    const layout = layoutMenuBelowField(rect)
+    if (typeof wx.stopPullDownRefresh === 'function') {
+      wx.stopPullDownRefresh()
+    }
+    this.setData({
+      publishFloatField: field,
+      publishFloatItems: items,
+      publishFloatTop: layout.top,
+      publishFloatLeft: layout.left,
+      publishFloatWidth: layout.width,
+      dateDropdownOpen: field === 'date',
+      timeDropdownOpen: field === 'time',
+      fromDropdownOpen: field === 'from',
+      toDropdownOpen: field === 'to',
+      countDropdownOpen: field === 'count'
+    })
+  },
+
+  onPublishFloatPick(e) {
+    poiPickerTouch.lockPickerTap(this)
+    const { index, id } = e.currentTarget.dataset
+    const field = this.data.publishFloatField
+    if (field === 'date') {
+      this.onPickDate({ currentTarget: { dataset: { index: Number(index) } } })
+      return
+    }
+    if (field === 'time') {
+      this.onPickTime({ currentTarget: { dataset: { index: Number(index) } } })
+      return
+    }
+    if (field === 'from') {
+      this.onSelectFrom({ currentTarget: { dataset: { id } } })
+      return
+    }
+    if (field === 'to') {
+      this.onSelectTo({ currentTarget: { dataset: { id } } })
+      return
+    }
+    if (field === 'count') {
+      this.onPickCount({ currentTarget: { dataset: { index: Number(index) } } })
+    }
+  },
+
+  onDateFieldTap() {
+    if (this.data.dateDropdownOpen) {
+      this.closeAllDropdowns()
+      return
+    }
+    this.openPublishFloatMenu('date')
+  },
+
+  onTimeFieldTap() {
+    if (!this.data.hasAvailableSlots) return
+    if (this.data.timeDropdownOpen) {
+      this.closeAllDropdowns()
+      return
+    }
+    this.openPublishFloatMenu('time')
+  },
+
+  onCountFieldTap() {
+    if (this.data.countDropdownOpen) {
+      this.closeAllDropdowns()
+      return
+    }
+    this.openPublishFloatMenu('count')
+  },
+
+  onPickDate(e) {
+    poiPickerTouch.lockPickerTap(this)
+    const dateIndex = Number(e.currentTarget.dataset.index)
     const date = this.data.dateValues[dateIndex]
     const slotState = buildSlotViewState(date, new Date())
     this.setData({
       dateIndex,
+      dateDropdownOpen: false,
+      publishFloatField: '',
+      publishFloatItems: [],
       ...slotState,
       'form.date': date,
       'form.timeWindow': slotState.formTimeWindow
     })
   },
 
-  onTimeChange(e) {
-    const timeIndex = Number(e.detail.value)
+  onPickTime(e) {
+    poiPickerTouch.lockPickerTap(this)
+    const timeIndex = Number(e.currentTarget.dataset.index)
     const selectedSlot = this.data.timeSlots[timeIndex] || null
     this.setData({
       timeIndex,
+      timeDropdownOpen: false,
+      publishFloatField: '',
+      publishFloatItems: [],
       selectedSlot,
       'form.timeWindow': selectedSlot ? selectedSlot.label : ''
     })
   },
 
-  onCountChange(e) {
-    const countIndex = Number(e.detail.value)
+  onPickCount(e) {
+    poiPickerTouch.lockPickerTap(this)
+    const countIndex = Number(e.currentTarget.dataset.index)
+    const count = this.data.countRange[countIndex]
+    if (!count) return
     this.setData({
       countIndex,
-      'form.passengerCount': this.data.countRange[countIndex]
+      countDropdownOpen: false,
+      publishFloatField: '',
+      publishFloatItems: [],
+      'form.passengerCount': count
     })
   },
 
@@ -517,7 +766,7 @@ Page({
       const openId = await auth.ensureLogin()
       const profile = await auth.getProfile()
       const storedTime = formatDepartTimeForStorage(form.date, selectedSlot)
-      const created = await order.createOrder({
+      const payload = {
         fromPointId: form.fromPointId,
         toPointId: form.toPointId,
         departTime: storedTime.departTime,
@@ -526,13 +775,23 @@ Page({
         note: submitNote,
         passengerOpenId: openId,
         passengerName: (profile && profile.nickName) || app.globalData.userInfo.displayName || '乘客'
-      })
+      }
+
+      let targetId = this.data.editingOrderId
+      if (this.data.editMode && targetId) {
+        const updated = await order.updateOrder(targetId, payload)
+        targetId = updated._id || targetId
+        wx.showToast({ title: '保存成功', icon: 'success' })
+      } else {
+        const created = await order.createOrder(payload)
+        targetId = created._id
+        wx.showToast({ title: '发布成功', icon: 'success' })
+      }
 
       app._syncAuth()
 
-      wx.showToast({ title: '发布成功', icon: 'success' })
       setTimeout(() => {
-        wx.navigateTo({ url: `/pages/detail/detail?orderId=${created._id}&role=passenger` })
+        wx.navigateTo({ url: `/pages/detail/detail?orderId=${targetId}&role=passenger` })
       }, 400)
     } catch (error) {
       const messageMap = {
@@ -541,7 +800,8 @@ Page({
         OVERLAPPING_ORDER: '该时段已有进行中的订单',
         INVALID_PASSENGER_COUNT: '出行人数无效',
         INVALID_NOTE: `备注不超过 ${MAX_NOTE_LENGTH} 字`,
-        NOT_LOGGED_IN: '请先登录'
+        NOT_LOGGED_IN: '请先登录',
+        INVALID_ACTION: '请重新部署 order 云函数后再保存'
       }
       wx.showToast({
         title: messageMap[error.code] || error.message || '发布失败',

@@ -22,6 +22,7 @@ App({
         env: config.cloudEnvId,
         traceUser: true
       })
+      require('./modules/order/index').listPoints().catch(() => {})
     }
 
     if (!config.useCloud) {

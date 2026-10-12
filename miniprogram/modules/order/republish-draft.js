@@ -6,6 +6,7 @@
 const { PREFERENCE_NOTE_TAGS } = require('../auth/vehicle-data')
 
 let pendingDraft = null
+let pendingEditDraft = null
 
 function buildRepublishDraft(orderItem, m3Order) {
   const item = orderItem || {}
@@ -27,6 +28,34 @@ function setRepublishDraft(draft) {
 function consumeRepublishDraft() {
   const draft = pendingDraft
   pendingDraft = null
+  return draft
+}
+
+function buildEditDraftFromOrder(orderItem) {
+  const item = orderItem || {}
+  const departTime = (item.departTime || '').trim()
+  const date = departTime.length >= 10 ? departTime.slice(0, 10) : ''
+  const start = departTime.length >= 16 ? departTime.slice(11, 16) : ''
+  const end = (item.departTimeEnd || '').trim()
+  const timeWindow = start && end ? `${start}-${end}` : ''
+  return {
+    orderId: item._id || '',
+    fromPointId: item.fromPointId || '',
+    toPointId: item.toPointId || '',
+    passengerCount: item.passengerCount || 1,
+    note: (item.note || '').trim(),
+    date,
+    timeWindow
+  }
+}
+
+function setEditOrderDraft(draft) {
+  pendingEditDraft = draft && typeof draft === 'object' ? { ...draft } : null
+}
+
+function consumeEditOrderDraft() {
+  const draft = pendingEditDraft
+  pendingEditDraft = null
   return draft
 }
 
@@ -109,11 +138,53 @@ function applyRepublishDraft(draft, points, countRange) {
   }
 }
 
+/**
+ * @param {{ buildSlotViewState: Function }} helpers
+ */
+function applyEditOrderDraft(draft, points, countRange, dateValues, helpers) {
+  if (!draft || !draft.orderId) return null
+  const republish = applyRepublishDraft(draft, points, countRange)
+  if (!republish) return null
+
+  const noteParts = parseNoteForRepublish(draft.note)
+  const now = new Date()
+  let dateIndex = dateValues.indexOf(draft.date)
+  if (dateIndex < 0) dateIndex = 0
+  const date = dateValues[dateIndex] || draft.date || dateValues[0]
+  const slotState = helpers.buildSlotViewState(date, now)
+  let timeIndex = 0
+  let selectedSlot = slotState.timeSlots[0] || null
+  if (draft.timeWindow && slotState.timeSlots.length) {
+    const idx = slotState.timeSlots.findIndex((slot) => slot.label === draft.timeWindow)
+    if (idx >= 0) {
+      timeIndex = idx
+      selectedSlot = slotState.timeSlots[idx]
+    }
+  }
+
+  return {
+    ...republish,
+    orderId: draft.orderId,
+    dateIndex,
+    selectedNoteMap: noteParts.selectedNoteMap,
+    supplementNote: noteParts.supplementNote,
+    ...slotState,
+    timeIndex,
+    selectedSlot,
+    formDate: date,
+    formTimeWindow: selectedSlot ? selectedSlot.label : slotState.formTimeWindow
+  }
+}
+
 module.exports = {
   buildRepublishDraft,
+  buildEditDraftFromOrder,
+  setEditOrderDraft,
   setRepublishDraft,
   consumeRepublishDraft,
+  consumeEditOrderDraft,
   parseNoteForRepublish,
   findPointIndex,
-  applyRepublishDraft
+  applyRepublishDraft,
+  applyEditOrderDraft
 }

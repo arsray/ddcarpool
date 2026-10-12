@@ -99,7 +99,10 @@ function collectSelectableTimes(orders, dateFilter, now) {
   const baseNow = now || new Date()
   const times = new Set(collectUniqueTimes(orders, dateFilter))
 
-  if (!dateFilter) return Array.from(times).sort()
+  if (!dateFilter) {
+    buildDailyTimeSlots().forEach((slot) => times.add(slot.label))
+    return Array.from(times).sort()
+  }
 
   const day = parseDepartTime(`${dateFilter} 08:00`)
   const isToday = day && isSameCalendarDay(day, baseNow)
